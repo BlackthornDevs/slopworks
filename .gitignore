@@ -81,3 +81,4 @@ Assets/StreamingAssets/FMOD/
 # Lightmap data (large, machine-specific)
 **/LightmapData-*
 **/Lightmap-*
+**/ReflectionProbe-*
