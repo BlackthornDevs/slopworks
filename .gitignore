@@ -57,6 +57,9 @@ crashlytics-build.properties
 # TextMeshPro generated files
 **/[Aa]ssets/TextMesh*Pro/Resources/Fonts & Materials/*.mat
 
+# TextMesh Pro examples (not needed in repo)
+Assets/TextMesh Pro/Examples & Extras/
+
 # Annotation processor generated files
 /[Aa]ssets/Generated/
 
