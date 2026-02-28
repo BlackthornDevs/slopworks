@@ -74,3 +74,13 @@ Thumbs.db
 
 # Supabase credentials (use supabase-config.template.json as reference)
 Assets/StreamingAssets/supabase-config.json
+
+# Lightmaps — regenerate locally, too large for git (see render-pipeline.md)
+**/LightmapData-*
+**/Lightmap-*
+**/ReflectionProbe-*
+
+# FMOD banks — compiled artifacts, not source (see audio.md)
+# Commit the .fspro project file, not the banks
+Assets/StreamingAssets/FMOD/*.bank
+Assets/StreamingAssets/FMOD/*.bank.guids
