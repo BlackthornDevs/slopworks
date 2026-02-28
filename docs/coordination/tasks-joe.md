@@ -31,9 +31,22 @@ If multiple tasks share the same priority, pick the **lowest J-number** first (e
 1. Mark its status as `Complete` with the date and commit hash
 2. Update `docs/coordination/handoff-joe.md` with what you did, what's next, and any blockers
 3. Run all EditMode tests -- they must pass before you push
+3b. Check for shared file changes. If you modified ANY of these, note it prominently in handoff-joe.md:
+    - Slopworks.Runtime.asmdef or any .asmdef file
+    - Anything in ProjectSettings/
+    - Anything in Scripts/Core/
+    - Any ScriptableObject definition (fields, not assets)
+    - Any new package dependency
 4. Commit and push to `joe/main`
 5. Check this file again for the next task (repeat the priority rules)
-6. If no pending tasks remain, write a note in `handoff-joe.md` saying "all tasks complete, awaiting new assignments" and stop
+6. If no pending tasks remain, use the `slopworks-handoff-joe` skill to run the full handoff process
+
+### When you finish ALL tasks
+
+When no pending tasks remain:
+1. Use the `slopworks-handoff-joe` skill to run the full handoff process
+2. This ensures compilation verification, test reporting, and shared-file change tracking
+3. Do not just write "all tasks complete" -- run the skill
 
 ### When you hit a blocker
 

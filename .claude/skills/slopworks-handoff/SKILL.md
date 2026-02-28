@@ -10,7 +10,19 @@ When the user says "handoff", "end session", or "wrap up", perform ALL of the fo
 
 ## Steps
 
-### 1. Write session handoff file
+### 1. Review Joe's handoff
+
+Read `docs/coordination/handoff-joe.md`. Check:
+- Did Joe report any shared file changes? If so, note merge risks in your own handoff.
+- Did Joe flag any contradictions? If so, resolve them in `decisions.md`.
+- Are Joe's test counts consistent with expectations?
+- Did Joe add any packages or asmdef references that need attention?
+
+If Joe's handoff has a "Shared file changes" section with entries, merge those changes
+carefully. asmdef reference additions in particular can cause compilation failures if
+the referenced package isn't set up identically on both branches.
+
+### 2. Write session handoff file
 
 Create or overwrite `docs/coordination/handoff-kevin.md` with:
 
@@ -41,7 +53,7 @@ Last commit: [hash] [message]
 - [Anything non-obvious: workarounds, gotchas, partially built systems]
 ```
 
-### 2. Update tasks-joe.md and check for new assignments
+### 3. Update tasks-joe.md and check for new assignments
 
 **Always check whether Joe needs new tasks.** Review:
 - Did this session complete work that unblocks Joe?
@@ -53,11 +65,11 @@ If yes to any: update `docs/coordination/tasks-joe.md` with new tasks following 
 
 Also update `docs/coordination/handoff-joe.md` so Joe's next session has context on what changed.
 
-### 3. Update decisions.md (if architectural decisions were made)
+### 4. Update decisions.md (if architectural decisions were made)
 
 If any architectural decisions were made during the session, add them to `docs/coordination/decisions.md` following the existing format.
 
-### 4. Update auto-memory
+### 5. Update auto-memory
 
 Update `C:\Users\KevinAmditis\.claude\projects\C--Users-KevinAmditis-source-repos\memory\MEMORY.md` with:
 - Any new patterns or conventions discovered
@@ -67,7 +79,7 @@ Update `C:\Users\KevinAmditis\.claude\projects\C--Users-KevinAmditis-source-repo
 
 Keep it concise. Don't duplicate what's in CLAUDE.md or the handoff file.
 
-### 5. Commit all changes
+### 6. Commit all changes
 
 - Run `git status` to see what's outstanding
 - Stage all relevant files (exclude `.claude/settings.local.json`)
@@ -78,12 +90,12 @@ Keep it concise. Don't duplicate what's in CLAUDE.md or the handoff file.
   ```
 - NEVER include Co-Authored-By lines
 
-### 6. Push to kevin/main
+### 7. Push to kevin/main
 
 - Push to `kevin/main`
 - Report the final commit hash
 
-### 6b. Push coordination docs to master (if Joe's tasks changed)
+### 7b. Push coordination docs to master (if Joe's tasks changed)
 
 If `tasks-joe.md`, `handoff-joe.md`, `contradictions.md`, or `decisions.md` were updated:
 
@@ -95,7 +107,7 @@ If `tasks-joe.md`, `handoff-joe.md`, `contradictions.md`, or `decisions.md` were
 
 This ensures Joe picks up new tasks on his next `git merge origin/master`. Do NOT push any Phase implementation code to master -- only coordination and CLAUDE.md files.
 
-### 7. Summary to user
+### 8. Summary to user
 
 Print a brief summary:
 - What was accomplished
@@ -107,6 +119,6 @@ Print a brief summary:
 
 - NEVER add Co-Authored-By lines to commits
 - The handoff file is the primary way the next session recovers context -- make it thorough
-- Joe's Claude auto-picks tasks from `tasks-joe.md` on master. Step 6b ensures he gets them.
-- Only push coordination files to master (step 6b), never Phase implementation code
+- Joe's Claude auto-picks tasks from `tasks-joe.md` on master. Step 7b ensures he gets them.
+- Only push coordination files to master (step 7b), never Phase implementation code
 - If you made changes to shared code (Scripts/Core/, ScriptableObjects/, ProjectSettings/), note this prominently -- it needs a separate merge to master for jawn to pick up
