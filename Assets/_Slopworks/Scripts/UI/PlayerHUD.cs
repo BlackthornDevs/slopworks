@@ -12,6 +12,7 @@ public class PlayerHUD : MonoBehaviour
     private HealthComponent _playerHealth;
     private WeaponController _playerWeapon;
     private WaveController _waveController;
+    private CameraShake _cameraShake;
 
     private float _damageFlashAlpha;
     private const float FLASH_FADE_SPEED = 3f;
@@ -140,6 +141,10 @@ public class PlayerHUD : MonoBehaviour
         var weaponBehaviour = player.GetComponent<WeaponBehaviour>();
         if (weaponBehaviour != null)
             _playerWeapon = weaponBehaviour.Weapon;
+
+        var cam = player.GetComponentInChildren<Camera>();
+        if (cam != null)
+            _cameraShake = cam.GetComponent<CameraShake>();
     }
 
     private void FindWaveController()
@@ -191,6 +196,12 @@ public class PlayerHUD : MonoBehaviour
     {
         UpdateHealthDisplay();
         _damageFlashAlpha = FLASH_INTENSITY;
+
+        if (_cameraShake != null)
+        {
+            float intensity = Mathf.Clamp01(damage.amount / 30f);
+            _cameraShake.Shake(intensity);
+        }
     }
 
     private void OnPlayerDeath()
