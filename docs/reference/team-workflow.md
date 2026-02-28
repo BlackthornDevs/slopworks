@@ -251,7 +251,8 @@ For Slopworks: minimum useful workflow is a build on push to master so you catch
 - ScriptableObjects for static data (items, recipes, events, settings)
 - `NetworkBehaviour` subclasses for anything that needs to sync over network
 - Event-driven cross-system communication via `GameEventSO`
-- No dependency injection framework — direct `GetComponent` and serialized references are fine at this scale
+- No dependency injection framework (see `docs/coordination/decisions.md` D-001) — `[SerializeField]` references for MonoBehaviours, constructor params for plain C# simulation classes
+- Simulation logic in plain C# classes, MonoBehaviours as thin wrappers (see D-004) — enables EditMode testing
 
 **Avoid:**
 - Singletons (use ScriptableObject references instead)
