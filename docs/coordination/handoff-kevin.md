@@ -53,11 +53,10 @@ Last commit: (pending -- uncommitted work from this + prior session)
 - None -- all work is ready to commit
 
 ## Next task to pick up
-- **Continue Phase 1 playtest polish** based on user feedback:
-  - Consider adding visual connection lines between connected ports (inserter visuals)
-  - The smelter directional placement UX could be improved (auto-detect belt direction?)
-  - Test the full ore -> ingot pipeline end-to-end with the fill storage feature
-- **Phase 2 planning** once Phase 1 playtest is validated
+- **Phase 1 is COMPLETE.** All features verified end-to-end in interactive playtest:
+  - Factory grid, foundations, walls, ramps, machines, storage, belts, auto-inserters, simulation tick
+  - Full pipeline tested: storage (F-fill) -> belt -> smelter -> belt -> storage, items flow
+- **Start Phase 2 planning** -- read `docs/plans/2026-02-27-vertical-slice-plan.md` for Phase 2 scope
 
 ## Blockers or decisions needed
 - None
