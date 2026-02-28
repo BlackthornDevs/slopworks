@@ -157,7 +157,8 @@ Added `_cachedTargetHealth` field. UpdatePerception caches HealthBehaviour once 
 
 ### TASK J-011: Add NPBehave reference to Slopworks.Runtime.asmdef
 
-**Status:** Pending
+**Status:** Complete (2026-02-28)
+**Commits:** `1bd6bc1`, `4aa4351`
 **Priority:** Critical
 **Branch:** `joe/main`
 **Ownership:** `Scripts/` (shared file)
@@ -171,7 +172,8 @@ J-005 vendored NPBehave and J-007 converted combat scripts to NetworkBehaviour, 
 
 ### TASK J-012: Add FishNet and NPBehave references to Slopworks.Tests.EditMode.asmdef
 
-**Status:** Pending
+**Status:** Complete (2026-02-28)
+**Commits:** `1bd6bc1`, `4aa4351`
 **Priority:** Critical
 **Branch:** `joe/main`
 **Ownership:** `Tests/` (shared file)
