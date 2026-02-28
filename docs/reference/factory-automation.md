@@ -49,8 +49,9 @@ struct BeltItem {
     public ushort DistanceToNext;  // integer subdivisions, not float
 }
 
-// On a belt segment entity
-DynamicBuffer<BeltItem> items;
+// On a belt segment NetworkBehaviour (one NetworkObject per segment)
+[SyncObject]
+private readonly SyncList<BeltItem> _items = new();
 ushort terminalGap;  // space from last item to end of segment
 ```
 

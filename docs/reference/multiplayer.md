@@ -154,7 +154,9 @@ This is the recommended dev workflow. No builds needed to test multiplayer.
 
 ---
 
-## Supabase integration points
+## Supabase integration points (BACKLOGGED)
+
+> **Status: Deferred.** Supabase integration is backlogged until core gameplay is working. Use local JSON save files for persistence during prototype/vertical slice development. Add Supabase when lobby discovery and cross-session persistence become necessary.
 
 FishNet and Supabase are separate systems. They only touch at:
 

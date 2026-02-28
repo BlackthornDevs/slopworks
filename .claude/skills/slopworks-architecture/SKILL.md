@@ -94,7 +94,9 @@ Scenes load additively. The NetworkManager scene is always the base.
 
 ---
 
-## Supabase integration points
+## Supabase integration points (BACKLOGGED)
+
+> **Status: Deferred.** Use local JSON save files during prototype phase. Add Supabase when lobby discovery and cross-session persistence are needed.
 
 FishNet and Supabase are separate systems. They only touch at discrete events.
 
