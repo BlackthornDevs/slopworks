@@ -1,6 +1,6 @@
 # Joe's session handoff
 
-Updated by Joe's Claude at the end of each session. Read this at the start of every session to recover context.
+Updated by Joe's Claude at the end of each session.
 
 ---
 
@@ -8,19 +8,19 @@ Updated by Joe's Claude at the end of each session. Read this at the start of ev
 
 ### What was completed
 
-J-007 through J-010 — all four code review fixes from Kevin's review of Phase 3.
+- Fixed compilation errors on kevin/main caused by missing asmdef references
+- Added NPBehave (`GUID:b23d0b8134b59074db4ef602bb53a3c5`) reference to `Slopworks.Runtime.asmdef`
+- Added FishNet.Runtime (`GUID:7c88a4a7926ee5145ad2dfa06f454c67`) and NPBehave (`GUID:b23d0b8134b59074db4ef602bb53a3c5`) references to `Slopworks.Tests.EditMode.asmdef`
 
-**J-007 (Critical):** Converted EnemySpawner, WaveControllerBehaviour, FaunaController, WeaponBehaviour from MonoBehaviour to NetworkBehaviour. Added `IsServerInitialized` guards to all server-only methods. WeaponBehaviour now validates damage server-side via `[ServerRpc] ServerFireWeapon(Vector3 origin, Vector3 direction)` — client does client-prediction raycast for visuals, server re-validates. Added FishNet.Runtime reference to Slopworks.Runtime.asmdef.
+### Shared file changes (CRITICAL)
 
-**J-008 (High):** Extracted `FaunaAI.cs` (plain C#) from FaunaController following D-004 pattern. Covers attack timing, threat evaluation, pack coordination, alert evaluation, aggression management, strafe direction. FaunaController is now a thin wrapper. 23 EditMode tests in FaunaAITests.cs.
-
-**J-009 (Medium):** Eliminated all `GameObject.Find` and `FindAnyObjectByType` calls from combat and UI code. PlayerHUD uses `[SerializeField]` references wired by PlaytestSetup. WeaponBehaviour's `_hitMarker` is a SerializeField. Added `sourcePosition` field to DamageData so EnemyKnockback resolves knockback direction from damage data instead of `GameObject.Find(sourceId)`.
-
-**J-010 (Low):** Added `_cachedTargetHealth` field to FaunaController. Cached on target change in UpdatePerception, used in MeleeAttack. GetComponent called once per target, not per attack.
+- **Slopworks.Runtime.asmdef**: Added NPBehave GUID reference (was already on joe/main but lost during merge to kevin/main)
+- **Slopworks.Tests.EditMode.asmdef**: Added FishNet.Runtime and NPBehave GUID references so test assembly can resolve NetworkBehaviour and Blackboard types used transitively through PackCoordinatorTests
 
 ### What needs attention
 
-All tasks complete. Ready to merge to master — Phase 3 code review fixes are done.
+- The root cause was that J-007 added FishNet.Runtime and J-005 added NPBehave to the runtime asmdef, but these shared-file changes were not flagged in the previous handoff. The new handoff protocol should prevent this going forward.
+- The test asmdef was never updated to include these transitive dependencies, so PackCoordinatorTests could not compile even on joe/main after the runtime asmdef references were present.
 
 ### Next task
 
@@ -32,13 +32,11 @@ None.
 
 ### Test status
 
-FaunaAITests.cs added (23 tests). Existing tests unaffected — no signature changes to HealthComponent, WeaponController, or WaveController.
+666/666 passing, 0 failing, 0 skipped. Zero compilation errors, zero warnings.
 
 ### Key context
 
-- `tasks-joe.md` now has an auto-pickup protocol -- read the top of the file and follow it every session
-- Merge master before starting work to pick up the latest task assignments
-- `Slopworks.Runtime.asmdef` now references FishNet.Runtime — all combat scripts can use NetworkBehaviour
-- DamageData has a new `sourcePosition` field (Vector3) with backward-compatible constructors
-- PlaytestSetup.SetupHUD() now wires all serialized references via SerializedObject
-- FaunaAI is a standalone testable class — future AI changes should go there, not in FaunaController
+- `Slopworks.Runtime.asmdef` now references: Unity InputSystem, TMPro, FishNet.Runtime, NPBehave (plus 2 others)
+- `Slopworks.Tests.EditMode.asmdef` now references: Slopworks.Runtime, TestRunner, FishNet.Runtime, NPBehave, plus nunit precompiled reference
+- After git operations that modify asmdef files, Unity requires Assets/Refresh before recompile to pick up changes
+- FaunaAI is a standalone testable class -- future AI changes go there, not in FaunaController

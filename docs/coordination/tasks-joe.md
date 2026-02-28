@@ -153,6 +153,41 @@ Added `_cachedTargetHealth` field. UpdatePerception caches HealthBehaviour once 
 
 ---
 
+## asmdef reference fixes
+
+### TASK J-011: Add NPBehave reference to Slopworks.Runtime.asmdef
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Scripts/` (shared file)
+
+J-005 vendored NPBehave and J-007 converted combat scripts to NetworkBehaviour, but the NPBehave GUID reference (`b23d0b8134b59074db4ef602bb53a3c5`) was not added to `Slopworks.Runtime.asmdef` on joe/main. This causes compilation failures when merging to other branches.
+
+**Acceptance criteria:**
+- `Slopworks.Runtime.asmdef` includes `GUID:b23d0b8134b59074db4ef602bb53a3c5` in its references array
+- Zero compilation errors after recompile
+- Note this in handoff as a shared file change
+
+### TASK J-012: Add FishNet and NPBehave references to Slopworks.Tests.EditMode.asmdef
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Tests/` (shared file)
+
+`PackCoordinatorTests.cs` uses `FaunaController` (which extends `NetworkBehaviour`) and `PackCoordinator` (which uses `NPBehave.Blackboard`). The test assembly needs direct references to both transitive dependencies to compile.
+
+**Acceptance criteria:**
+- `Slopworks.Tests.EditMode.asmdef` includes `GUID:7c88a4a7926ee5145ad2dfa06f454c67` (FishNet.Runtime) and `GUID:b23d0b8134b59074db4ef602bb53a3c5` (NPBehave) in its references array
+- All 666 EditMode tests pass
+- Zero compilation errors after recompile
+- Note both asmdef changes in handoff as shared file changes
+
+**Depends on:** J-011
+
+---
+
 ## Phase 3 completion notes
 
 **All tasks (J-003 through J-006) complete and merged to master** (2026-02-28, commit `7bdb704`).
