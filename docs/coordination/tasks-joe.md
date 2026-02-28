@@ -99,7 +99,8 @@ Weapons need something to damage. Enemies need health. Turrets need something to
 
 ## TASK J-004: Basic hitscan weapon
 
-**Priority:** High -- needed for combat testing
+**Status:** Complete (2026-02-28)
+**Commits:** `7699c61`
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
 
