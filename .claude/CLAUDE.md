@@ -17,6 +17,24 @@ Before starting any session, read:
 2. `docs/coordination/ownership.md` -- who owns what
 3. `docs/coordination/contradictions.md` -- open questions needing resolution
 
+### Joe's session workflow (auto-pickup)
+
+Joe's Claude follows the auto-pickup protocol in `docs/coordination/tasks-joe.md`. Every session:
+
+1. Merge master: `git fetch origin master && git merge origin/master`
+2. Read `docs/coordination/handoff-joe.md` for context from the last session
+3. Read `docs/coordination/tasks-joe.md` and pick the next task by priority rules (Critical > High > Medium > Low, lowest J-number first within same priority)
+4. Work the task to completion, mark it `Complete` with date and commit hash
+5. Update `handoff-joe.md` with what was done, what's next, and any blockers
+6. Run all EditMode tests, commit, push to `joe/main`
+7. Pick up the next task (repeat from step 3)
+
+No need to wait for Kevin to assign work. Tasks are pre-assigned in `tasks-joe.md`. Kevin adds new tasks by pushing to master. Joe picks them up on the next merge.
+
+### Kevin's session workflow
+
+Kevin reads `docs/coordination/handoff-kevin.md` at session start. Uses the `slopworks-handoff` skill at session end to write handoff notes.
+
 ---
 
 ## Hard rules
@@ -78,6 +96,23 @@ Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoB
 **Verify before done.** Don't mark a task complete without proving it works. For simulation logic: run the test. For networking: test with two editor instances via ParrelSync.
 
 **Demand elegance.** If a fix feels like a workaround, it probably is. Ask: knowing everything now, what's the clean solution?
+
+---
+
+## Phase completion standard
+
+**A phase is not done until it is playable.** Every implementation phase must produce a self-contained playtest scene that lets a human verify the system works end-to-end. The pattern:
+
+1. **Simulation layer** — pure C# classes with EditMode tests (D-004 pattern). All tests must pass.
+2. **MonoBehaviour wrappers** — thin wrappers that own the simulation objects and spawn placeholder visuals.
+3. **Playtest scene** — a `[SystemName]Playtest` scene with a single bootstrapper component. Drop it on an empty GameObject, hit Play, and exercise every feature the phase adds. No prefabs or asset dependencies required -- runtime primitives and `ScriptableObject.CreateInstance` only.
+4. **Human verification** — the developer plays the scene and confirms behavior matches intent before the phase is marked complete.
+
+**Playtest scenes must log extensively.** Every user action, placement, removal, validation failure, and state change must produce a `Debug.Log` message. These logs are the primary verification tool -- if something goes wrong, the console should make it obvious what happened and why. Log messages should be short and factual: `"foundation placed at (5,3) level 0"`, `"ramp blocked: cell (5,7) occupied by non-structural building"`, `"wall removed at (5,5) edge north"`.
+
+Existing playtest scenes to reference:
+- `PortNodePlaytestSetup.cs` — factory automation chain (belts, machines, inserters)
+- `StructuralPlaytestSetup.cs` — structural building (foundations, walls, ramps, multi-level)
 
 ---
 
