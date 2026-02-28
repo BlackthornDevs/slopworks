@@ -2,9 +2,6 @@
   "name": "slopworks",
   "version": "0.1.0",
   "description": "Claude Code plugin for Slopworks game development. Provides critical patterns and architecture reference for writing correct C# code in this Unity + FishNet project.",
-  "skills": [
-    "skills/slopworks-patterns",
-    "skills/slopworks-architecture"
-  ],
-  "hooks": "hooks/hooks.json"
+  "skills": "./.claude/skills",
+  "hooks": "./.claude/hooks/hooks.json"
 }
