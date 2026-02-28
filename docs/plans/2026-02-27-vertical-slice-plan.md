@@ -1133,3 +1133,4 @@ Convert single-player systems to networked:
 - Day/night cycle
 - GameCI build pipeline
 - MCP Unity integration for Claude Code workflow
+- Review SebLague/Curve-Editor (https://github.com/SebLague/Curve-Editor) for belt path math -- Bezier curves, path creation, 2D curve editing. Document reusable math for curved belt placement and visual path rendering

@@ -145,4 +145,24 @@ public class BeltSegment
     {
         return _items.AsReadOnly();
     }
+
+    /// <summary>
+    /// Returns normalized positions (0 = input end, 1 = output end) for each item
+    /// on the belt. Used by the visual layer to position item GameObjects.
+    /// </summary>
+    /// <param name="positions">List to populate with positions (cleared first).</param>
+    public void GetItemPositions(List<float> positions)
+    {
+        positions.Clear();
+
+        if (_items.Count == 0 || _totalLength == 0)
+            return;
+
+        float cumulative = 0f;
+        for (int i = 0; i < _items.Count; i++)
+        {
+            cumulative += _items[i].distanceToNext;
+            positions.Add(cumulative / _totalLength);
+        }
+    }
 }

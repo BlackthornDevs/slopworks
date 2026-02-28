@@ -85,8 +85,9 @@ public class BuildModeControllerBehaviour : MonoBehaviour
 
     /// <summary>
     /// Enter build mode with the given definition. Can be called from UI.
+    /// Accepts any IPlaceableDefinition (foundation, machine, storage).
     /// </summary>
-    public void EnterBuildMode(FoundationDefinitionSO definition)
+    public void EnterBuildMode(IPlaceableDefinition definition)
     {
         _controller.EnterBuildMode(definition);
 

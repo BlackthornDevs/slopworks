@@ -5,7 +5,7 @@ using UnityEngine;
 /// Never mutate at runtime -- SOs are shared across all instances.
 /// </summary>
 [CreateAssetMenu(menuName = "Slopworks/Buildings/Machine Definition")]
-public class MachineDefinitionSO : ScriptableObject
+public class MachineDefinitionSO : ScriptableObject, IPlaceableDefinition
 {
     /// <summary>
     /// Stable string identifier for this machine type.
@@ -55,4 +55,7 @@ public class MachineDefinitionSO : ScriptableObject
     /// I/O port definitions for belt connections.
     /// </summary>
     public MachinePort[] ports;
+
+    public string PlaceableId => machineId;
+    Vector2Int IPlaceableDefinition.Size => size;
 }
