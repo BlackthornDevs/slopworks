@@ -6,13 +6,24 @@ Assigned by lead. Work on `joe/main`. Merge `master` first to pick up the projec
 
 ## TASK J-001: FPS Character Controller + Camera Toggle
 
-### Status: COMPLETE
+**Status:** Complete (2026-02-28)
+**Commits:** `c251da1` (main implementation), `ac55db6` (visual feedback on test interactable)
 
 ---
 
 ## TASK J-002: Clean up TMP extras and merge to master
 
-### Status: COMPLETE
+**Status:** Complete (2026-02-28)
+**Commits:** `d5dde89` (TMP cleanup), `c45d3be` (handoff note)
+
+### Handoff notes (from Joe's Claude)
+
+- Master is up to date with both Phase 1 factory systems and the full player controller stack.
+- Player controller: FPS movement (WASD/sprint/jump/mouse look), camera mode toggle (V key, FPS/isometric), interaction system (raycast, E key, IInteractable), HUD canvas with interaction prompt text.
+- Bug fix included: `InteractionController.OnDisable()` calls `ClearTarget()` so prompt clears when switching to isometric.
+- TMP Examples & Extras is gitignored and removed from tracking. TMP runtime stays.
+- Dev_Test scene has a test cube at (0, 0.5, 3) on layer 14 with `TestInteractable` -- toggles green on interaction.
+- Plugins.meta GUID conflict resolved during merge -- kept Joe's GUID (`44395c0d`).
 
 ---
 
@@ -188,7 +199,7 @@ A basic ground enemy that wanders, detects the player, chases, attacks, takes da
    - Holds `HealthComponent` (plain C# from J-003)
    - Holds `NavMeshAgent` reference
    - Builds NPBehave behavior tree per the structure in `docs/reference/fauna-ai.md`:
-     - Hurt response → Flee when low HP → Attack in range → Chase target → Detect players → Wander
+     - Hurt response -> Flee when low HP -> Attack in range -> Chase target -> Detect players -> Wander
    - Perception: `OverlapSphere` scan for Player layer, LOS check against `PhysicsLayers.FaunaLOSMask`
    - Throttle perception to every 0.2s (not every frame)
    - On death: play death (disable collider, wait, destroy)
