@@ -9,6 +9,9 @@ public class FactorySimulationBehaviour : MonoBehaviour
 {
     [SerializeField] private RecipeRegistry _recipeRegistry;
 
+    [Tooltip("Subdivisions per tick. At 50Hz, speed 2 = 1 tile/sec.")]
+    [SerializeField] private ushort _beltSpeed = 2;
+
     private FactorySimulation _simulation;
 
     public FactorySimulation Simulation => _simulation;
@@ -16,6 +19,7 @@ public class FactorySimulationBehaviour : MonoBehaviour
     private void Awake()
     {
         _simulation = new FactorySimulation(_recipeRegistry.Get);
+        _simulation.BeltSpeed = _beltSpeed;
     }
 
     private void FixedUpdate()
