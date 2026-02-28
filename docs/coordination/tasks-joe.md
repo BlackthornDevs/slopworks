@@ -207,9 +207,106 @@ J-005 vendored NPBehave and J-007 converted combat scripts to NetworkBehaviour, 
 
 ### Interfaces available for Phase 4
 
-Kevin's turret system can use:
-- `HealthComponent` / `HealthBehaviour` — attach to anything that takes damage
-- `DamageData` / `DamageType` — pass to `HealthComponent.TakeDamage()`
-- `FaunaDefinitionSO` — define new enemy types with pack behavior fields
-- `GameEventSO` (EnemyDied) — listen for enemy deaths
-- `PhysicsLayers` constants — layer masks for raycasts
+Phase 4 is now assigned to Joe. Use these existing systems:
+- `HealthComponent` / `HealthBehaviour` -- attach to anything that takes damage
+- `DamageData` / `DamageType` -- pass to `HealthComponent.TakeDamage()`
+- `FaunaDefinitionSO` -- define new enemy types with pack behavior fields
+- `GameEventSO` (EnemyDied) -- listen for enemy deaths
+- `PhysicsLayers` constants -- layer masks for raycasts
+- `BuildingPlacementService` -- place turrets on factory grid (like machines)
+- `PortNode` system -- turrets can have input ports for ammo delivery via belts
+- `PowerNetwork` / `PowerNetworkManager` -- turrets check `GetSatisfaction()` to operate
+- `StorageContainer` -- turret internal ammo inventory
+- `MachineDefinitionSO` / `MachinePort` -- reference pattern for turret SO + port definitions
+
+---
+
+## Phase 4: Turret Defenses
+
+### TASK J-013: Auto-turret simulation layer
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`
+
+Build the turret as a plain C# simulation object (D-004 pattern). The turret detects enemies, rotates toward them, and fires on interval. It consumes ammo from an internal `StorageContainer` and requires power to operate.
+
+**Files to create:**
+- `Scripts/Combat/TurretController.cs` -- plain C# turret logic
+- `Scripts/Combat/TurretDefinitionSO.cs` -- read-only turret stats (range, fire rate, damage, ammo type, power consumption)
+- `Tests/Editor/EditMode/TurretControllerTests.cs` -- EditMode tests
+
+**Implementation:**
+1. `TurretDefinitionSO`: range, fireInterval, damagePerShot, damageType, ammoItemId, powerConsumption, size, ports (MachinePort[] for ammo input)
+2. `TurretController`: plain C# class, takes TurretDefinitionSO
+   - `Tick(float deltaTime)` -- called by simulation
+   - Internally owns a `StorageContainer` for ammo
+   - Tracks current target, rotation toward target, fire cooldown
+   - Target selection: nearest enemy within range (pass candidate list, don't use Physics)
+   - Fire: consume 1 ammo from internal storage, return `TurretFireEvent` struct (target, damage)
+   - Power check: takes satisfaction float (0-1), won't fire if satisfaction < threshold (e.g. 0.5)
+   - Does NOT do raycasting or Unity physics -- pure simulation logic
+3. Tests: fire rate timing, ammo consumption, no-ammo stops firing, no-power stops firing, target selection (nearest), no target when out of range
+
+**Acceptance criteria:**
+- TurretController is pure C# with no MonoBehaviour dependency
+- All tests pass
+- Follows D-004 pattern (simulation object, not MonoBehaviour)
+
+### TASK J-014: Turret MonoBehaviour wrapper and placement
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`
+**Depends on:** J-013
+
+Build the thin MonoBehaviour wrapper and integrate turret placement into the playtest scene.
+
+**Files to create:**
+- `Scripts/Combat/TurretBehaviour.cs` -- thin wrapper
+- Modify `Scripts/Building/StructuralPlaytestSetup.cs` -- add tool [8] for turret placement
+
+**Implementation:**
+1. `TurretBehaviour`: thin wrapper around TurretController
+   - `FixedUpdate`: call `TurretController.Tick()` with nearby enemies
+   - Uses `OverlapSphere` to find enemies in range, passes to controller
+   - When controller returns a fire event, apply `DamageData` to target's `HealthComponent`
+   - Visual: rotate barrel transform toward current target
+2. Add turret as tool [8] in StructuralPlaytestSetup:
+   - Create `TurretDefinitionSO` at runtime (like smelter/storage)
+   - Place via `BuildingPlacementService.PlaceMachine()` (turrets are machines that consume ammo)
+   - Port definition: one input port for ammo belt connection
+   - Turret visual: cylinder base + elongated cube barrel
+   - Port indicators like machines (blue input for ammo)
+3. Add turret stats to OnGUI overlay
+
+**Acceptance criteria:**
+- Turret placeable on foundations via tool [8]
+- Turret auto-targets and kills enemies in range
+- Turret consumes ammo from internal storage
+- Belt can deliver ammo to turret via port connection
+- Turret stops firing when out of ammo
+
+### TASK J-015: Turret playtest scene
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`, `Scenes/`
+**Depends on:** J-014
+
+Create a combined turret defense playtest that verifies the full loop: place turrets, feed them ammo via belts, trigger enemy waves, watch turrets defend.
+
+**Implementation:**
+1. Either extend StructuralPlaytest scene or create a new `TurretPlaytest.unity`
+2. Pre-seed option: storage with ammo -> belt -> turret, enemy spawner nearby
+3. Wave trigger key (e.g. W) to spawn a wave of enemies
+4. Verify: ammo flows on belt -> inserter loads turret -> turret fires at enemies -> enemies die
+5. Verify: turret stops when ammo runs out, stops when power disconnected (if power network wired)
+
+**Acceptance criteria:**
+- Playable end-to-end: build turret, connect ammo supply, trigger wave, watch defense
+- Turret kills enemies, consumes ammo, logs activity
+- Enemies path toward base and get intercepted
