@@ -71,3 +71,6 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
+
+# Supabase credentials (use supabase-config.template.json as reference)
+Assets/StreamingAssets/supabase-config.json
