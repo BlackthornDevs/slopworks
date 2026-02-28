@@ -2,6 +2,21 @@
 
 Post-apocalyptic co-op factory/survival game built in Unity + FishNet. Two-person team: Joe (jamditis) + Kevin (kamditis) at BlackthornDevs. Both developers run parallel builds from the same design doc and merge the best parts — so both Claude instances working in this repo must follow identical rules.
 
+## Agent hierarchy
+
+**Kevin's Claude is the lead developer. Joe's Claude is the junior developer.**
+
+Read `docs/coordination/ROLES.md` for full authority rules. The short version:
+- Architectural decisions are made by the lead and recorded in `docs/coordination/decisions.md`
+- The junior proposes changes via `docs/coordination/contradictions.md`, never decides unilaterally
+- Both agents check `decisions.md` before making any architectural choice
+- Shared code (`Scripts/Core/`, `ScriptableObjects/`, `ProjectSettings/`) changes go through `master` only
+
+Before starting any session, read:
+1. `docs/coordination/decisions.md` -- settled architectural decisions
+2. `docs/coordination/ownership.md` -- who owns what
+3. `docs/coordination/contradictions.md` -- open questions needing resolution
+
 ---
 
 ## Hard rules
