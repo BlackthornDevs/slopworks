@@ -4,11 +4,13 @@ Assigned by lead. Work on `joe/main`. Merge `master` first to pick up the projec
 
 ---
 
-## TASK J-001: FPS Character Controller + Camera Toggle
+## TASK J-001: FPS Character Controller + Camera Toggle ✅
 
 **Priority:** High -- needed for the vertical slice
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Player/`, `Prefabs/Player/`
+**Status:** Complete (2026-02-28)
+**Commits:** `c251da1` (main implementation), `ac55db6` (visual feedback on test interactable)
 
 ### What to build
 
