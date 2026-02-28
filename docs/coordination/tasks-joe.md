@@ -31,9 +31,22 @@ If multiple tasks share the same priority, pick the **lowest J-number** first (e
 1. Mark its status as `Complete` with the date and commit hash
 2. Update `docs/coordination/handoff-joe.md` with what you did, what's next, and any blockers
 3. Run all EditMode tests -- they must pass before you push
+3b. Check for shared file changes. If you modified ANY of these, note it prominently in handoff-joe.md:
+    - Slopworks.Runtime.asmdef or any .asmdef file
+    - Anything in ProjectSettings/
+    - Anything in Scripts/Core/
+    - Any ScriptableObject definition (fields, not assets)
+    - Any new package dependency
 4. Commit and push to `joe/main`
 5. Check this file again for the next task (repeat the priority rules)
-6. If no pending tasks remain, write a note in `handoff-joe.md` saying "all tasks complete, awaiting new assignments" and stop
+6. If no pending tasks remain, use the `slopworks-handoff-joe` skill to run the full handoff process
+
+### When you finish ALL tasks
+
+When no pending tasks remain:
+1. Use the `slopworks-handoff-joe` skill to run the full handoff process
+2. This ensures compilation verification, test reporting, and shared-file change tracking
+3. Do not just write "all tasks complete" -- run the skill
 
 ### When you hit a blocker
 
@@ -140,10 +153,45 @@ Added `_cachedTargetHealth` field. UpdatePerception caches HealthBehaviour once 
 
 ---
 
+## asmdef reference fixes
+
+### TASK J-011: Add NPBehave reference to Slopworks.Runtime.asmdef
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Scripts/` (shared file)
+
+J-005 vendored NPBehave and J-007 converted combat scripts to NetworkBehaviour, but the NPBehave GUID reference (`b23d0b8134b59074db4ef602bb53a3c5`) was not added to `Slopworks.Runtime.asmdef` on joe/main. This causes compilation failures when merging to other branches.
+
+**Acceptance criteria:**
+- `Slopworks.Runtime.asmdef` includes `GUID:b23d0b8134b59074db4ef602bb53a3c5` in its references array
+- Zero compilation errors after recompile
+- Note this in handoff as a shared file change
+
+### TASK J-012: Add FishNet and NPBehave references to Slopworks.Tests.EditMode.asmdef
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Tests/` (shared file)
+
+`PackCoordinatorTests.cs` uses `FaunaController` (which extends `NetworkBehaviour`) and `PackCoordinator` (which uses `NPBehave.Blackboard`). The test assembly needs direct references to both transitive dependencies to compile.
+
+**Acceptance criteria:**
+- `Slopworks.Tests.EditMode.asmdef` includes `GUID:7c88a4a7926ee5145ad2dfa06f454c67` (FishNet.Runtime) and `GUID:b23d0b8134b59074db4ef602bb53a3c5` (NPBehave) in its references array
+- All 666 EditMode tests pass
+- Zero compilation errors after recompile
+- Note both asmdef changes in handoff as shared file changes
+
+**Depends on:** J-011
+
+---
+
 ## Phase 3 completion notes
 
 **All tasks (J-003 through J-006) complete and merged to master** (2026-02-28, commit `7bdb704`).
-**Code review fixes (J-007 through J-010) complete** (2026-02-28, commit `9b71b82`). Ready to merge to master.
+**Code review fixes (J-007 through J-010) complete** (2026-02-28, commit `9b71b82`). Merged to master.
 
 ### Additional work beyond task specs
 

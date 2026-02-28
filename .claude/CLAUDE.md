@@ -25,11 +25,16 @@ Joe's Claude follows the auto-pickup protocol in `docs/coordination/tasks-joe.md
 2. Read `docs/coordination/handoff-joe.md` for context from the last session
 3. Read `docs/coordination/tasks-joe.md` and pick the next task by priority rules (Critical > High > Medium > Low, lowest J-number first within same priority)
 4. Work the task to completion, mark it `Complete` with date and commit hash
-5. Update `handoff-joe.md` with what was done, what's next, and any blockers
-6. Run all EditMode tests, commit, push to `joe/main`
-7. Pick up the next task (repeat from step 3)
+5. **Report shared-file changes** -- if you touched asmdef, ProjectSettings, Core scripts,
+   or added packages, flag this in `handoff-joe.md` under "Shared file changes"
+6. Update `handoff-joe.md` with what was done, what's next, and any blockers
+7. Run all EditMode tests. Report exact counts. They must pass before you push.
+8. Commit, push to `joe/main`
+9. Pick up the next task (repeat from step 3)
+10. **When all tasks are done:** use the `slopworks-handoff-joe` skill for session end
 
-No need to wait for Kevin to assign work. Tasks are pre-assigned in `tasks-joe.md`. Kevin adds new tasks by pushing to master. Joe picks them up on the next merge.
+No need to wait for Kevin to assign work. Tasks are pre-assigned in `tasks-joe.md`.
+Kevin adds new tasks by pushing to master. Joe picks them up on the next merge.
 
 ### Kevin's session workflow
 
