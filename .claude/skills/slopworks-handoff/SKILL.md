@@ -41,9 +41,17 @@ Last commit: [hash] [message]
 - [Anything non-obvious: workarounds, gotchas, partially built systems]
 ```
 
-### 2. Update tasks-joe.md (if jawn's tasks changed)
+### 2. Update tasks-joe.md and check for new assignments
 
-If you assigned new tasks, completed tasks that unblock jawn, or have info jawn's Claude needs, update `docs/coordination/tasks-joe.md` with current status.
+**Always check whether Joe needs new tasks.** Review:
+- Did this session complete work that unblocks Joe?
+- Are there new fix tasks from code review findings?
+- Did the plan produce new implementation tasks Joe should pick up?
+- Are all of Joe's pending tasks still accurate (priorities, acceptance criteria)?
+
+If yes to any: update `docs/coordination/tasks-joe.md` with new tasks following the standard format (Status: Pending, Priority, Branch, Ownership, Acceptance criteria). Use the next available J-number.
+
+Also update `docs/coordination/handoff-joe.md` so Joe's next session has context on what changed.
 
 ### 3. Update decisions.md (if architectural decisions were made)
 
@@ -73,8 +81,19 @@ Keep it concise. Don't duplicate what's in CLAUDE.md or the handoff file.
 ### 6. Push to kevin/main
 
 - Push to `kevin/main`
-- Do NOT push to `master` without explicit user permission
 - Report the final commit hash
+
+### 6b. Push coordination docs to master (if Joe's tasks changed)
+
+If `tasks-joe.md`, `handoff-joe.md`, `contradictions.md`, or `decisions.md` were updated:
+
+1. Switch to master: `git checkout master && git pull origin master`
+2. Cherry-pick only the coordination files: `git checkout kevin/main -- .claude/CLAUDE.md docs/coordination/tasks-joe.md docs/coordination/handoff-joe.md docs/coordination/contradictions.md docs/coordination/decisions.md` (only files that changed)
+3. Commit: "Update coordination docs for Joe"
+4. Push to master: `git push origin master`
+5. Switch back: `git checkout kevin/main && git merge origin/master --no-edit && git push origin kevin/main`
+
+This ensures Joe picks up new tasks on his next `git merge origin/master`. Do NOT push any Phase implementation code to master -- only coordination and CLAUDE.md files.
 
 ### 7. Summary to user
 
@@ -86,8 +105,8 @@ Print a brief summary:
 
 ## Important Notes
 
-- NEVER push to `master` without explicit user permission
 - NEVER add Co-Authored-By lines to commits
 - The handoff file is the primary way the next session recovers context -- make it thorough
-- Joe's Claude reads `tasks-joe.md` and `decisions.md` from master, so push coordination changes to master if they affect jawn
-- If you made changes to shared code (Scripts/Core/, ScriptableObjects/, ProjectSettings/), note this prominently -- it needs to go to master for jawn to pick up
+- Joe's Claude auto-picks tasks from `tasks-joe.md` on master. Step 6b ensures he gets them.
+- Only push coordination files to master (step 6b), never Phase implementation code
+- If you made changes to shared code (Scripts/Core/, ScriptableObjects/, ProjectSettings/), note this prominently -- it needs a separate merge to master for jawn to pick up
