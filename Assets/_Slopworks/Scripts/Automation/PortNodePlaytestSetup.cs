@@ -28,6 +28,8 @@ public class PortNodePlaytestSetup : MonoBehaviour
     private PortNodeRegistry _portRegistry;
     private ConnectionResolver _connectionResolver;
     private BuildingPlacementService _placementService;
+    private StructuralPlacementService _structuralService;
+    private SnapPointRegistry _snapRegistry;
 
     // -- Placement results --
     private PlacementResult _sourceResult;
@@ -46,6 +48,7 @@ public class PortNodePlaytestSetup : MonoBehaviour
     // -- Definitions (created at runtime) --
     private MachineDefinitionSO _smelterDef;
     private StorageDefinitionSO _storageDef;
+    private FoundationDefinitionSO _foundationDef;
     private RecipeSO _smeltRecipe;
 
     // -- Visuals --
@@ -143,6 +146,7 @@ public class PortNodePlaytestSetup : MonoBehaviour
     {
         if (_smelterDef != null) DestroyImmediate(_smelterDef);
         if (_storageDef != null) DestroyImmediate(_storageDef);
+        if (_foundationDef != null) DestroyImmediate(_foundationDef);
         if (_smeltRecipe != null) DestroyImmediate(_smeltRecipe);
     }
 
@@ -195,6 +199,11 @@ public class PortNodePlaytestSetup : MonoBehaviour
             }
         };
 
+        _foundationDef = ScriptableObject.CreateInstance<FoundationDefinitionSO>();
+        _foundationDef.foundationId = "foundation_1x1";
+        _foundationDef.size = Vector2Int.one;
+        _foundationDef.generatesSnapPoints = true;
+
         _smeltRecipe = ScriptableObject.CreateInstance<RecipeSO>();
         _smeltRecipe.recipeId = SmeltIronRecipeId;
         _smeltRecipe.displayName = "Smelt Iron";
@@ -216,6 +225,9 @@ public class PortNodePlaytestSetup : MonoBehaviour
         _connectionResolver = new ConnectionResolver(_portRegistry, _simulation);
         _placementService = new BuildingPlacementService(
             _grid, _portRegistry, _connectionResolver, _simulation);
+
+        _snapRegistry = new SnapPointRegistry();
+        _structuralService = new StructuralPlacementService(_grid, _snapRegistry);
     }
 
     private void PlaceEverything()
@@ -229,29 +241,34 @@ public class PortNodePlaytestSetup : MonoBehaviour
 
         int row = 5;
 
+        // 0. Place foundations under all cells that will hold automation buildings
+        int beltAEnd = _beltLengthTiles;
+        int smelterCell = beltAEnd + 1;
+        int beltBStart = smelterCell + 1;
+        int beltBEnd = beltBStart + _beltLengthTiles - 1;
+        int outputCell = beltBEnd + 1;
+
+        for (int x = 0; x <= outputCell; x++)
+            _structuralService.PlaceFoundation(_foundationDef, new Vector2Int(x, row), 0);
+
         // 1. Source storage
         _sourceResult = _placementService.PlaceStorage(_storageDef, new Vector2Int(0, row), 0);
         _sourceStorage = (StorageContainer)_sourceResult.SimulationObject;
 
         // 2. Belt A: from cell 1 to cell (1 + beltLength - 1)
-        int beltAEnd = _beltLengthTiles;
         _beltAResult = _placementService.PlaceBelt(new Vector2Int(1, row), new Vector2Int(beltAEnd, row));
         _beltA = (BeltSegment)_beltAResult.SimulationObject;
 
         // 3. Smelter: at cell after belt A
-        int smelterCell = beltAEnd + 1;
         _smelterResult = _placementService.PlaceMachine(_smelterDef, new Vector2Int(smelterCell, row), 0);
         _smelter = (Machine)_smelterResult.SimulationObject;
         _smelter.SetRecipe(SmeltIronRecipeId);
 
         // 4. Belt B: from cell after smelter
-        int beltBStart = smelterCell + 1;
-        int beltBEnd = beltBStart + _beltLengthTiles - 1;
         _beltBResult = _placementService.PlaceBelt(new Vector2Int(beltBStart, row), new Vector2Int(beltBEnd, row));
         _beltB = (BeltSegment)_beltBResult.SimulationObject;
 
         // 5. Output storage: at cell after belt B
-        int outputCell = beltBEnd + 1;
         _outputResult = _placementService.PlaceStorage(_storageDef, new Vector2Int(outputCell, row), 0);
         _outputStorage = (StorageContainer)_outputResult.SimulationObject;
 

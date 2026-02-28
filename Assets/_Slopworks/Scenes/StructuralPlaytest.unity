@@ -148,6 +148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e180ffc94bf4b064ba57dc1f31e60f3f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::StructuralPlaytestSetup
+  _preSeedFactory: 1
+  _beltSpeed: 4
 --- !u!4 &453972814
 Transform:
   m_ObjectHideFlags: 0
