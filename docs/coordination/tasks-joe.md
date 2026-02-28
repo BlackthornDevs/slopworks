@@ -159,9 +159,17 @@ A hitscan weapon that fires from the player camera. This integrates with your ex
 
 ## TASK J-005: Enemy AI with NPBehave
 
-**Priority:** High -- needed for wave defense testing
+**Status:** Complete (2026-02-28)
+**Commits:** `d2b7281`
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
+
+### Notes
+- NPBehave vendored from github.com/meniku/NPBehave (not snozbot — reference doc URL was wrong)
+- Custom asmdef created for NPBehave to resolve assembly boundaries with Slopworks.Runtime
+- `UnityEngine.Random` must be fully qualified due to NPBehave.Random name collision
+- Enemy_Basic exists in Dev_Test scene with all components; prefab asset needs manual drag-to-project
+- PlayMode tests noted but not written — behavior tree + NavMesh require running game loop
 
 ### Before you start
 
