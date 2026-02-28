@@ -74,3 +74,10 @@ Thumbs.db
 
 # Supabase credentials (use supabase-config.template.json as reference)
 Assets/StreamingAssets/supabase-config.json
+
+# FMOD banks (built from FMOD Studio project, not source)
+Assets/StreamingAssets/FMOD/
+
+# Lightmap data (large, machine-specific)
+**/LightmapData-*
+**/Lightmap-*
