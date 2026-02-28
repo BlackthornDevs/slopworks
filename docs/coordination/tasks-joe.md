@@ -99,7 +99,8 @@ Weapons need something to damage. Enemies need health. Turrets need something to
 
 ## TASK J-004: Basic hitscan weapon
 
-**Priority:** High -- needed for combat testing
+**Status:** Complete (2026-02-28)
+**Commits:** `7699c61`
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
 
@@ -158,9 +159,17 @@ A hitscan weapon that fires from the player camera. This integrates with your ex
 
 ## TASK J-005: Enemy AI with NPBehave
 
-**Priority:** High -- needed for wave defense testing
+**Status:** Complete (2026-02-28)
+**Commits:** `d2b7281`
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
+
+### Notes
+- NPBehave vendored from github.com/meniku/NPBehave (not snozbot — reference doc URL was wrong)
+- Custom asmdef created for NPBehave to resolve assembly boundaries with Slopworks.Runtime
+- `UnityEngine.Random` must be fully qualified due to NPBehave.Random name collision
+- Enemy_Basic exists in Dev_Test scene with all components; prefab asset needs manual drag-to-project
+- PlayMode tests noted but not written — behavior tree + NavMesh require running game loop
 
 ### Before you start
 
@@ -237,7 +246,7 @@ A basic ground enemy that wanders, detects the player, chases, attacks, takes da
 
 ## TASK J-006: Wave defense system
 
-**Priority:** Medium -- needed for vertical slice gameplay loop
+**Status:** Complete (2026-02-28)
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
 **Depends on:** J-003, J-005

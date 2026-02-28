@@ -82,9 +82,12 @@ public class PlayerController : MonoBehaviour
 
     private void CheckGround()
     {
-        Vector3 origin = transform.position + Vector3.up * _groundCheckRadius;
+        // offset origin above the capsule bottom so the sphere never starts
+        // overlapping the ground (SphereCast ignores already-overlapping colliders)
+        float skinOffset = 0.1f;
+        Vector3 origin = transform.position + Vector3.up * (_groundCheckRadius + skinOffset);
         _isGrounded = Physics.SphereCast(origin, _groundCheckRadius, Vector3.down,
-            out _, _groundCheckDistance, GroundMask);
+            out _, _groundCheckDistance + skinOffset, GroundMask);
     }
 
     private void CheckJump()

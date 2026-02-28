@@ -106,6 +106,8 @@ GameObject:
   - component: {fileID: 8349258982856759013}
   - component: {fileID: 8409958811347206451}
   - component: {fileID: 2444139317478601892}
+  - component: {fileID: 4644641045236385830}
+  - component: {fileID: 7310743053435581595}
   m_Layer: 8
   m_Name: PlayerCharacter
   m_TagString: Player
@@ -121,7 +123,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7817691759707185349}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.12046184, z: 0, w: 0.992718}
+  m_LocalRotation: {x: 0, y: 0.12046603, z: 0, w: 0.99271744}
   m_LocalPosition: {x: -0.25387955, y: 0.049999952, z: 1.4176369}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -129,7 +131,7 @@ Transform:
   - {fileID: 5580942615005930787}
   - {fileID: 7356472403451267063}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 13.838, z: 0}
 --- !u!136 &3911547655114267546
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -229,6 +231,33 @@ MonoBehaviour:
   _interactRange: 3
   _camera: {fileID: 2980269953171773878}
   _promptText: {fileID: 0}
+--- !u!114 &4644641045236385830
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7817691759707185349}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36d0800a76a7441158dc40c82b854c82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::WeaponBehaviour
+  _weaponDefinition: {fileID: 11400000, guid: 40766daf16084461692c1321a03ce300, type: 2}
+  _camera: {fileID: 2980269953171773878}
+--- !u!114 &7310743053435581595
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7817691759707185349}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acff543b317634b6299afbbec3a5fe74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::HealthBehaviour
+  _maxHealth: 100
 --- !u!1 &8135151929964229975
 GameObject:
   m_ObjectHideFlags: 0

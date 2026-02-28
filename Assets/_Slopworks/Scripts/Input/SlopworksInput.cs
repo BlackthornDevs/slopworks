@@ -172,6 +172,15 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Reload"",
+                    ""type"": ""Button"",
+                    ""id"": ""a1b2c3d4-2222-4000-8000-00000000000a"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -458,6 +467,28 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
                     ""action"": ""SwitchIsometric"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ba000001-0000-4000-8000-000000000001"",
+                    ""path"": ""<Keyboard>/r"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Reload"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ba000001-0000-4000-8000-000000000002"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Reload"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -858,6 +889,7 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
         m_Exploration_Aim = m_Exploration.FindAction("Aim", throwIfNotFound: true);
         m_Exploration_InventoryOpen = m_Exploration.FindAction("InventoryOpen", throwIfNotFound: true);
         m_Exploration_SwitchIsometric = m_Exploration.FindAction("SwitchIsometric", throwIfNotFound: true);
+        m_Exploration_Reload = m_Exploration.FindAction("Reload", throwIfNotFound: true);
         // Factory
         m_Factory = asset.FindActionMap("Factory", throwIfNotFound: true);
         m_Factory_CameraPan = m_Factory.FindAction("CameraPan", throwIfNotFound: true);
@@ -959,6 +991,7 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Exploration_Aim;
     private readonly InputAction m_Exploration_InventoryOpen;
     private readonly InputAction m_Exploration_SwitchIsometric;
+    private readonly InputAction m_Exploration_Reload;
     /// <summary>
     /// Provides access to input actions defined in input action map "Exploration".
     /// </summary>
@@ -1006,6 +1039,10 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Exploration/SwitchIsometric".
         /// </summary>
         public InputAction @SwitchIsometric => m_Wrapper.m_Exploration_SwitchIsometric;
+        /// <summary>
+        /// Provides access to the underlying input action "Exploration/Reload".
+        /// </summary>
+        public InputAction @Reload => m_Wrapper.m_Exploration_Reload;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -1059,6 +1096,9 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
             @SwitchIsometric.started += instance.OnSwitchIsometric;
             @SwitchIsometric.performed += instance.OnSwitchIsometric;
             @SwitchIsometric.canceled += instance.OnSwitchIsometric;
+            @Reload.started += instance.OnReload;
+            @Reload.performed += instance.OnReload;
+            @Reload.canceled += instance.OnReload;
         }
 
         /// <summary>
@@ -1097,6 +1137,9 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
             @SwitchIsometric.started -= instance.OnSwitchIsometric;
             @SwitchIsometric.performed -= instance.OnSwitchIsometric;
             @SwitchIsometric.canceled -= instance.OnSwitchIsometric;
+            @Reload.started -= instance.OnReload;
+            @Reload.performed -= instance.OnReload;
+            @Reload.canceled -= instance.OnReload;
         }
 
         /// <summary>
@@ -1410,6 +1453,13 @@ public partial class @SlopworksControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnSwitchIsometric(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Reload" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnReload(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Factory" which allows adding and removing callbacks.
