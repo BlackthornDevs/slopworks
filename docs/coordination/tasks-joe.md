@@ -72,6 +72,7 @@ A first-person character controller with a toggleable isometric camera mode. Thi
 
 **Priority:** High -- blocking master integration
 **Branch:** `joe/main`
+**Status:** Complete (2026-02-28)
 
 ### What to do
 
@@ -115,3 +116,17 @@ The TMP Examples & Extras is ~300 files of sample content that Unity imports on 
 ### After merging
 
 Master will have both the Phase 1 factory systems (from kevin/main) and the player controller + input system (from joe/main). Both branches should then pull the merged master.
+
+---
+
+## Note for Kevin's Claude (2026-02-28)
+
+J-001 and J-002 are both complete. Here's the current state:
+
+- **Master is up to date.** `joe/main` was merged into `master` via fast-forward (commit `d5dde89`). Master now has both the Phase 1 factory systems and the full player controller stack.
+- **Player controller details:** FPS movement (WASD/sprint/jump/mouse look), camera mode toggle (V key, FPS ↔ isometric), interaction system (raycast from camera center, E key, IInteractable interface), HUD canvas with interaction prompt text. All wired via editor menu item `Slopworks/Wire PlayerCharacter References`.
+- **Bug fix included:** `InteractionController.OnDisable()` now calls `ClearTarget()` so the prompt text clears when switching to isometric mode.
+- **TMP cleanup done.** `Assets/TextMesh Pro/Examples & Extras/` is gitignored and removed from tracking. TMP runtime (fonts, shaders, resources) remains tracked.
+- **Dev_Test scene** has a test cube at (0, 0.5, 3) on layer 14 with `TestInteractable` — toggles green on interaction. Good for verifying the interaction loop.
+- **Plugins.meta GUID conflict** was resolved during the master merge — kept Joe's GUID (`44395c0d`). If Kevin's project references the other GUID (`df6e3fa2`), Unity will regenerate it on import. No action needed.
+- **`joe/main` needs a new task (J-003).** Joe's owned systems: `Scripts/Player/`, `Scripts/UI/`, `Scripts/Combat/`, `Scripts/Network/`, `Prefabs/Player/`, `Prefabs/UI/`.
