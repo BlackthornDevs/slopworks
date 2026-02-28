@@ -336,14 +336,57 @@ public static class PlaytestSetup
         var hud = canvas.GetComponent<PlayerHUD>();
         if (hud == null)
         {
-            canvas.AddComponent<PlayerHUD>();
+            hud = canvas.AddComponent<PlayerHUD>();
             Debug.Log("added PlayerHUD to HUD_Canvas");
         }
 
-        if (canvas.GetComponent<HitMarkerUI>() == null)
+        var hitMarker = canvas.GetComponent<HitMarkerUI>();
+        if (hitMarker == null)
         {
-            canvas.AddComponent<HitMarkerUI>();
+            hitMarker = canvas.AddComponent<HitMarkerUI>();
             Debug.Log("added HitMarkerUI to HUD_Canvas");
+        }
+
+        // wire all references via serialized fields — replaces runtime GameObject.Find
+        var player = GameObject.Find("PlayerCharacter");
+        if (player != null)
+        {
+            var weapon = player.GetComponent<WeaponBehaviour>();
+            if (weapon != null)
+            {
+                var weaponSo = new SerializedObject(weapon);
+                weaponSo.FindProperty("_hitMarker").objectReferenceValue = hitMarker;
+                weaponSo.ApplyModifiedProperties();
+            }
+
+            var hudSo = new SerializedObject(hud);
+            var playerHealth = player.GetComponent<HealthBehaviour>();
+            if (playerHealth != null)
+                hudSo.FindProperty("_playerHealthBehaviour").objectReferenceValue = playerHealth;
+            if (weapon != null)
+                hudSo.FindProperty("_playerWeaponBehaviour").objectReferenceValue = weapon;
+
+            var fpsCam = player.transform.Find("FPSCamera");
+            if (fpsCam != null)
+            {
+                var shake = fpsCam.GetComponent<CameraShake>();
+                if (shake != null)
+                    hudSo.FindProperty("_cameraShake").objectReferenceValue = shake;
+            }
+
+            hudSo.ApplyModifiedProperties();
+        }
+
+        var waveObj = GameObject.Find("WaveController");
+        if (waveObj != null)
+        {
+            var wcb = waveObj.GetComponent<WaveControllerBehaviour>();
+            if (wcb != null)
+            {
+                var hudSo = new SerializedObject(hud);
+                hudSo.FindProperty("_waveControllerBehaviour").objectReferenceValue = wcb;
+                hudSo.ApplyModifiedProperties();
+            }
         }
 
         EditorUtility.SetDirty(canvas);

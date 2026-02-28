@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using FishNet.Object;
 using UnityEngine;
 
-public class WaveControllerBehaviour : MonoBehaviour
+public class WaveControllerBehaviour : NetworkBehaviour
 {
     [SerializeField] private EnemySpawner _spawner;
     [SerializeField] private List<WaveDefinition> _waves;
@@ -29,6 +30,8 @@ public class WaveControllerBehaviour : MonoBehaviour
 
     private IEnumerator Start()
     {
+        if (!IsServerInitialized) yield break;
+
         if (_autoStartDelay >= 0f)
         {
             yield return new WaitForSeconds(_autoStartDelay);
@@ -56,6 +59,8 @@ public class WaveControllerBehaviour : MonoBehaviour
 
     public void BeginNextWave()
     {
+        if (!IsServerInitialized) return;
+
         if (_spawnInProgress)
         {
             Debug.LogWarning("wave spawn already in progress");
@@ -74,6 +79,8 @@ public class WaveControllerBehaviour : MonoBehaviour
 
     public void ReportEnemyKilled()
     {
+        if (!IsServerInitialized) return;
+
         _controller.OnEnemyKilled();
     }
 

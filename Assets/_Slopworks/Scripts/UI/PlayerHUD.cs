@@ -4,6 +4,11 @@ using UnityEngine.UI;
 
 public class PlayerHUD : MonoBehaviour
 {
+    [SerializeField] private HealthBehaviour _playerHealthBehaviour;
+    [SerializeField] private WeaponBehaviour _playerWeaponBehaviour;
+    [SerializeField] private WaveControllerBehaviour _waveControllerBehaviour;
+    [SerializeField] private CameraShake _cameraShake;
+
     private TextMeshProUGUI _healthText;
     private TextMeshProUGUI _ammoText;
     private TextMeshProUGUI _waveText;
@@ -12,7 +17,6 @@ public class PlayerHUD : MonoBehaviour
     private HealthComponent _playerHealth;
     private WeaponController _playerWeapon;
     private WaveController _waveController;
-    private CameraShake _cameraShake;
 
     private float _damageFlashAlpha;
     private const float FLASH_FADE_SPEED = 3f;
@@ -21,8 +25,49 @@ public class PlayerHUD : MonoBehaviour
     private void Start()
     {
         CreateUIElements();
-        FindPlayerComponents();
-        FindWaveController();
+
+        // wire from serialized references (editor-assigned)
+        if (_playerHealthBehaviour != null)
+            _playerHealth = _playerHealthBehaviour.Health;
+        if (_playerWeaponBehaviour != null)
+            _playerWeapon = _playerWeaponBehaviour.Weapon;
+        if (_waveControllerBehaviour != null)
+            _waveController = _waveControllerBehaviour.Controller;
+
+        if (_playerHealth != null)
+        {
+            _playerHealth.OnDamaged += OnPlayerDamaged;
+            _playerHealth.OnDeath += OnPlayerDeath;
+            UpdateHealthDisplay();
+        }
+
+        if (_waveController != null)
+        {
+            _waveController.OnWaveStarted += OnWaveStarted;
+            _waveController.OnWaveEnded += OnWaveEnded;
+        }
+    }
+
+    public void Initialize(HealthComponent playerHealth, WeaponController weapon,
+                           CameraShake cameraShake, WaveController waveController)
+    {
+        _playerHealth = playerHealth;
+        _playerWeapon = weapon;
+        _cameraShake = cameraShake;
+
+        if (_playerHealth != null)
+        {
+            _playerHealth.OnDamaged += OnPlayerDamaged;
+            _playerHealth.OnDeath += OnPlayerDeath;
+            UpdateHealthDisplay();
+        }
+
+        if (waveController != null)
+        {
+            _waveController = waveController;
+            _waveController.OnWaveStarted += OnWaveStarted;
+            _waveController.OnWaveEnded += OnWaveEnded;
+        }
     }
 
     private void OnDisable()
@@ -68,7 +113,6 @@ public class PlayerHUD : MonoBehaviour
             TextAlignmentOptions.Top, 20);
         _waveText.text = "";
 
-        // damage flash overlay
         var flashObj = new GameObject("DamageFlash");
         flashObj.transform.SetParent(transform, false);
         _damageFlash = flashObj.AddComponent<Image>();
@@ -96,7 +140,6 @@ public class PlayerHUD : MonoBehaviour
         var rect = text.rectTransform;
         rect.sizeDelta = new Vector2(300, 40);
 
-        // anchor based on alignment
         if (alignment == TextAlignmentOptions.TopLeft)
         {
             rect.anchorMin = new Vector2(0, 1);
@@ -120,46 +163,9 @@ public class PlayerHUD : MonoBehaviour
         return text;
     }
 
-    private void FindPlayerComponents()
-    {
-        var player = GameObject.Find("PlayerCharacter");
-        if (player == null)
-        {
-            Debug.LogWarning("PlayerHUD: PlayerCharacter not found");
-            return;
-        }
-
-        var healthBehaviour = player.GetComponent<HealthBehaviour>();
-        if (healthBehaviour != null)
-        {
-            _playerHealth = healthBehaviour.Health;
-            _playerHealth.OnDamaged += OnPlayerDamaged;
-            _playerHealth.OnDeath += OnPlayerDeath;
-            UpdateHealthDisplay();
-        }
-
-        var weaponBehaviour = player.GetComponent<WeaponBehaviour>();
-        if (weaponBehaviour != null)
-            _playerWeapon = weaponBehaviour.Weapon;
-
-        var cam = player.GetComponentInChildren<Camera>();
-        if (cam != null)
-            _cameraShake = cam.GetComponent<CameraShake>();
-    }
-
-    private void FindWaveController()
-    {
-        var wcb = FindAnyObjectByType<WaveControllerBehaviour>();
-        if (wcb == null) return;
-
-        _waveController = wcb.Controller;
-        _waveController.OnWaveStarted += OnWaveStarted;
-        _waveController.OnWaveEnded += OnWaveEnded;
-    }
-
     private void UpdateHealthDisplay()
     {
-        if (_playerHealth == null) return;
+        if (_playerHealth == null || _healthText == null) return;
         _healthText.text = "HP: " + Mathf.CeilToInt(_playerHealth.CurrentHealth) +
                            "/" + Mathf.CeilToInt(_playerHealth.MaxHealth);
 

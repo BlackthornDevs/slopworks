@@ -1,8 +1,9 @@
+using FishNet.Object;
 using UnityEngine;
 using UnityEngine.AI;
 using NPBehave;
 
-public class FaunaController : MonoBehaviour
+public class FaunaController : NetworkBehaviour
 {
     [SerializeField] private FaunaDefinitionSO _def;
     [SerializeField] private GameEventSO _onDeathEvent;
@@ -12,27 +13,20 @@ public class FaunaController : MonoBehaviour
     private Root _tree;
     private Collider _collider;
 
+    private FaunaAI _ai;
     private Transform _currentTarget;
-    private float _lastAttackTime = float.MinValue;
+    private HealthBehaviour _cachedTargetHealth;
 
     // pack coordination
     private PackCoordinator _pack;
     private Blackboard _ownBlackboard;
-    private float _lastReactedAllyDeathTime;
-    private float _forceFleeUntil;
-    private float _aggressionBoostUntil;
-    private bool _aggressionBoosted;
-    private bool _strafeClockwise;
 
     private const float WANDER_RADIUS = 10f;
     private const float FLEE_DISTANCE = 12f;
-    private const float ALERT_STALE_TIME = 15f;
-    private const float FORCE_FLEE_DURATION = 5f;
-    private const float AGGRESSION_BOOST_DURATION = 3f;
-    private const float AGGRESSION_BOOST_MULTIPLIER = 1.3f;
 
     public FaunaDefinitionSO Definition => _def;
     public HealthComponent Health => _health;
+    public FaunaAI AI => _ai;
     public bool IsDead => _health != null && !_health.IsAlive;
 
     private void Awake()
@@ -43,6 +37,8 @@ public class FaunaController : MonoBehaviour
 
     private void Start()
     {
+        if (!IsServerInitialized) return;
+
         var healthBehaviour = GetComponent<HealthBehaviour>();
         if (healthBehaviour == null)
         {
@@ -51,6 +47,12 @@ public class FaunaController : MonoBehaviour
             return;
         }
         _health = healthBehaviour.Health;
+
+        _ai = new FaunaAI(
+            _def.attackCooldown,
+            _def.fleeConfidenceThreshold,
+            _def.alertRange
+        );
 
         _agent.speed = _def.moveSpeed;
         _agent.stoppingDistance = _def.attackRange * 0.5f;
@@ -101,17 +103,17 @@ public class FaunaController : MonoBehaviour
 
                     // 2. ally death reaction — flee if morale broken, else rage boost
                     new Condition(
-                        () => HasUnreactedAllyDeath(),
+                        () => CheckAllyDeathReaction(),
                         Stops.LOWER_PRIORITY, 0.5f, 0.1f,
                         new Sequence(
-                            new Action(ReactToAllyDeath),
+                            new Action(ExecuteAllyDeathReaction),
                             new Wait(0.5f)
                         )
                     ),
 
                     // 3. flee when near death or morale-forced flee
                     new Condition(
-                        () => _health.IsAlive && (HealthPercent() <= 0.2f || Time.time < _forceFleeUntil),
+                        () => _health.IsAlive && _ai.ShouldFlee(HealthPercent(), Time.time),
                         Stops.LOWER_PRIORITY, 0.5f, 0.1f,
                         new Sequence(
                             new Action(PickFleeTarget),
@@ -124,7 +126,7 @@ public class FaunaController : MonoBehaviour
                         new Selector(
                             // 4a. in range + can attack → melee
                             new Condition(
-                                () => DistanceToTarget() <= _def.attackRange && CanAttack(),
+                                () => DistanceToTarget() <= _def.attackRange && _ai.CanAttack(Time.time),
                                 Stops.NONE,
                                 new Sequence(
                                     new Action(MeleeAttack),
@@ -156,7 +158,7 @@ public class FaunaController : MonoBehaviour
 
                     // 5. alert response — investigate last known player position
                     new Condition(
-                        () => HasPackAlert(),
+                        () => CheckPackAlert(),
                         Stops.NONE,
                         new Sequence(
                             new Action(AdoptAlertAsTarget),
@@ -178,18 +180,24 @@ public class FaunaController : MonoBehaviour
 
     private void ServiceTick()
     {
+        if (!IsServerInitialized) return;
+
         UpdatePerception();
         UpdatePackState();
     }
 
     private void UpdatePerception()
     {
-        // TODO: add if (!IsServerInitialized) return; for networking
         var target = FindBestTarget();
 
         if (target != null)
         {
-            _currentTarget = target.transform;
+            // cache HealthBehaviour on target change
+            if (_currentTarget != target.transform)
+            {
+                _currentTarget = target.transform;
+                _cachedTargetHealth = _currentTarget.GetComponent<HealthBehaviour>();
+            }
             _tree.Blackboard["has_target"] = true;
             _tree.Blackboard["target_position"] = _currentTarget.position;
 
@@ -199,21 +207,17 @@ public class FaunaController : MonoBehaviour
         else
         {
             _currentTarget = null;
+            _cachedTargetHealth = null;
             _tree.Blackboard["has_target"] = false;
         }
     }
 
     private void UpdatePackState()
     {
-        if (_pack == null)
-            return;
+        if (_pack == null) return;
 
-        // revert aggression boost when expired
-        if (_aggressionBoosted && Time.time > _aggressionBoostUntil)
-        {
+        if (_ai.TryRevertAggression(Time.time))
             _agent.speed = _def.moveSpeed;
-            _aggressionBoosted = false;
-        }
     }
 
     // ── perception ─────────────────────────────────────────
@@ -222,7 +226,6 @@ public class FaunaController : MonoBehaviour
     {
         int playerMask = 1 << PhysicsLayers.Player;
 
-        // sight: frontal cone + line-of-sight
         var sightHits = Physics.OverlapSphere(transform.position, _def.sightRange, playerMask);
         foreach (var hit in sightHits)
         {
@@ -236,7 +239,6 @@ public class FaunaController : MonoBehaviour
             return hit.gameObject;
         }
 
-        // hearing: no LOS needed
         var hearingHits = Physics.OverlapSphere(transform.position, _def.hearingRange, playerMask);
         if (hearingHits.Length > 0)
             return hearingHits[0].gameObject;
@@ -244,43 +246,34 @@ public class FaunaController : MonoBehaviour
         return null;
     }
 
-    // ── pack awareness ─────────────────────────────────────
+    // ── pack awareness (delegates to FaunaAI) ─────────────
 
-    private bool HasUnreactedAllyDeath()
+    private bool CheckAllyDeathReaction()
     {
-        if (_pack == null)
-            return false;
-
+        if (_pack == null) return false;
         float allyDeathTime = (float)_pack.SharedBlackboard["ally_death_time"];
-        return allyDeathTime > _lastReactedAllyDeathTime && allyDeathTime > 0f;
+        return _ai.HasUnreactedAllyDeath(allyDeathTime);
     }
 
-    private void ReactToAllyDeath()
+    private void ExecuteAllyDeathReaction()
     {
-        _lastReactedAllyDeathTime = (float)_pack.SharedBlackboard["ally_death_time"];
+        float allyDeathTime = (float)_pack.SharedBlackboard["ally_death_time"];
+        var reaction = _ai.ReactToAllyDeath(allyDeathTime, _pack.Confidence, Time.time);
 
-        if (_pack.Confidence < _def.fleeConfidenceThreshold)
-            _forceFleeUntil = Time.time + FORCE_FLEE_DURATION;
-        else
-            BoostAggression();
+        if (reaction == FaunaAI.AllyDeathReaction.Boost)
+            _agent.speed = _def.moveSpeed * _ai.GetSpeedMultiplier(Time.time);
     }
 
-    private bool HasPackAlert()
+    private bool CheckPackAlert()
     {
-        if (_pack == null)
-            return false;
+        if (_pack == null) return false;
 
         bool alertValid = (bool)_pack.SharedBlackboard["alert_valid"];
-        if (!alertValid)
-            return false;
-
         float alertTime = (float)_pack.SharedBlackboard["alert_time"];
-        if (Time.time - alertTime > ALERT_STALE_TIME)
-            return false;
-
         Vector3 alertPos = (Vector3)_pack.SharedBlackboard["alert_position"];
         float distance = Vector3.Distance(transform.position, alertPos);
-        return distance <= _def.alertRange;
+
+        return _ai.IsAlertRelevant(alertValid, alertTime, Time.time, distance);
     }
 
     private void AdoptAlertAsTarget()
@@ -289,67 +282,48 @@ public class FaunaController : MonoBehaviour
         _tree.Blackboard["target_position"] = alertPos;
     }
 
-    private void BoostAggression()
-    {
-        _agent.speed = _def.moveSpeed * AGGRESSION_BOOST_MULTIPLIER;
-        _aggressionBoostUntil = Time.time + AGGRESSION_BOOST_DURATION;
-        _aggressionBoosted = true;
-    }
-
-    // ── combat movement ────────────────────────────────────
+    // ── combat ─────────────────────────────────────────────
 
     private float DistanceToTarget()
     {
-        if (_currentTarget == null)
-            return float.MaxValue;
-
+        if (_currentTarget == null) return float.MaxValue;
         return Vector3.Distance(transform.position, _currentTarget.position);
-    }
-
-    private bool CanAttack()
-    {
-        return Time.time - _lastAttackTime >= _def.attackCooldown;
     }
 
     private void MeleeAttack()
     {
-        if (_currentTarget == null)
-            return;
+        if (!IsServerInitialized) return;
+        if (_currentTarget == null) return;
+        if (!_ai.CanAttack(Time.time)) return;
 
-        if (!CanAttack())
-            return;
+        _ai.RecordAttack(Time.time);
 
-        _lastAttackTime = Time.time;
-
-        var healthBehaviour = _currentTarget.GetComponent<HealthBehaviour>();
-        if (healthBehaviour == null)
-            return;
+        if (_cachedTargetHealth == null) return;
 
         var damage = new DamageData(
             _def.attackDamage,
             _def.faunaId,
-            _def.attackDamageType
+            _def.attackDamageType,
+            transform.position
         );
-        healthBehaviour.Health.TakeDamage(damage);
+        _cachedTargetHealth.Health.TakeDamage(damage);
     }
 
     private void PickStrafeTarget()
     {
-        if (_currentTarget == null)
-            return;
+        if (_currentTarget == null) return;
 
         _agent.speed = _def.strafeSpeed;
-        _strafeClockwise = !_strafeClockwise;
+        bool clockwise = _ai.ToggleStrafeDirection();
 
         Vector3 strafePoint = CombatMovement.CalculateStrafeTarget(
-            transform.position, _currentTarget.position, _def.strafeRadius, _strafeClockwise);
+            transform.position, _currentTarget.position, _def.strafeRadius, clockwise);
         _tree.Blackboard["strafe_target"] = strafePoint;
     }
 
     private void PickFlankTarget()
     {
-        if (_currentTarget == null)
-            return;
+        if (_currentTarget == null) return;
 
         _agent.speed = _def.moveSpeed;
         float angle = _pack.GetFlankAngle(this);
@@ -371,7 +345,6 @@ public class FaunaController : MonoBehaviour
         else
             threatDir = transform.forward;
 
-        // try cover-seeking first
         Vector3? coverPoint = CombatMovement.FindCoverPoint(
             transform.position, threatDir, _def.coverSearchRadius);
 
@@ -381,7 +354,6 @@ public class FaunaController : MonoBehaviour
             return;
         }
 
-        // fall back to original flee logic
         Vector3 fleeDir = -threatDir;
         Vector3 fleePoint = transform.position + fleeDir * FLEE_DISTANCE;
         if (NavMesh.SamplePosition(fleePoint, out NavMeshHit hit, FLEE_DISTANCE, NavMesh.AllAreas))
@@ -421,7 +393,8 @@ public class FaunaController : MonoBehaviour
 
     private void OnDeath()
     {
-        // report to pack before cleanup
+        if (!IsServerInitialized) return;
+
         if (_pack != null)
         {
             _pack.ReportAllyDeath(transform.position);
@@ -443,6 +416,7 @@ public class FaunaController : MonoBehaviour
         if (_onDeathEvent != null)
             _onDeathEvent.Raise();
 
+        // TODO: replace with ServerManager.Despawn() when enemy has NetworkObject
         Destroy(gameObject, 2f);
     }
 }

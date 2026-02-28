@@ -47,7 +47,7 @@ public class EnemyKnockback : MonoBehaviour
 
     private void OnDamaged(DamageData damage)
     {
-        Vector3 direction = ResolveKnockbackDirection(damage.sourceId);
+        Vector3 direction = ResolveKnockbackDirection(damage);
         float distance = Mathf.Clamp(damage.amount * _knockbackMultiplier, _minKnockbackDistance, _maxKnockbackDistance);
 
         if (_knockbackCoroutine != null)
@@ -56,14 +56,10 @@ public class EnemyKnockback : MonoBehaviour
         _knockbackCoroutine = StartCoroutine(KnockbackRoutine(direction, distance));
     }
 
-    private Vector3 ResolveKnockbackDirection(string sourceId)
+    private Vector3 ResolveKnockbackDirection(DamageData damage)
     {
-        if (!string.IsNullOrEmpty(sourceId))
-        {
-            var source = GameObject.Find(sourceId);
-            if (source != null)
-                return (transform.position - source.transform.position).normalized;
-        }
+        if (damage.sourcePosition != Vector3.zero)
+            return (transform.position - damage.sourcePosition).normalized;
 
         return -transform.forward;
     }

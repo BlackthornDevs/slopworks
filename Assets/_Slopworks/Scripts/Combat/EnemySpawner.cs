@@ -1,12 +1,15 @@
+using FishNet.Object;
 using UnityEngine;
 
-public class EnemySpawner : MonoBehaviour
+public class EnemySpawner : NetworkBehaviour
 {
     [SerializeField] private GameObject _enemyPrefab;
     [SerializeField] private Transform[] _spawnPoints;
 
     public void SpawnWave(int count)
     {
+        if (!IsServerInitialized) return;
+
         if (_enemyPrefab == null || _spawnPoints == null || _spawnPoints.Length == 0)
             return;
 
@@ -15,6 +18,7 @@ public class EnemySpawner : MonoBehaviour
             Transform point = _spawnPoints[i % _spawnPoints.Length];
             GameObject enemy = Instantiate(_enemyPrefab, point.position, point.rotation);
             enemy.layer = PhysicsLayers.Fauna;
+            // TODO: replace with ServerManager.Spawn(enemy) when enemy prefab has NetworkObject
         }
     }
 }

@@ -4,22 +4,27 @@ Updated by Joe's Claude at the end of each session. Read this at the start of ev
 
 ---
 
-## Last updated: 2026-02-28 (by lead, initial setup)
+## Last updated: 2026-02-28
 
 ### What was completed
 
-J-001 through J-006 (Phase 3 combat systems) are merged to master.
+J-007 through J-010 — all four code review fixes from Kevin's review of Phase 3.
+
+**J-007 (Critical):** Converted EnemySpawner, WaveControllerBehaviour, FaunaController, WeaponBehaviour from MonoBehaviour to NetworkBehaviour. Added `IsServerInitialized` guards to all server-only methods. WeaponBehaviour now validates damage server-side via `[ServerRpc] ServerFireWeapon(Vector3 origin, Vector3 direction)` — client does client-prediction raycast for visuals, server re-validates. Added FishNet.Runtime reference to Slopworks.Runtime.asmdef.
+
+**J-008 (High):** Extracted `FaunaAI.cs` (plain C#) from FaunaController following D-004 pattern. Covers attack timing, threat evaluation, pack coordination, alert evaluation, aggression management, strafe direction. FaunaController is now a thin wrapper. 23 EditMode tests in FaunaAITests.cs.
+
+**J-009 (Medium):** Eliminated all `GameObject.Find` and `FindAnyObjectByType` calls from combat and UI code. PlayerHUD uses `[SerializeField]` references wired by PlaytestSetup. WeaponBehaviour's `_hitMarker` is a SerializeField. Added `sourcePosition` field to DamageData so EnemyKnockback resolves knockback direction from damage data instead of `GameObject.Find(sourceId)`.
+
+**J-010 (Low):** Added `_cachedTargetHealth` field to FaunaController. Cached on target change in UpdatePerception, used in MeleeAttack. GetComponent called once per target, not per attack.
 
 ### What needs attention
 
-Lead reviewed all Phase 3 code and found 4 issues (C-004 through C-007 in `contradictions.md`). Fix tasks J-007 through J-010 have been assigned in `tasks-joe.md`.
+All tasks complete. Ready to merge to master — Phase 3 code review fixes are done.
 
 ### Next task
 
-**J-007: Fix server authority violations** (Critical priority). See `tasks-joe.md` for full details. Key points:
-- Add `if (!IsServerInitialized) return;` to EnemySpawner, WaveControllerBehaviour, FaunaController
-- Route WeaponBehaviour damage through ServerRpc
-- All existing tests must still pass after changes
+All tasks complete, awaiting new assignments.
 
 ### Blockers
 
@@ -27,10 +32,11 @@ None.
 
 ### Test status
 
-All EditMode tests passing as of last session.
+FaunaAITests.cs added (23 tests). Existing tests unaffected — no signature changes to HealthComponent, WeaponController, or WaveController.
 
 ### Key context
 
-- `tasks-joe.md` now has an auto-pickup protocol -- read the top of the file and follow it every session
-- Merge master before starting work to pick up the latest task assignments
-- The code review findings are documented in `contradictions.md` (C-004 through C-007) with full explanations of what's wrong and why
+- `Slopworks.Runtime.asmdef` now references FishNet.Runtime — all combat scripts can use NetworkBehaviour
+- DamageData has a new `sourcePosition` field (Vector3) with backward-compatible constructors
+- PlaytestSetup.SetupHUD() now wires all serialized references via SerializedObject
+- FaunaAI is a standalone testable class — future AI changes should go there, not in FaunaController
