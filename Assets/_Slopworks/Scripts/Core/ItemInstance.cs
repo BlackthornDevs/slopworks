@@ -4,7 +4,9 @@ using System;
 public struct ItemInstance
 {
     public string definitionId;
-    public int durability;
+    public string instanceId;
+    public float durability;
+    public int quality;
 
     public bool IsEmpty => string.IsNullOrEmpty(definitionId);
 
@@ -13,7 +15,9 @@ public struct ItemInstance
         return new ItemInstance
         {
             definitionId = definitionId,
-            durability = -1
+            instanceId = null,
+            durability = -1f,
+            quality = 0
         };
     }
 
