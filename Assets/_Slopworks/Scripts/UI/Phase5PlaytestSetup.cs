@@ -139,10 +139,10 @@ public class Phase5PlaytestSetup : MonoBehaviour
         var cam = camObj.AddComponent<Camera>();
         camObj.AddComponent<AudioListener>();
 
-        // Components
+        // Components (PlayerInventory before PlayerController so Awake finds it)
+        player.AddComponent<PlayerInventory>();
         player.AddComponent<PlayerController>();
         var healthBehaviour = player.AddComponent<HealthBehaviour>();
-        player.AddComponent<PlayerInventory>();
 
         // Pickup trigger (child)
         var pickupObj = new GameObject("PickupTrigger");
@@ -180,8 +180,8 @@ public class Phase5PlaytestSetup : MonoBehaviour
             var renderer = obj.GetComponent<Renderer>();
             renderer.material.color = new Color(0.6f, 0.4f, 0.2f);
 
-            // Remove default box collider, WorldItem.Start adds a trigger sphere
-            Destroy(obj.GetComponent<BoxCollider>());
+            // Remove default box collider immediately so WorldItem.Start adds a trigger sphere
+            DestroyImmediate(obj.GetComponent<BoxCollider>());
 
             var worldItem = obj.AddComponent<WorldItem>();
             worldItem.Initialize(_ironScrapDef, Random.Range(1, 4));
