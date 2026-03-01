@@ -484,6 +484,37 @@ Build the boss floor as the tier-gating mechanic.
 - Fragment counter resets after boss kill
 - Fragment requirement is configurable on the SO
 
+### TASK J-022: Integrate consolidated PlayerHUD into Dev_Test
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/UI/`, `Scripts/Combat/`
+**Depends on:** J-012
+
+After merging master, Dev_Test should pick up the consolidated PlayerHUD, inventory system, and hotbar with pages. Wire these into Dev_Test's existing bootstrapper.
+
+**What changed on master:**
+- `HUDController.cs` deleted, replaced by consolidated `PlayerHUD.cs`
+- PlayerHUD creates all HUD elements: crosshair, health bar, ammo, wave status, damage flash, interaction prompt, build mode indicator, hotbar with pages
+- New `HotbarPage.cs` -- hotbar page data types
+- `HotbarSlotUI.cs` gains `SetEntry()` for non-inventory page display
+- `Phase5PlaytestSetup.cs` deleted (merged into StructuralPlaytestSetup)
+
+**What to do:**
+1. Replace HUDController references with PlayerHUD in Dev_Test setup code
+2. Add PlayerInventory + ItemPickupTrigger to the player if not already present
+3. Wire PlayerHUD.Initialize() for combat (health, weapon, cameraShake, waveController)
+4. Wire PlayerHUD.InitializeInventory() for inventory + camera
+5. Add InventoryUI and RecipeSelectionUI to the HUD canvas
+6. Verify all existing combat HUD features still work (health text, ammo, wave status, damage flash)
+
+**Acceptance criteria:**
+- Dev_Test player has working inventory (Tab opens grid)
+- Hotbar shows items, B toggles to build page (build page can be empty for now)
+- All Joe's combat HUD features work: health, ammo, wave status, damage flash
+- Crosshair visible at center screen
+
 ### TASK J-021: Tower playtest scene
 
 **Status:** Pending

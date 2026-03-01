@@ -107,3 +107,31 @@ Settled decisions that both agents follow. Do not re-litigate unless new informa
 **Decision:** uGUI for all UI work in the vertical slice. World-space Canvas for machine status panels. Screen Space Overlay for HUD. No UI Toolkit until Phase 2+.
 
 **Impact:** Consistent with plan. No changes needed.
+
+---
+
+## D-009: One playtest scene per developer, incrementally growing
+
+**Date:** 2026-03-01
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Phase 5 created Phase5Playtest as a separate scene instead of adding to StructuralPlaytest. Three isolated islands instead of two growing scenes.
+
+**Decision:** Each developer has one playtest scene that grows each phase. Kevin's scene is StructuralPlaytest (building + automation + inventory + crafting + combat). Joe's scene is Dev_Test (combat focus). New features get added to the existing scene, never a separate playtest scene per phase.
+
+**Rationale:** Isolated playtest scenes don't test feature interactions. A growing scene ensures each new system works alongside existing ones. Two scenes (one per developer) keeps merge conflicts manageable.
+
+**Impact:** Phase5Playtest deleted. Phase 5 features (PlayerInventory, HUD, crafting) merged into StructuralPlaytestSetup. Future phases add to StructuralPlaytestSetup, not new scenes.
+
+---
+
+## D-010: Hotbar is an action bar with switchable pages
+
+**Date:** 2026-03-01
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Hotbar was directly tied to inventory slots. Need build tools on the same hotbar strip.
+
+**Decision:** Hotbar is a generic action bar with switchable pages. Page 0 = inventory items (bound to PlayerInventory slots 0-8). Page 1 = build tools (mapped to ToolMode values). B key toggles between pages. Digit keys select the slot on the current page.
+
+**Rationale:** Keeps UI simple (one strip, two contexts) rather than a separate build menu. Switching to items page cancels any active build tool. Escape returns to items page.
+
+**Impact:** HotbarSlotUI gains `SetEntry()` for non-inventory display. PlayerHUD manages pages via `HotbarPage[]`. StructuralPlaytestSetup digit-key tool selection removed in favor of page-based selection.

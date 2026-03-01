@@ -1,55 +1,46 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-01 12:40
+Last updated: 2026-03-01 19:00
 Branch: kevin/main
-Last commit: bcc377b Add integration testing requirements to CLAUDE.md
+Last commit: (pending -- this session's changes not yet committed)
 
 ## What was completed this session
 
-### Phase 5: Core UI + Player Inventory + Scene Management -- COMPLETE
+### FPS Building + Storage Interaction UI
 
-All 15 implementation tasks done. Full list of work:
+Implemented 5-part plan for FPS building and storage interaction:
 
-- SceneLoader pure C# + ISceneService interface + tests (`Scripts/Core/SceneLoader.cs`, `Scripts/Core/ISceneService.cs`)
-- SceneLoaderBehaviour MonoBehaviour wrapper (`Scripts/Core/SceneLoaderBehaviour.cs`)
-- Inventory OnSlotChanged callback (`Scripts/Core/Inventory.cs`)
-- PlayerInventory MonoBehaviour (`Scripts/Player/PlayerInventory.cs`)
-- WorldItem pickup system (`Scripts/Player/WorldItem.cs`, `Scripts/Player/ItemPickupTrigger.cs`)
-- HUDController + HealthBarUI + InteractionPromptUI (`Scripts/UI/HUDController.cs`, `Scripts/UI/HealthBarUI.cs`, `Scripts/UI/InteractionPromptUI.cs`)
-- HotbarSlotUI (`Scripts/UI/HotbarSlotUI.cs`)
-- InventoryUI panel + InventorySlotUI (`Scripts/UI/InventoryUI.cs`, `Scripts/UI/InventorySlotUI.cs`)
-- Inventory SetSlot + SwapSlots (`Scripts/Core/Inventory.cs`)
-- Player input wiring for hotbar (`Scripts/Player/PlayerController.cs`)
-- RecipeSelectionUI + MachineBehaviour IInteractable (`Scripts/UI/RecipeSelectionUI.cs`, `Scripts/Automation/MachineBehaviour.cs`)
-- Player interaction raycast (`Scripts/Player/PlayerController.cs`)
-- Phase5PlaytestSetup bootstrapper (`Scripts/UI/Phase5PlaytestSetup.cs`)
-- Phase5Playtest scene created via MCP Unity
-- Manual playtest verification -- all systems confirmed working
+- **FPS building placement.** Tagged FPS camera as MainCamera so Camera.main works in FPS mode. Weapon suppressed when build page active (WeaponBehaviour disabled/enabled on page change). All build handlers now log click attempts for debugging. `StructuralPlaytestSetup.cs`
+- **StorageContainer SetSlot + OnSlotChanged.** Added `SetSlot()` method, `OnSlotChanged` event, fired from all mutation methods (TryInsert, TryExtract, TryInsertStack, ExtractAll). `StorageContainer.cs`
+- **StorageBehaviour implements IInteractable.** Added `Initialize()` for bootstrapper path, Awake guard, interaction prompt, opens StorageUI on E press. `StorageBehaviour.cs`
+- **StorageUI (new file).** Modal split panel showing player inventory (45 slots) and storage (N slots) side-by-side. Click-to-transfer between sides. X close button. Live updates via OnSlotChanged events. `Scripts/UI/StorageUI.cs`
+- **MachineBehaviour interaction wiring.** Added `Initialize()` method + Awake guard. SpawnMachineVisual now adds MachineBehaviour with Interactable layer + BoxCollider. `MachineBehaviour.cs`, `StructuralPlaytestSetup.cs`
+- **RecipeSelectionUI upgraded.** Shows machine name as title, live status panel (status/progress/input/output buffers updating every frame), recipe entries show input counts with "(have X)" and output on separate lines, X close button, frame-skip guard. `RecipeSelectionUI.cs`
 
-### Bugs fixed during playtest (5 integration-level bugs)
+### Bug fixes
 
-1. Mouse not locked -- added cursor lock in `PlayerController.OnEnable()`
-2. Hotbar keys dead -- old Input API disabled by `activeInputHandler: 1`, switched to `Keyboard.current`
-3. Items not picked up -- component ordering in bootstrapper + `DestroyImmediate` vs `Destroy`
-4. Empty recipe panel -- `AddComponent` triggers Awake before fields set, fixed with inactive-then-activate pattern
-5. Invisible recipe entries -- `AddComponent<RectTransform>()` replaces Transform, invalidating cached reference
+- **WeaponBehaviour NRE flood.** Null-conditional on `_weapon?.Tick()` and null camera guard. `WeaponBehaviour.cs`
+- **FPS building silent failure.** FPS camera not tagged MainCamera, Camera.main returned null. Added tag + logging to all failure paths.
+- **StorageUI instant close.** E key triggers both open and close on same frame. Added frame counter skip. Same fix applied to RecipeSelectionUI.
+- **StorageBehaviour Awake overwriting container.** Initialize() sets container, then SetActive(true) triggers Awake creating new empty one. Added `if (_container != null) return;` guard.
+- **Ghost port indicator physics.** CreatePrimitive colliders active for one frame pushing player. Changed `Destroy(col)` to `DestroyImmediate(col)`.
+- **Smelting recipe mismatch.** Recipe expected iron_ore but player has iron_scrap. Changed recipe input + pre-seeded storage to iron_scrap.
 
-### Testing policy added to CLAUDE.md
+### HUD consolidation (from prior session, uncommitted)
 
-Added "Testing requirements" section requiring integration tests alongside simulation tests. Merged to master via PR #3 so Joe receives the same direction.
+- HUDController.cs deleted, Phase5PlaytestSetup.cs deleted
+- All HUD features merged into PlayerHUD.cs
+- New HotbarPage.cs for hotbar page data types
+- HotbarSlotUI gains SetEntry() for non-inventory page display
 
 ## What's in progress (not yet committed)
 
-None -- all committed and pushed.
+All work complete and ready to commit.
 
 ## Next task to pick up
 
-- **Start Phase 6: Building Exploration**
-  - Read `docs/plans/2026-02-27-vertical-slice-plan.md` for Phase 6 task specs
-  - Create detailed implementation plan using `writing-plans` skill
-  - Key systems: BuildingManager, interior chunk loading, loot containers, building-specific encounters
-  - File ownership: `Scripts/World/BuildingManager*`, `Scenes/Buildings/`
-  - No file overlap with Joe (he's working Phase 4 turrets, then Phase 7 Tower)
+- **Belt flow investigation.** Automated chain (storage -> belt -> smelter -> belt -> output) may have port connection issues. Check belt link count and inserter activity.
+- **Phase 6 (Building Exploration)** per vertical slice plan.
 
 ## Blockers or decisions needed
 
@@ -61,8 +52,12 @@ None.
 
 ## Key context the next session needs
 
-- Phase 5 is done. Joe's J-018 (Tower MonoBehaviour wrapper) is now unblocked.
-- All 5 playtest bugs were at integration seams -- CLAUDE.md now requires integration tests for all future phases
-- Unity gotchas discovered: `AddComponent<RectTransform>()` replaces Transform (invalidates cached refs), `AddComponent` triggers Awake immediately, `Destroy` is deferred (use `DestroyImmediate` when same-frame code depends on it), component ordering matters in bootstrappers
-- `activeInputHandler: 1` means old `UnityEngine.Input` API is completely dead -- use `Keyboard.current` / New Input System only
-- Phase5Playtest scene uses `Phase5PlaytestSetup.cs` bootstrapper with runtime-created definitions, inactive-then-activate pattern for registries/machines, and comprehensive diagnostic logging
+- `StorageUI.cs` is new in `Scripts/UI/` -- follows RecipeSelectionUI modal pattern
+- `HotbarPage.cs` is new in `Scripts/UI/` -- hotbar page data types
+- `HUDController.cs` and `Phase5PlaytestSetup.cs` are deleted
+- Ghost port indicators use `DestroyImmediate()` for collider removal -- don't change back
+- MachineBehaviour and StorageBehaviour both have `Initialize()` + Awake guard
+- Recipe uses iron_scrap -> iron_ingot (not iron_ore)
+- Escape key removed from all modal UIs (was exiting play mode)
+- Both RecipeSelectionUI and StorageUI have frame-skip guards for E key
+- Shared UI components updated (RecipeSelectionUI, StorageUI) -- ownership.md lists these as shared
