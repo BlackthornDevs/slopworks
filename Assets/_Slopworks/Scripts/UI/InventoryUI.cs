@@ -96,8 +96,8 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        // SwapSlots will be added to Inventory in Task 9 -- for now log the intent
-        Debug.Log($"inventory ui: swap slot {fromIndex} <-> {toIndex} (pending Task 9)");
+        _playerInventory.Inventory.SwapSlots(fromIndex, toIndex);
+        Debug.Log($"inventory ui: swapped slot {fromIndex} <-> {toIndex}");
     }
 
     private void OnSlotChanged(int index)

@@ -193,6 +193,36 @@ public class Inventory
     }
 
     /// <summary>
+    /// Directly sets a slot's contents. Used by UI for drag-and-drop operations.
+    /// </summary>
+    public void SetSlot(int index, ItemSlot slot)
+    {
+        if (index < 0 || index >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        _slots[index] = slot;
+        OnSlotChanged?.Invoke(index);
+    }
+
+    /// <summary>
+    /// Swaps the contents of two slots.
+    /// </summary>
+    public void SwapSlots(int indexA, int indexB)
+    {
+        if (indexA < 0 || indexA >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(indexA));
+        if (indexB < 0 || indexB >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(indexB));
+
+        var temp = _slots[indexA];
+        _slots[indexA] = _slots[indexB];
+        _slots[indexB] = temp;
+
+        OnSlotChanged?.Invoke(indexA);
+        OnSlotChanged?.Invoke(indexB);
+    }
+
+    /// <summary>
     /// Returns a copy of all slots. Modifying the returned array does not affect the inventory.
     /// </summary>
     public ItemSlot[] GetAllSlots()

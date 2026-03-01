@@ -249,4 +249,34 @@ public class InventoryTests
         slots[0].count = 999;
         Assert.AreEqual(10, inventory.GetSlot(0).count);
     }
+
+    [Test]
+    public void SetSlot_replaces_contents_and_fires_event()
+    {
+        var inventory = new Inventory(9, _ => 64);
+        inventory.TryAdd(ItemInstance.Create("iron"), 5);
+
+        int firedSlot = -1;
+        inventory.OnSlotChanged += (i) => firedSlot = i;
+
+        var newSlot = new ItemSlot { item = ItemInstance.Create("copper"), count = 3 };
+        inventory.SetSlot(0, newSlot);
+
+        Assert.AreEqual(0, firedSlot);
+        Assert.AreEqual("copper", inventory.GetSlot(0).item.definitionId);
+        Assert.AreEqual(3, inventory.GetSlot(0).count);
+    }
+
+    [Test]
+    public void SwapSlots_exchanges_two_slots()
+    {
+        var inventory = new Inventory(9, _ => 64);
+        inventory.TryAdd(ItemInstance.Create("iron"), 5);
+
+        inventory.SwapSlots(0, 1);
+
+        Assert.IsTrue(inventory.GetSlot(0).IsEmpty);
+        Assert.AreEqual("iron", inventory.GetSlot(1).item.definitionId);
+        Assert.AreEqual(5, inventory.GetSlot(1).count);
+    }
 }
