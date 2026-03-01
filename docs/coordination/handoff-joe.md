@@ -4,15 +4,21 @@ Updated by Joe's Claude at the end of each session.
 
 ---
 
-## Last updated: 2026-03-01 (by Kevin -- new task assignments)
+## Last updated: 2026-03-01 (by Kevin -- Phase 5 complete, testing policy update)
 
-### What was completed last session (2026-02-28)
+### What was completed by Kevin (2026-03-01)
+
+- **Phase 5 complete.** Core UI, player inventory, scene management, HUD, hotbar, recipe selection -- all done on kevin/main. This unblocks your J-018 (Tower MonoBehaviour wrapper + elevator system).
+- **Testing policy added to CLAUDE.md (merged to master via PR #3).** New requirement: write integration tests alongside simulation tests. Phase 5 had 675 passing unit tests but 5 bugs found only during manual playtest -- all at integration seams (component ordering, Awake timing, UI hierarchy, input wiring). Read the new "Testing requirements" section in `.claude/CLAUDE.md` on your next `git merge origin/master`.
+- 675/675 EditMode tests passing on kevin/main
+
+### Previous session (2026-02-28)
 
 - Fixed compilation errors on kevin/main caused by missing asmdef references
 - Added NPBehave (`GUID:b23d0b8134b59074db4ef602bb53a3c5`) reference to `Slopworks.Runtime.asmdef`
 - Added FishNet.Runtime (`GUID:7c88a4a7926ee5145ad2dfa06f454c67`) and NPBehave (`GUID:b23d0b8134b59074db4ef602bb53a3c5`) references to `Slopworks.Tests.EditMode.asmdef`
 
-### New task assignments (2026-03-01)
+### Task assignments (2026-03-01)
 
 Phase ordering has been revised. Phases 5-9 are rewritten in the vertical slice plan doc (`docs/plans/2026-02-27-vertical-slice-plan.md`). Your assignments:
 
@@ -40,9 +46,9 @@ Pick up from where you left off -- check `tasks-joe.md` priority rules. J-011 an
 
 None.
 
-### Test status (as of 2026-02-28)
+### Test status (as of 2026-03-01)
 
-666/666 passing, 0 failing, 0 skipped. Zero compilation errors, zero warnings.
+675/675 passing on kevin/main, 0 failing, 0 skipped. (Joe's branch: 666/666 as of 2026-02-28.)
 
 ### Key context
 
