@@ -209,6 +209,31 @@ public class InventoryTests
     }
 
     [Test]
+    public void OnSlotChanged_fires_when_item_added()
+    {
+        var inventory = new Inventory(9, _ => 64);
+        int firedSlot = -1;
+        inventory.OnSlotChanged += (index) => firedSlot = index;
+
+        inventory.TryAdd(ItemInstance.Create("iron_scrap"), 1);
+
+        Assert.AreNotEqual(-1, firedSlot);
+    }
+
+    [Test]
+    public void OnSlotChanged_fires_when_item_removed()
+    {
+        var inventory = new Inventory(9, _ => 64);
+        inventory.TryAdd(ItemInstance.Create("iron_scrap"), 5);
+        int firedSlot = -1;
+        inventory.OnSlotChanged += (index) => firedSlot = index;
+
+        inventory.TryRemove("iron_scrap", 3);
+
+        Assert.AreNotEqual(-1, firedSlot);
+    }
+
+    [Test]
     public void GetAllSlots_ReturnsCopy()
     {
         var inventory = CreateInventory(3);
