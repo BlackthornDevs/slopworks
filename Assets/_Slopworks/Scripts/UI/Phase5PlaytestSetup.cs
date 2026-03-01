@@ -80,25 +80,24 @@ public class Phase5PlaytestSetup : MonoBehaviour
 
     private void CreateRegistries()
     {
+        // Create inactive so AddComponent doesn't trigger Awake before fields are set
         var registryObj = new GameObject("Registries");
+        registryObj.SetActive(false);
 
         // ItemRegistry
         var itemRegistry = registryObj.AddComponent<ItemRegistry>();
         var itemsField = typeof(ItemRegistry).GetField("_items",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         itemsField?.SetValue(itemRegistry, new[] { _ironScrapDef, _ironIngotDef });
-        var itemAwake = typeof(ItemRegistry).GetMethod("Awake",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        itemAwake?.Invoke(itemRegistry, null);
 
         // RecipeRegistry
         var recipeRegistry = registryObj.AddComponent<RecipeRegistry>();
         var recipesField = typeof(RecipeRegistry).GetField("_recipes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         recipesField?.SetValue(recipeRegistry, new[] { _smeltIronRecipe });
-        var recipeAwake = typeof(RecipeRegistry).GetMethod("Awake",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        recipeAwake?.Invoke(recipeRegistry, null);
+
+        // Activate triggers Awake on both with fields already populated
+        registryObj.SetActive(true);
 
         Debug.Log("phase 5 playtest: registries initialized");
     }
@@ -202,13 +201,13 @@ public class Phase5PlaytestSetup : MonoBehaviour
 
         obj.layer = PhysicsLayers.Interactable;
 
+        // Deactivate so Awake doesn't fire before definition is set
+        obj.SetActive(false);
         var machineBehaviour = obj.AddComponent<MachineBehaviour>();
         var defField = typeof(MachineBehaviour).GetField("_definition",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         defField?.SetValue(machineBehaviour, _smelterDef);
-        var awakeMethod = typeof(MachineBehaviour).GetMethod("Awake",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        awakeMethod?.Invoke(machineBehaviour, null);
+        obj.SetActive(true);
 
         Debug.Log("phase 5 playtest: smelter created at (4, 0.5, 4)");
     }
