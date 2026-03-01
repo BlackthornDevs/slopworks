@@ -1,52 +1,51 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-02-28 20:30
+Last updated: 2026-03-01
 Branch: kevin/main
-Last commit: fc20c0d Add tower system to game overview visualization
+Last commit: b13defa Revise vertical slice phases 5-9, add Tower tasks
 
 ## What was completed this session
 
-### Tower system design
-- Designed "The Tower" -- a repeatable FPS combat gauntlet at home base
-- BIM-modeled skyscrapers, elevator-based floor chunk navigation, key fragment boss progression
-- Design doc: `docs/plans/2026-02-28-tower-design.md`
-- Updated game overview visualization: `docs/game-overview/index.html`
+### Phase reorder finalized and committed
+- Rewrote phases 5-10 in `docs/plans/2026-02-27-vertical-slice-plan.md`
+- Phase 5: Core UI + Player Inventory + Scene Management (Kevin)
+- Phase 6: Building Exploration (Kevin)
+- Phase 7: The Tower (Joe, J-016 through J-021)
+- Phase 8: Supply Chain Network (Kevin)
+- Phase 9: Save System + Full Loop (Joe assists)
+- Phase 10: Multiplayer (renumbered)
+- Added parallel execution schedule (3 rounds of Kevin/Joe concurrent work)
 
-### Phase re-evaluation discussion
-- Reviewed vertical slice phases 4-7 for completeness
-- Identified Phase 7 (HUD + inventory) should come earlier -- prerequisite for building exploration and tower
-- Discussed overworld as a node-based supply chain network (distance, events, multi-node routing)
-- Proposed revised ordering: 4 (Turrets/Joe) -> 5 (Core UI + Inventory) -> 6 (Building Exploration) -> 7 (Supply Chain) -> 8 (Save + Full Loop)
-- Phase reorder not yet committed to the plan doc -- needs finalization next session
+### Joe's Tower tasks assigned
+- Added J-016 through J-021 to `docs/coordination/tasks-joe.md`
+- Updated `docs/coordination/handoff-joe.md` with new assignments and context
+- Tower design doc: `docs/plans/2026-02-28-tower-design.md`
 
-### PR-only master workflow (earlier in session, already committed)
-- Added hard rule to CLAUDE.md: never push directly to master
-- Updated both Kevin's and Joe's workflow sections
-- Updated slopworks-handoff skill for PR workflow
-- Created and merged PR #1
+### PR #2 merged to master
+- Coordination docs pushed to master so Joe picks them up on next merge
 
 ## What's in progress (not yet committed)
 - None -- all committed
 
 ## Next task to pick up
-- **Finalize phase reorder** in `docs/plans/2026-02-27-vertical-slice-plan.md` -- update phases 5-8 based on the discussion this session. Tower needs to slot in (between Building Exploration and Supply Chain).
-- **Create implementation plan for the Tower** -- invoke writing-plans skill against `docs/plans/2026-02-28-tower-design.md`
-- **Decide who owns what**: Kevin takes Phase 5 (Core UI + Inventory)? Joe continues with Phase 4 (Turrets, J-011 through J-015)?
+- **Start Phase 5: Core UI + Player Inventory + Scene Management**
+  - Task 5.1: Scene loader and transition system (`Scripts/Core/SceneLoader.cs`)
+  - Task 5.2: Basic HUD (`Scripts/UI/`, `Scenes/HomeBase/HomeBase_UI.unity`)
+  - Task 5.3: Player inventory (`Scripts/Player/PlayerInventory.cs`)
+- Use the `writing-plans` skill to create a detailed implementation plan for Phase 5
+- This is the critical path -- Joe's J-018 (Tower MonoBehaviour wrapper) depends on Phase 5
 
 ## Blockers or decisions needed
-- Phase ordering needs to be finalized and committed
-- Tower phase number needs assignment (likely Phase 6.5 or renumber everything)
-- Need to decide if Tower implementation is Kevin's or Joe's work
+- None. All phase ordering decisions are finalized and committed.
 
 ## Test status
 - 666/666 passing, 0 failures, 0 skipped
 - 0 compilation errors
 
 ## Key context the next session needs
-- Tower design is approved and documented but no implementation plan exists yet
-- The tower is a home base feature, not an overworld node (though it requires an overworld power node to activate the elevator)
-- Key fragments are loot (lost on death), not auto-saved. Must extract to bank them.
-- Floor chunks are prefabs loaded via elevator transitions (Approach C from brainstorming)
-- BIM building models from Kevin's Revit library will serve as floor geometry -- no procedural generation needed
-- Joe has J-011/J-012 (asmdef fixes) and J-013 through J-015 (turret tasks) pending
-- Joe's handoff says all prior tasks complete, 666/666 tests passing, awaiting new assignments
+- Phase 5 is Kevin's immediate work. It unlocks everything downstream.
+- Joe is working Phase 4 (turrets, J-011 through J-015) in parallel
+- Joe can start J-016/J-017 (Tower pure C# simulation) without Phase 5, but J-018+ needs it
+- Existing systems to build on: `InventoryContainer` (from Phase 1), `GameEventSO` event bus, `Bootstrap.cs`
+- The plan doc has task specs for 5.1, 5.2, 5.3 with file lists and acceptance criteria
+- No file overlap with Joe during Round 1 (Kevin=Phase 5, Joe=Phase 4)
