@@ -379,13 +379,15 @@ Full design: `docs/plans/2026-02-28-tower-design.md`
 
 ### TASK J-016: Tower data model and simulation layer
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`
 **Depends on:** J-015
 
 Build the tower simulation as plain C# classes following D-004 pattern. This task can start before Phase 5 (Inventory) is done since it's pure C# simulation.
+
+**Result:** Created TowerController (plain C#), FloorChunkDefinition (data class), TowerBuildingDefinitionSO (read-only SO). 41 EditMode tests covering run init, chunk clearing, fragment collection/randomization, extraction banking, death losing carried but keeping banked, boss unlock, boss completion, tier progression. 852/852 tests passing.
 
 **Files to create:**
 - `Scripts/World/TowerController.cs` -- plain C# run state manager
