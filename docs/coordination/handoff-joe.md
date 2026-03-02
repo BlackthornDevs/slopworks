@@ -4,12 +4,18 @@ Updated by Joe's Claude at the end of each session.
 
 ---
 
-## Last updated: 2026-03-01 (by Kevin -- Phase 5 complete, testing policy update)
+## Last updated: 2026-03-01 (by Kevin -- combat scripts patched for local play)
 
-### What was completed by Kevin (2026-03-01)
+### What was completed by Kevin (2026-03-01, session 2)
 
-- **Phase 5 complete.** Core UI, player inventory, scene management, HUD, hotbar, recipe selection -- all done on kevin/main. This unblocks your J-018 (Tower MonoBehaviour wrapper + elevator system).
-- **Testing policy added to CLAUDE.md (merged to master via PR #3).** New requirement: write integration tests alongside simulation tests. Phase 5 had 675 passing unit tests but 5 bugs found only during manual playtest -- all at integration seams (component ordering, Awake timing, UI hierarchy, input wiring). Read the new "Testing requirements" section in `.claude/CLAUDE.md` on your next `git merge origin/master`.
+- **Combat integrated into StructuralPlaytest.** Weapon, enemies, wave spawning, NavMesh, camera effects, HitMarkerUI -- all wired at runtime in StructuralPlaytestSetup.cs. Press G to spawn waves, left-click to shoot.
+- **Combat scripts patched for local play (IMPORTANT).** All 4 combat scripts in `Scripts/Combat/` were modified on kevin/main. The `IsServerInitialized` guards were changed to `NetworkObject != null && !IsServerInitialized` so they work without FishNet in playtest scenes. Also `WeaponBehaviour.OnFire` now routes damage locally when no NetworkObject is present. These changes are backward-compatible with multiplayer. Files: `WeaponBehaviour.cs`, `EnemySpawner.cs`, `WaveControllerBehaviour.cs`, `FaunaController.cs`.
+- **Note:** These combat script changes are on kevin/main only. They will need to be merged to master via PR before Joe picks them up. If Joe modifies the same files on joe/main, there will be merge conflicts on the guard lines.
+
+### Previous updates
+
+- **Phase 5 complete (2026-03-01, session 1).** Core UI, player inventory, scene management, HUD, hotbar, recipe selection -- all done on kevin/main. This unblocks J-018 (Tower MonoBehaviour wrapper + elevator system).
+- **Testing policy added to CLAUDE.md (merged to master via PR #3).** New requirement: write integration tests alongside simulation tests.
 - 675/675 EditMode tests passing on kevin/main
 
 ### Previous session (2026-02-28)
@@ -45,6 +51,10 @@ Pick up from where you left off -- check `tasks-joe.md` priority rules. J-011 an
 ### Blockers
 
 None.
+
+### Combat script merge warning
+
+Kevin modified 4 files in `Scripts/Combat/` on kevin/main (see above). If you modify the same files before these changes reach master, expect merge conflicts on `IsServerInitialized` guard lines. The pattern change is mechanical (add `NetworkObject != null &&` prefix) and conflicts should be easy to resolve.
 
 ### Test status (as of 2026-03-01)
 

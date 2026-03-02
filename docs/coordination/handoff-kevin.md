@@ -1,37 +1,36 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-01 19:00
+Last updated: 2026-03-01 20:00
 Branch: kevin/main
 Last commit: (pending -- this session's changes not yet committed)
 
 ## What was completed this session
 
-### FPS Building + Storage Interaction UI
+### Combat integration into StructuralPlaytest
 
-Implemented 5-part plan for FPS building and storage interaction:
+Added all combat systems to StructuralPlaytestSetup so every game system can be tested in one scene:
 
-- **FPS building placement.** Tagged FPS camera as MainCamera so Camera.main works in FPS mode. Weapon suppressed when build page active (WeaponBehaviour disabled/enabled on page change). All build handlers now log click attempts for debugging. `StructuralPlaytestSetup.cs`
-- **StorageContainer SetSlot + OnSlotChanged.** Added `SetSlot()` method, `OnSlotChanged` event, fired from all mutation methods (TryInsert, TryExtract, TryInsertStack, ExtractAll). `StorageContainer.cs`
-- **StorageBehaviour implements IInteractable.** Added `Initialize()` for bootstrapper path, Awake guard, interaction prompt, opens StorageUI on E press. `StorageBehaviour.cs`
-- **StorageUI (new file).** Modal split panel showing player inventory (45 slots) and storage (N slots) side-by-side. Click-to-transfer between sides. X close button. Live updates via OnSlotChanged events. `Scripts/UI/StorageUI.cs`
-- **MachineBehaviour interaction wiring.** Added `Initialize()` method + Awake guard. SpawnMachineVisual now adds MachineBehaviour with Interactable layer + BoxCollider. `MachineBehaviour.cs`, `StructuralPlaytestSetup.cs`
-- **RecipeSelectionUI upgraded.** Shows machine name as title, live status panel (status/progress/input/output buffers updating every frame), recipe entries show input counts with "(have X)" and output on separate lines, X close button, frame-skip guard. `RecipeSelectionUI.cs`
+- **Combat definitions at runtime.** WeaponDefinitionSO (test_rifle: 25 dmg, 2 fire rate, 50 range, 12 mag), FaunaDefinitionSO (test_grunt: 50 HP, 3 speed, 10 attack dmg, pack behavior), GameEventSO for enemy death. `StructuralPlaytestSetup.cs:CreateDefinitions()`
+- **Player weapon wiring.** WeaponBehaviour added via inactive-then-activate pattern, weapon definition and camera set via reflection, CameraRecoil + CameraShake on FPS camera, MuzzleFlash child object, HitMarkerUI on HUD canvas. `StructuralPlaytestSetup.cs:WirePlayerCombat()`
+- **Enemy template.** Inactive capsule prefab with Rigidbody, NavMeshAgent, HealthBehaviour, FaunaController, EnemyHitFlash, EnemyKnockback. Red colored, Fauna layer. `StructuralPlaytestSetup.cs:CreateEnemyTemplate()`
+- **Spawn points + wave system.** 4 spawn points around build area, EnemySpawner + WaveControllerBehaviour on inactive-then-activate GO, 3 wave definitions (3, 5, 8 enemies). `StructuralPlaytestSetup.cs:CreateSpawnPointsAndWaves()`
+- **NavMesh baking.** Ground plane marked as NavigationStatic, legacy NavMeshBuilder.BuildNavMesh() used (AI Navigation package installed but NavMeshSurface requires asmdef change). `StructuralPlaytestSetup.cs:BakeNavMesh()`
+- **HUD combat wiring.** CameraShake and WaveController passed to PlayerHUD.Initialize() (were null before). HitMarkerUI wired to WeaponBehaviour. `StructuralPlaytestSetup.cs:CreateHUD(), WireHUD()`
+- **Wave trigger + OnGUI.** G key spawns next wave. OnGUI shows wave count, enemies remaining, HP, ammo (all null-safe). `StructuralPlaytestSetup.cs:HandleWaveTrigger(), OnGUI()`
 
-### Bug fixes
+### NetworkBehaviour local play pattern (IMPORTANT -- affects Joe's combat scripts)
 
-- **WeaponBehaviour NRE flood.** Null-conditional on `_weapon?.Tick()` and null camera guard. `WeaponBehaviour.cs`
-- **FPS building silent failure.** FPS camera not tagged MainCamera, Camera.main returned null. Added tag + logging to all failure paths.
-- **StorageUI instant close.** E key triggers both open and close on same frame. Added frame counter skip. Same fix applied to RecipeSelectionUI.
-- **StorageBehaviour Awake overwriting container.** Initialize() sets container, then SetActive(true) triggers Awake creating new empty one. Added `if (_container != null) return;` guard.
-- **Ghost port indicator physics.** CreatePrimitive colliders active for one frame pushing player. Changed `Destroy(col)` to `DestroyImmediate(col)`.
-- **Smelting recipe mismatch.** Recipe expected iron_ore but player has iron_scrap. Changed recipe input + pre-seeded storage to iron_scrap.
+FishNet NetworkBehaviours cannot work with runtime-created objects (no registered prefab collection, no proper spawn). Instead of booting FishNet as host, patched all combat scripts to gracefully handle missing NetworkObject:
 
-### HUD consolidation (from prior session, uncommitted)
+**Pattern:** `if (NetworkObject != null && !IsServerInitialized) return;` instead of `if (!IsServerInitialized) return;`
 
-- HUDController.cs deleted, Phase5PlaytestSetup.cs deleted
-- All HUD features merged into PlayerHUD.cs
-- New HotbarPage.cs for hotbar page data types
-- HotbarSlotUI gains SetEntry() for non-inventory page display
+When NetworkObject is null (local play without FishNet), the guard is skipped entirely. When NetworkObject is present (multiplayer with FishNet), the guard works as normal. Backward-compatible.
+
+**Files patched (all in Scripts/Combat/):**
+- `WeaponBehaviour.cs` -- IsOwner guard in OnFire, routing to local vs server damage paths
+- `EnemySpawner.cs:11` -- IsServerInitialized guard, removed ServerManager.Spawn() (just Instantiate)
+- `WaveControllerBehaviour.cs:33,62,82` -- three IsServerInitialized guards
+- `FaunaController.cs:40,183,295,396` -- four IsServerInitialized guards
 
 ## What's in progress (not yet committed)
 
@@ -52,12 +51,11 @@ None.
 
 ## Key context the next session needs
 
-- `StorageUI.cs` is new in `Scripts/UI/` -- follows RecipeSelectionUI modal pattern
-- `HotbarPage.cs` is new in `Scripts/UI/` -- hotbar page data types
-- `HUDController.cs` and `Phase5PlaytestSetup.cs` are deleted
-- Ghost port indicators use `DestroyImmediate()` for collider removal -- don't change back
-- MachineBehaviour and StorageBehaviour both have `Initialize()` + Awake guard
-- Recipe uses iron_scrap -> iron_ingot (not iron_ore)
-- Escape key removed from all modal UIs (was exiting play mode)
-- Both RecipeSelectionUI and StorageUI have frame-skip guards for E key
-- Shared UI components updated (RecipeSelectionUI, StorageUI) -- ownership.md lists these as shared
+- Combat scripts (WeaponBehaviour, EnemySpawner, WaveControllerBehaviour, FaunaController) now use `NetworkObject != null && !IsServerInitialized` guard pattern -- these changes are on kevin/main and need to reach Joe via master PR eventually
+- FishNet cannot spawn runtime-created objects -- don't try to boot FishNet in bootstrappers, use the guard pattern instead
+- NavMesh baking uses legacy `NavMeshBuilder.BuildNavMesh()` with `isStatic = true` on ground plane -- works but deprecated. Would prefer NavMeshSurface but it requires adding Unity.AI.Navigation to Slopworks.Runtime.asmdef
+- Enemy template is an inactive GameObject (not a disk prefab) -- EnemySpawner.SpawnWave() calls Instantiate() which clones it
+- Spawn points at (30,0,30), (1,0,30), (30,0,1), (1,0,1) -- clamped to stay on ground plane (200x200 grid)
+- WeaponBehaviour uses inactive-then-activate pattern because Awake() creates WeaponController from null _weaponDefinition otherwise
+- WaveControllerBehaviour uses inactive-then-activate because Awake() creates WaveController from _waves list
+- All prior session context still applies (StorageUI, HotbarPage, MachineBehaviour.Initialize patterns, etc.)

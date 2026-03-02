@@ -135,3 +135,17 @@ Settled decisions that both agents follow. Do not re-litigate unless new informa
 **Rationale:** Keeps UI simple (one strip, two contexts) rather than a separate build menu. Switching to items page cancels any active build tool. Escape returns to items page.
 
 **Impact:** HotbarSlotUI gains `SetEntry()` for non-inventory display. PlayerHUD manages pages via `HotbarPage[]`. StructuralPlaytestSetup digit-key tool selection removed in favor of page-based selection.
+
+---
+
+## D-011: NetworkBehaviour local play guard pattern
+
+**Date:** 2026-03-01
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Playtest bootstrappers create objects at runtime without FishNet. All combat scripts extend NetworkBehaviour with `if (!IsServerInitialized) return;` guards. Without a properly spawned NetworkObject, accessing `IsServerInitialized` or `IsOwner` throws NRE because `_networkObjectCache` is null. FishNet cannot spawn runtime-created objects (requires registered prefab collections).
+
+**Decision:** Prefix all NetworkBehaviour authority guards with a null check: `if (NetworkObject != null && !IsServerInitialized) return;`. The `NetworkObject` property returns `_networkObjectCache` directly -- when null (no FishNet), the guard is skipped. When present (multiplayer), the guard works normally.
+
+**Rationale:** Runtime-created objects in playtest scenes will never have a NetworkObject. Booting FishNet as local host was attempted and failed -- NetworkManager.Awake() requires SpawnablePrefabs, and runtime NetworkObjects don't get properly initialized through FishNet's spawn pipeline. The null-check pattern is backward-compatible, requires no FishNet changes, and lets the same scripts work in both local and networked modes.
+
+**Impact:** All NetworkBehaviour scripts in playtest scenes must use this pattern. Applied to WeaponBehaviour, EnemySpawner, WaveControllerBehaviour, FaunaController. Future NetworkBehaviour scripts that need to work in local playtests should follow the same pattern. Do not attempt to boot FishNet in bootstrapper scenes.
