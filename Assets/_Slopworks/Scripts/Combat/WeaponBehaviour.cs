@@ -58,6 +58,7 @@ public class WeaponBehaviour : NetworkBehaviour
     {
         if (_camera == null || _weapon == null) return;
         if (NetworkObject != null && !IsOwner) return;
+        PlaytestLogger.Log($"input: Fire | ammo={_weapon.CurrentAmmo}/{(_weaponDefinition != null ? _weaponDefinition.magazineSize : 0)} weapon={enabled}");
         if (!_weapon.TryFire()) return;
 
         // visual feedback runs on the owning client immediately
@@ -114,6 +115,7 @@ public class WeaponBehaviour : NetworkBehaviour
 
     private void OnReload(InputAction.CallbackContext ctx)
     {
+        PlaytestLogger.Log("input: Reload");
         _weapon.Reload();
     }
 }

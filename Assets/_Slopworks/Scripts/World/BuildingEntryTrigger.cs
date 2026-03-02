@@ -38,6 +38,7 @@ public class BuildingEntryTrigger : MonoBehaviour
             other.transform.position = _entranceSpawn.position;
         }
 
+        PlaytestLogger.Log("event: entered building portal");
         Debug.Log("building: player entered warehouse");
         _onPlayerEnter?.Invoke();
     }

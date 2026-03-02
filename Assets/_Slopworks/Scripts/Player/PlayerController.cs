@@ -104,6 +104,7 @@ public class PlayerController : MonoBehaviour
     {
         if (_isGrounded && _controls.Exploration.Jump.WasPressedThisFrame())
         {
+            PlaytestLogger.Log($"input: Jump | grounded={_isGrounded} pos=({transform.position.x:F1},{transform.position.y:F1},{transform.position.z:F1})");
             _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _jumpForce, _rb.linearVelocity.z);
         }
     }
@@ -125,6 +126,7 @@ public class PlayerController : MonoBehaviour
         {
             if (kb[HotbarKeys[i]].wasPressedThisFrame)
             {
+                PlaytestLogger.Log($"input: hotbar slot {i}");
                 _playerInventory.SelectHotbarSlot(i);
                 break;
             }
@@ -145,6 +147,7 @@ public class PlayerController : MonoBehaviour
 
         if (_currentInteractable != null && _controls.Exploration.Interact.WasPressedThisFrame())
         {
+            PlaytestLogger.Log($"input: key E | interactable={(_currentInteractable as MonoBehaviour)?.gameObject.name}");
             _currentInteractable.Interact(gameObject);
         }
     }

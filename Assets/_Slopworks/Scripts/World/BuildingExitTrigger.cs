@@ -36,6 +36,7 @@ public class BuildingExitTrigger : MonoBehaviour
             other.transform.position = _exitDestination.position;
         }
 
+        PlaytestLogger.Log("event: exited building portal");
         Debug.Log("building: player exited warehouse");
         _onPlayerExit?.Invoke();
     }

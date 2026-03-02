@@ -320,40 +320,59 @@ Create a combined turret defense playtest that verifies the full loop: place tur
 
 ## Pre-PR merge task
 
-### TASK J-023: Merge master into joe/main and resolve conflicts before PR
+### TASK J-023: Merge master into joe/main and port turret code to JoePlaytestSetup
 
 **Status:** Complete (2026-03-02)
 **Commits:** `5aaa09d`
 **Priority:** Critical
 **Branch:** `joe/main`
 
-Master now contains Phase 6 (Building Exploration) and Phase 8 (Supply Chain Network) from Kevin. Your branch is missing both. You MUST merge master and resolve all conflicts before creating a PR for your turret work.
+`StructuralPlaytestSetup.cs` no longer exists. It was split into shared infrastructure + per-developer bootstrappers to eliminate merge conflicts. Your turret code needs to be ported into `JoePlaytestSetup.cs`, which is exclusively yours.
+
+**FIRST: Close PR #9 without merging.** It modifies files that don't exist on master and will not merge. Run: `gh pr close 9`
+
+**New file structure (on master):**
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `PlaytestContext.cs` | `Scripts/Debug/` | Shared data class holding all refs from bootstrap |
+| `PlaytestBootstrap.cs` | `Scripts/Debug/` | Plain C# one-shot setup (creates grid, simulation, player, HUD, combat) |
+| `PlaytestToolController.cs` | `Scripts/Debug/` | MonoBehaviour: all shared tool handling (foundation, wall, ramp, belt, machine, storage, delete), visuals, OnGUI, simulation tick |
+| `KevinPlaytestSetup.cs` | `Scripts/Debug/` | Kevin's exclusive bootstrapper (building exploration, supply chain, overworld map). **Do not touch.** |
+| `JoePlaytestSetup.cs` | `Scripts/Debug/` | Joe's exclusive bootstrapper -- YOUR file, skeleton ready for turret code |
 
 **Result:** Clean merge, no conflicts. Git ort strategy auto-merged all 122 files. Zero compilation errors, 789/789 EditMode tests passing.
 
 **Steps:**
-1. `git fetch origin master && git merge origin/master`
-2. Resolve merge conflicts in `StructuralPlaytestSetup.cs` -- this is the big one. Details below.
-3. Verify compilation: `recompile_scripts` via MCP
-4. Run ALL EditMode tests -- they must all pass (789+ tests expected)
-5. Do a quick manual playtest: hit Play, verify turrets still work, verify building portal and supply dock are present
+1. `gh pr close 9` -- close the stale PR
+2. `git fetch origin master && git merge origin/master`
+3. Delete stale files from your branch that should not exist:
+   - `git rm Assets/_Slopworks/Scripts/Debug/StructuralPlaytestSetup.cs` (if still present after merge)
+   - `git rm Assets/_Slopworks/Scripts/Debug/DevTestPlaytestSetup.cs` (this file should never have been created -- use JoePlaytestSetup.cs instead)
+   - Remove C-008 from your copy of `docs/coordination/contradictions.md` (it's moot -- StructuralPlaytestSetup doesn't exist)
+4. Port turret code into `JoePlaytestSetup.cs`. The skeleton has commented placeholders showing exactly where each piece goes:
+   - Add `CreateTurretDefinition()` -- create TurretDefinitionSO at runtime, add to `_ctx.RuntimeSOs`
+   - Uncomment slot 7 in `CreateBuildPage()`: `Set(7, "turret", "Turret", ...)`
+   - Register turret tool handler: `_toolCtrl.RegisterToolHandler(PlaytestToolController.ToolMode.TurretPlace, HandleTurretPlaceInput)`
+   - Replace `CreateGroundPlane()` with your PlaytestEnvironment code
+   - Add turret pre-seed chain after `_toolCtrl.PreSeedFactory()` in the `_preSeedFactory` block
+   - Add `Update()` with P key trigger for turret pre-seed
+   - Add `OnGUI()` for turret stats (start Y position from `_toolCtrl.GuiNextY`)
+   - Add turret SO cleanup in `OnDestroy()`
+5. Verify compilation: `recompile_scripts` via MCP
+6. Run ALL EditMode tests -- they must all pass (789+ tests expected)
+7. Quick manual playtest: hit Play in a scene with JoePlaytestSetup, verify turrets work
 
-**StructuralPlaytestSetup.cs conflict details:**
-
-Master has these additions that your branch does not have -- preserve ALL of them:
-
-- **Phase 6 (Building Exploration):** BuildingManager, BuildingLayoutGenerator, MEPRestorePointBehaviour, building portal system, building entry/exit, building enemies, MEP restore flow. Look for methods like `CreateBuildingManager()`, `CreateBuildingPortal()`, building-related fields (`_buildingManager`, `_warehouseState`, etc.), and Update() logic for building entry (F key near portal).
-
-- **Phase 8 (Supply Chain):** SupplyLineManager, SupplyLine, OverworldMap, OverworldMapUI. Look for `CreateSupplyChain()`, supply-related fields (`_supplyLineManager`, `_warehouseSupplyLine`, `_overworldMap`, `_overworldMapUI`), M key toggle in Update(), supply status in OnGUI(), `_supplyLineManager.TickAll()` in FixedUpdate(), and `_warehouseSupplyLine.Dispose()` in OnDestroy().
-
-- **Supply dock rewrite:** `CreateSupplyDock()` was completely rewritten to use `_automationService.PlaceStorage()` at grid cell (15,7) with output-only ports and SpawnPortIndicators(). Do NOT keep the old hand-placed supply dock code.
-
-**Your turret additions to integrate:**
-- Tool slot 7 for turret placement (no conflict -- Kevin uses slots 1-6)
-- `ToolMode.TurretPlace` enum value
-- P key for pre-seed factory
-- `CreateTurretDefinition()`, turret placement logic in Update()
-- PlaytestEnvironment replacing CreateGroundPlane()
+**Key API on PlaytestToolController:**
+- `RegisterToolHandler(ToolMode mode, Action<Keyboard, Mouse> handler)` -- register your turret input handler
+- `SetTool(ToolMode mode)` -- programmatically switch tools
+- `GetCellUnderCursor()` -- returns grid cell under mouse
+- `SpawnPortIndicators(PlacementResult result)` -- show port indicators on placed buildings
+- `PreSeedFactory()` -- pre-seeds the basic smelting chain
+- `CurrentTool` -- read current tool mode
+- `CurrentLevel` -- read current vertical level
+- `GuiNextY` -- Y position after shared OnGUI, use as start for your OnGUI
+- `SuppressInput` -- set true to block all tool input (for modal UI)
 
 **Shared file changes (yours, already on joe/main):**
 - `PhysicsLayers.cs` -- added FaunaMask (additive, no conflict expected)
@@ -365,9 +384,8 @@ Master has these additions that your branch does not have -- preserve ALL of the
 **Acceptance criteria:**
 - Zero compilation errors after merge
 - All EditMode tests pass (should be 789+ after merge)
-- Turret placement and firing still works
-- Building portal, supply dock, and overworld map (M key) are present in scene
-- No Phase 6 or Phase 8 code was lost during conflict resolution
+- Turret placement and firing still works in JoePlaytestSetup scene
+- `StructuralPlaytestSetup.cs` is fully deleted (not present on joe/main after merge)
 
 ---
 
@@ -546,38 +564,62 @@ Build the boss floor as the tier-gating mechanic.
 - Fragment counter resets after boss kill
 - Fragment requirement is configurable on the SO
 
-### TASK J-022: Integrate consolidated PlayerHUD into Dev_Test
+### TASK J-024: Verify MasterPlaytest scene integration
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Debug/`
+**Depends on:** J-023
+
+After porting turret code in J-023, verify the MasterPlaytest scene works with both providers active.
+
+**Steps:**
+1. Open `Scenes/Playtest/MasterPlaytest.unity` (has MasterPlaytestSetup + KevinPlaytestSetup + JoePlaytestSetup + PlaytestLogger + PlaytestValidator)
+2. Hit Play
+3. Verify PlaytestValidator logs no errors for master scene
+4. Verify shared tools work (foundation, wall, belt, machine, storage, delete)
+5. Verify Kevin's features are present (buildings, supply chain, overworld map with M key)
+6. Verify turret placement works (slot 8 on build page)
+7. Verify wave spawning (G key) and turrets firing at enemies
+8. Verify OnGUI lines chain correctly (shared lines, then Kevin, then Joe)
+
+**Key context:** Your `JoePlaytestSetup` implements `IPlaytestFeatureProvider`. In master mode, `_isStandalone = false` and MasterPlaytestSetup calls your interface methods. Your `CreateCombatSetup()` should return `null` in master mode (Kevin handles home-base waves). All other interface methods should work normally.
+
+**Acceptance criteria:**
+- MasterPlaytest scene boots without errors
+- PlaytestValidator reports all checks pass
+- Both Kevin's and Joe's features coexist (buildings + turrets)
+- Only one wave controller active (no duplicate waves)
+- Turrets fire at enemies spawned by Kevin's wave controller
+
+---
+
+### TASK J-022: Verify consolidated PlayerHUD works in JoePlaytestSetup
 
 **Status:** Complete (2026-03-02)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/UI/`, `Scripts/Combat/`
-**Depends on:** J-012
+**Depends on:** J-023
 
-After merging master, Dev_Test should pick up the consolidated PlayerHUD, inventory system, and hotbar with pages. Wire these into Dev_Test's existing bootstrapper.
+After completing J-023 (merge master + port turret code), verify that the consolidated PlayerHUD and all combat HUD features work in your JoePlaytestSetup scene. The shared bootstrap (`PlaytestBootstrap.cs`) already creates the full PlayerHUD with all elements -- you should not need to wire anything manually.
 
-**Result:** Extended PlaytestSetup.cs to add PlayerInventory, ItemPickupTrigger, ItemRegistry, InventoryUI, RecipeSelectionUI, and wire _playerInventory + _playerCamera on PlayerHUD. Created DevTestHUDBootstrap.cs for runtime InventoryUI initialization. Run "Slopworks/Setup Playtest Scene" menu then play to get full HUD with inventory.
+**What to verify:**
+1. Crosshair visible at center screen
+2. Health bar works (take damage from enemies, see it update)
+3. Ammo counter works (fire weapon, see count decrease)
+4. Wave status shows when enemies spawn
+5. Damage flash on hit
+6. Hotbar shows items, B toggles to build page
+7. Tab opens inventory grid
+8. Interaction prompt appears when looking at interactable objects
 
-**What changed on master:**
-- `HUDController.cs` deleted, replaced by consolidated `PlayerHUD.cs`
-- PlayerHUD creates all HUD elements: crosshair, health bar, ammo, wave status, damage flash, interaction prompt, build mode indicator, hotbar with pages
-- New `HotbarPage.cs` -- hotbar page data types
-- `HotbarSlotUI.cs` gains `SetEntry()` for non-inventory page display
-- `Phase5PlaytestSetup.cs` deleted (merged into StructuralPlaytestSetup)
-
-**What to do:**
-1. Replace HUDController references with PlayerHUD in Dev_Test setup code
-2. Add PlayerInventory + ItemPickupTrigger to the player if not already present
-3. Wire PlayerHUD.Initialize() for combat (health, weapon, cameraShake, waveController)
-4. Wire PlayerHUD.InitializeInventory() for inventory + camera
-5. Add InventoryUI and RecipeSelectionUI to the HUD canvas
-6. Verify all existing combat HUD features still work (health text, ammo, wave status, damage flash)
+**Note:** `Dev_Test` scene and `DevTestPlaytestSetup.cs` should be deleted as part of J-023. All testing happens in a scene with `JoePlaytestSetup` component.
 
 **Acceptance criteria:**
-- Dev_Test player has working inventory (Tab opens grid)
-- Hotbar shows items, B toggles to build page (build page can be empty for now)
-- All Joe's combat HUD features work: health, ammo, wave status, damage flash
-- Crosshair visible at center screen
+- All HUD features work in JoePlaytestSetup scene
+- No separate bootstrapper or HUD wiring code needed -- shared bootstrap handles it
 
 ### TASK J-021: Tower playtest scene
 

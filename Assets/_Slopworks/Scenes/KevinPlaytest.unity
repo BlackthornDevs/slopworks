@@ -129,8 +129,10 @@ GameObject:
   m_Component:
   - component: {fileID: 453972814}
   - component: {fileID: 453972813}
+  - component: {fileID: 453972815}
+  - component: {fileID: 453972816}
   m_Layer: 0
-  m_Name: StructuralPlaytestSetup
+  m_Name: KevinPlaytestSetup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -145,10 +147,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 453972812}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e180ffc94bf4b064ba57dc1f31e60f3f, type: 3}
+  m_Script: {fileID: 11500000, guid: 131f413b97a9cf4438233836e07973a4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Slopworks.Runtime::StructuralPlaytestSetup
-  _preSeedFactory: 0
+  m_EditorClassIdentifier: Slopworks.Runtime::KevinPlaytestSetup
+  _preSeedFactory: 1
   _beltSpeed: 4
   _worldItemCount: 5
 --- !u!4 &453972814
@@ -166,6 +168,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &453972815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 453972812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dcddd3cee728de419d6e95186c97bd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::PlaytestValidator
+  _runOnPlay: 1
+  _delayFrames: 5
+  _autoQuit: 1
+--- !u!114 &453972816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 453972812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07b57c19bef47534fa0b2ee352a0f892, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::PlaytestLogger
+  _enabled: 0
+  _logMovement: 0
+  _logBreadcrumbs: 1
+  _breadcrumbInterval: 5
 --- !u!1 &633822391
 GameObject:
   m_ObjectHideFlags: 0

@@ -33,6 +33,7 @@ public class WorldItem : MonoBehaviour
 
     public bool TryCollect(PlayerInventory inventory)
     {
+        PlaytestLogger.Log($"event: item pickup attempt {(_definition != null ? _definition.displayName : "null")} x{_count}");
         if (_definition == null || _count <= 0) return false;
 
         var instance = ItemInstance.Create(_definition.itemId);
