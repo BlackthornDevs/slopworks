@@ -157,7 +157,8 @@ Added `_cachedTargetHealth` field. UpdatePerception caches HealthBehaviour once 
 
 ### TASK J-011: Add NPBehave reference to Slopworks.Runtime.asmdef
 
-**Status:** Pending
+**Status:** Complete (2026-02-28)
+**Commits:** `1bd6bc1`, `4aa4351`
 **Priority:** Critical
 **Branch:** `joe/main`
 **Ownership:** `Scripts/` (shared file)
@@ -171,7 +172,8 @@ J-005 vendored NPBehave and J-007 converted combat scripts to NetworkBehaviour, 
 
 ### TASK J-012: Add FishNet and NPBehave references to Slopworks.Tests.EditMode.asmdef
 
-**Status:** Pending
+**Status:** Complete (2026-02-28)
+**Commits:** `1bd6bc1`, `4aa4351`
 **Priority:** Critical
 **Branch:** `joe/main`
 **Ownership:** `Tests/` (shared file)
@@ -225,7 +227,8 @@ Phase 4 is now assigned to Joe. Use these existing systems:
 
 ### TASK J-013: Auto-turret simulation layer
 
-**Status:** Pending
+**Status:** Complete (2026-03-01)
+**Commits:** `6312a91`
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -256,7 +259,8 @@ Build the turret as a plain C# simulation object (D-004 pattern). The turret det
 
 ### TASK J-014: Turret MonoBehaviour wrapper and placement
 
-**Status:** Pending
+**Status:** Complete (2026-03-01)
+**Commits:** `2e4cc15`
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -291,7 +295,8 @@ Build the thin MonoBehaviour wrapper and integrate turret placement into the pla
 
 ### TASK J-015: Turret playtest scene
 
-**Status:** Pending
+**Status:** Complete (2026-03-01)
+**Commits:** `0a99c34`
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`, `Scenes/`
