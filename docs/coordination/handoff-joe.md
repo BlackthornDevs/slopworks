@@ -43,7 +43,9 @@ No asmdef changes. No ProjectSettings changes. No new packages.
 
 ### Next task
 
-J-016: Tower data model and simulation layer (Phase 7 start). Pure C# simulation following D-004 pattern. Read `docs/plans/2026-02-28-tower-design.md` before starting.
+**J-023 (Critical): Merge master into joe/main and resolve conflicts BEFORE creating your turret PR.** Master now has Phase 6 (Building Exploration) and Phase 8 (Supply Chain) that your branch is missing. The main conflict is in StructuralPlaytestSetup.cs -- see J-023 in tasks-joe.md for detailed conflict resolution guidance. This must be done before any PR or before starting J-016.
+
+After J-023: J-016 (Tower data model and simulation layer, Phase 7 start). Pure C# simulation following D-004 pattern. Read `docs/plans/2026-02-28-tower-design.md` before starting.
 
 ### Blockers
 
