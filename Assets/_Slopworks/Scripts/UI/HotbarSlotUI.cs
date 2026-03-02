@@ -83,9 +83,14 @@ public class HotbarSlotUI : MonoBehaviour
 
     public void Bind(PlayerInventory inventory, int slotIndex)
     {
+        // Unsubscribe from previous inventory first to prevent duplicate subscriptions
+        if (_playerInventory?.Inventory != null)
+            _playerInventory.Inventory.OnSlotChanged -= OnSlotChanged;
+
         _playerInventory = inventory;
         _slotIndex = slotIndex;
-        _itemRegistry = FindAnyObjectByType<ItemRegistry>();
+        if (_itemRegistry == null)
+            _itemRegistry = FindAnyObjectByType<ItemRegistry>();
 
         if (_playerInventory?.Inventory != null)
             _playerInventory.Inventory.OnSlotChanged += OnSlotChanged;
@@ -103,6 +108,32 @@ public class HotbarSlotUI : MonoBehaviour
     {
         if (index == _slotIndex)
             Refresh();
+    }
+
+    /// <summary>
+    /// Display a non-inventory entry (build tool, etc).
+    /// Pass null displayName to show an empty slot.
+    /// Unbinds from inventory while showing an entry.
+    /// </summary>
+    public void SetEntry(string displayName, Color color)
+    {
+        // Unbind from inventory events while showing non-inventory content
+        if (_playerInventory?.Inventory != null)
+            _playerInventory.Inventory.OnSlotChanged -= OnSlotChanged;
+        _playerInventory = null;
+
+        if (string.IsNullOrEmpty(displayName))
+        {
+            _iconImage.color = EmptyIconColor;
+            _iconImage.sprite = null;
+            _countText.text = "";
+        }
+        else
+        {
+            _iconImage.sprite = null;
+            _iconImage.color = color;
+            _countText.text = displayName;
+        }
     }
 
     public void SetSelected(bool selected)

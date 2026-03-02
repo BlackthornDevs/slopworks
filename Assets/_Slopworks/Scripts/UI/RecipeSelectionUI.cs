@@ -19,6 +19,12 @@ public class RecipeSelectionUI : MonoBehaviour
     private ItemRegistry _itemRegistry;
     private readonly List<GameObject> _recipeEntries = new();
 
+    private int _openFrame = -1;
+
+    // Live status display
+    private TextMeshProUGUI _statusText;
+    private TextMeshProUGUI _titleText;
+
     public bool IsOpen => _panel != null && _panel.activeSelf;
 
     private void Awake()
@@ -32,8 +38,48 @@ public class RecipeSelectionUI : MonoBehaviour
 
     private void Update()
     {
-        if (IsOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (!IsOpen) return;
+
+        RefreshStatus();
+
+        if (Time.frameCount == _openFrame) return;
+        var kb = Keyboard.current;
+        if (kb == null) return;
+        if (kb.eKey.wasPressedThisFrame)
             Close();
+    }
+
+    private void RefreshStatus()
+    {
+        if (_statusText == null || _currentMachine == null) return;
+        var m = _currentMachine.Machine;
+        if (m == null) return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"Status: <b>{m.Status}</b>");
+        if (m.ActiveRecipeId != null)
+            sb.Append($"  |  Progress: {m.CraftProgress:P0}");
+
+        int inputSlots = _currentMachine.Definition.inputBufferSize;
+        int outputSlots = _currentMachine.Definition.outputBufferSize;
+
+        sb.Append("\nInput: ");
+        for (int i = 0; i < inputSlots; i++)
+        {
+            if (i > 0) sb.Append(", ");
+            var slot = m.GetInput(i);
+            sb.Append(slot.IsEmpty ? "empty" : $"{slot.item.definitionId} x{slot.count}");
+        }
+
+        sb.Append("  |  Output: ");
+        for (int i = 0; i < outputSlots; i++)
+        {
+            if (i > 0) sb.Append(", ");
+            var slot = m.GetOutput(i);
+            sb.Append(slot.IsEmpty ? "empty" : $"{slot.item.definitionId} x{slot.count}");
+        }
+
+        _statusText.text = sb.ToString();
     }
 
     public void Open(MachineBehaviour machine, PlayerInventory inventory)
@@ -41,8 +87,13 @@ public class RecipeSelectionUI : MonoBehaviour
         _currentMachine = machine;
         _playerInventory = inventory;
 
-        PopulateRecipes();
+        if (_titleText != null)
+            _titleText.text = machine.Definition.displayName;
 
+        PopulateRecipes();
+        RefreshStatus();
+
+        _openFrame = Time.frameCount;
         _panel.SetActive(true);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -99,17 +150,18 @@ public class RecipeSelectionUI : MonoBehaviour
         bg.color = canCraft ? new Color(0.2f, 0.3f, 0.2f, 0.9f) : new Color(0.3f, 0.2f, 0.2f, 0.5f);
 
         var entryRect = bg.rectTransform;
-        entryRect.sizeDelta = new Vector2(0, 40);
+        entryRect.sizeDelta = new Vector2(0, 60);
 
         var layout = entryObj.AddComponent<LayoutElement>();
-        layout.preferredHeight = 40;
-        layout.minHeight = 40;
+        layout.preferredHeight = 60;
+        layout.minHeight = 60;
 
         var textObj = new GameObject("Text");
         textObj.transform.SetParent(entryObj.transform, false);
         var text = textObj.AddComponent<TextMeshProUGUI>();
         text.text = FormatRecipeText(recipe);
-        text.fontSize = 14;
+        text.fontSize = 13;
+        text.richText = true;
         text.color = canCraft ? Color.white : new Color(0.6f, 0.6f, 0.6f);
         text.alignment = TextAlignmentOptions.MidlineLeft;
         text.raycastTarget = false;
@@ -178,23 +230,24 @@ public class RecipeSelectionUI : MonoBehaviour
     private string FormatRecipeText(RecipeSO recipe)
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append(recipe.displayName).Append(": ");
+        sb.Append("<b>").Append(recipe.displayName).Append("</b>\n");
 
         if (recipe.inputs != null)
         {
+            sb.Append("In: ");
             for (int i = 0; i < recipe.inputs.Length; i++)
             {
                 if (i > 0) sb.Append(" + ");
                 var def = _itemRegistry?.Get(recipe.inputs[i].itemId);
                 string name = def != null ? def.displayName : recipe.inputs[i].itemId;
-                sb.Append($"{recipe.inputs[i].count}x {name}");
+                int have = _playerInventory != null ? _playerInventory.Inventory.GetCount(recipe.inputs[i].itemId) : 0;
+                sb.Append($"{recipe.inputs[i].count}x {name} <color=#888>(have {have})</color>");
             }
         }
 
-        sb.Append(" -> ");
-
         if (recipe.outputs != null)
         {
+            sb.Append("\nOut: ");
             for (int i = 0; i < recipe.outputs.Length; i++)
             {
                 if (i > 0) sb.Append(" + ");
@@ -202,9 +255,9 @@ public class RecipeSelectionUI : MonoBehaviour
                 string name = def != null ? def.displayName : recipe.outputs[i].itemId;
                 sb.Append($"{recipe.outputs[i].count}x {name}");
             }
+            sb.Append($"  <color=#888>({recipe.craftDuration}s)</color>");
         }
 
-        sb.Append($" ({recipe.craftDuration}s)");
         return sb.ToString();
     }
 
@@ -220,32 +273,65 @@ public class RecipeSelectionUI : MonoBehaviour
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.pivot = new Vector2(0.5f, 0.5f);
-        panelRect.sizeDelta = new Vector2(450, 300);
+        panelRect.sizeDelta = new Vector2(450, 350);
 
         // Title
         var titleObj = new GameObject("Title");
         titleObj.transform.SetParent(_panel.transform, false);
-        var titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "Select Recipe";
-        titleText.fontSize = 18;
-        titleText.alignment = TextAlignmentOptions.Center;
-        titleText.color = Color.white;
-        titleText.raycastTarget = false;
-        var titleRect = titleText.rectTransform;
+        _titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        _titleText.text = "Select Recipe";
+        _titleText.fontSize = 18;
+        _titleText.alignment = TextAlignmentOptions.Center;
+        _titleText.color = Color.white;
+        _titleText.raycastTarget = false;
+        var titleRect = _titleText.rectTransform;
         titleRect.anchorMin = new Vector2(0, 1);
         titleRect.anchorMax = new Vector2(1, 1);
         titleRect.pivot = new Vector2(0.5f, 1);
         titleRect.sizeDelta = new Vector2(0, 30);
         titleRect.anchoredPosition = new Vector2(0, -4);
 
-        // Content area for recipe list
+        // Close button
+        CreateCloseButton(_panel.transform);
+
+        // Machine status area (between title and recipe list)
+        var statusObj = new GameObject("Status");
+        statusObj.transform.SetParent(_panel.transform, false);
+        var statusBg = statusObj.AddComponent<Image>();
+        statusBg.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
+        statusBg.raycastTarget = false;
+        var statusBgRect = statusBg.rectTransform;
+        statusBgRect.anchorMin = new Vector2(0, 1);
+        statusBgRect.anchorMax = new Vector2(1, 1);
+        statusBgRect.pivot = new Vector2(0.5f, 1);
+        statusBgRect.sizeDelta = new Vector2(0, 50);
+        statusBgRect.anchoredPosition = new Vector2(0, -34);
+        statusBgRect.offsetMin = new Vector2(8, 0);
+        statusBgRect.offsetMax = new Vector2(-8, 0);
+
+        var statusTextObj = new GameObject("StatusText");
+        statusTextObj.transform.SetParent(statusObj.transform, false);
+        _statusText = statusTextObj.AddComponent<TextMeshProUGUI>();
+        _statusText.text = "";
+        _statusText.fontSize = 12;
+        _statusText.richText = true;
+        _statusText.color = new Color(0.8f, 0.9f, 0.8f);
+        _statusText.alignment = TextAlignmentOptions.MidlineLeft;
+        _statusText.raycastTarget = false;
+        var statusTextRect = _statusText.rectTransform;
+        statusTextRect.anchorMin = Vector2.zero;
+        statusTextRect.anchorMax = Vector2.one;
+        statusTextRect.offsetMin = new Vector2(8, 2);
+        statusTextRect.offsetMax = new Vector2(-8, -2);
+
+        // Content area for recipe list (below status)
         var scrollObj = new GameObject("ScrollArea");
         scrollObj.transform.SetParent(_panel.transform, false);
         var scrollRect = scrollObj.AddComponent<RectTransform>();
         scrollRect.anchorMin = new Vector2(0, 0);
         scrollRect.anchorMax = new Vector2(1, 1);
         scrollRect.offsetMin = new Vector2(8, 8);
-        scrollRect.offsetMax = new Vector2(-8, -36);
+        scrollRect.offsetMax = new Vector2(-8, -88);
 
         var contentObj = new GameObject("Content");
         contentObj.transform.SetParent(scrollObj.transform, false);
@@ -265,5 +351,38 @@ public class RecipeSelectionUI : MonoBehaviour
 
         var csf = contentObj.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+    }
+
+    private void CreateCloseButton(Transform parent)
+    {
+        var btnObj = new GameObject("CloseButton");
+        btnObj.transform.SetParent(parent, false);
+
+        var btnImage = btnObj.AddComponent<Image>();
+        btnImage.color = new Color(0.6f, 0.15f, 0.15f, 0.9f);
+
+        var btnRect = btnImage.rectTransform;
+        btnRect.anchorMin = new Vector2(1, 1);
+        btnRect.anchorMax = new Vector2(1, 1);
+        btnRect.pivot = new Vector2(1, 1);
+        btnRect.sizeDelta = new Vector2(28, 28);
+        btnRect.anchoredPosition = new Vector2(-4, -4);
+
+        var textObj = new GameObject("X");
+        textObj.transform.SetParent(btnObj.transform, false);
+        var text = textObj.AddComponent<TextMeshProUGUI>();
+        text.text = "X";
+        text.fontSize = 16;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        var textRect = text.rectTransform;
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        var btn = btnObj.AddComponent<Button>();
+        btn.onClick.AddListener(Close);
     }
 }

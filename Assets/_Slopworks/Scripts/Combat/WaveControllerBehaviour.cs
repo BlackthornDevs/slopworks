@@ -30,7 +30,7 @@ public class WaveControllerBehaviour : NetworkBehaviour
 
     private IEnumerator Start()
     {
-        if (!IsServerInitialized) yield break;
+        if (NetworkObject != null && !IsServerInitialized) yield break;
 
         if (_autoStartDelay >= 0f)
         {
@@ -59,7 +59,7 @@ public class WaveControllerBehaviour : NetworkBehaviour
 
     public void BeginNextWave()
     {
-        if (!IsServerInitialized) return;
+        if (NetworkObject != null && !IsServerInitialized) return;
 
         if (_spawnInProgress)
         {
@@ -79,7 +79,7 @@ public class WaveControllerBehaviour : NetworkBehaviour
 
     public void ReportEnemyKilled()
     {
-        if (!IsServerInitialized) return;
+        if (NetworkObject != null && !IsServerInitialized) return;
 
         _controller.OnEnemyKilled();
     }

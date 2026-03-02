@@ -149,6 +149,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::Phase5PlaytestSetup
   _worldItemCount: 5
+  _ironScrapDef: {fileID: 0}
+  _ironIngotDef: {fileID: 0}
+  _smelterDef: {fileID: 0}
+  _smeltIronRecipe: {fileID: 0}
 --- !u!4 &736475062
 Transform:
   m_ObjectHideFlags: 0
