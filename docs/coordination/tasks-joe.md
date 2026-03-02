@@ -318,6 +318,56 @@ Create a combined turret defense playtest that verifies the full loop: place tur
 
 ---
 
+## Pre-PR merge task
+
+### TASK J-023: Merge master into joe/main and resolve conflicts before PR
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+
+Master now contains Phase 6 (Building Exploration) and Phase 8 (Supply Chain Network) from Kevin. Your branch is missing both. You MUST merge master and resolve all conflicts before creating a PR for your turret work.
+
+**Steps:**
+1. `git fetch origin master && git merge origin/master`
+2. Resolve merge conflicts in `StructuralPlaytestSetup.cs` -- this is the big one. Details below.
+3. Verify compilation: `recompile_scripts` via MCP
+4. Run ALL EditMode tests -- they must all pass (789+ tests expected)
+5. Do a quick manual playtest: hit Play, verify turrets still work, verify building portal and supply dock are present
+
+**StructuralPlaytestSetup.cs conflict details:**
+
+Master has these additions that your branch does not have -- preserve ALL of them:
+
+- **Phase 6 (Building Exploration):** BuildingManager, BuildingLayoutGenerator, MEPRestorePointBehaviour, building portal system, building entry/exit, building enemies, MEP restore flow. Look for methods like `CreateBuildingManager()`, `CreateBuildingPortal()`, building-related fields (`_buildingManager`, `_warehouseState`, etc.), and Update() logic for building entry (F key near portal).
+
+- **Phase 8 (Supply Chain):** SupplyLineManager, SupplyLine, OverworldMap, OverworldMapUI. Look for `CreateSupplyChain()`, supply-related fields (`_supplyLineManager`, `_warehouseSupplyLine`, `_overworldMap`, `_overworldMapUI`), M key toggle in Update(), supply status in OnGUI(), `_supplyLineManager.TickAll()` in FixedUpdate(), and `_warehouseSupplyLine.Dispose()` in OnDestroy().
+
+- **Supply dock rewrite:** `CreateSupplyDock()` was completely rewritten to use `_automationService.PlaceStorage()` at grid cell (15,7) with output-only ports and SpawnPortIndicators(). Do NOT keep the old hand-placed supply dock code.
+
+**Your turret additions to integrate:**
+- Tool slot 7 for turret placement (no conflict -- Kevin uses slots 1-6)
+- `ToolMode.TurretPlace` enum value
+- P key for pre-seed factory
+- `CreateTurretDefinition()`, turret placement logic in Update()
+- PlaytestEnvironment replacing CreateGroundPlane()
+
+**Shared file changes (yours, already on joe/main):**
+- `PhysicsLayers.cs` -- added FaunaMask (additive, no conflict expected)
+- `PortOwnerType.cs` -- added Turret (additive, no conflict expected)
+- `BuildingPlacementService.cs` -- added PlaceTurret (additive, no conflict expected)
+- `ConnectionResolver.cs` -- added Turret cases (additive, no conflict expected)
+- `PlayerController.cs` -- added GridPlane to GroundMask (additive, no conflict expected)
+
+**Acceptance criteria:**
+- Zero compilation errors after merge
+- All EditMode tests pass (should be 789+ after merge)
+- Turret placement and firing still works
+- Building portal, supply dock, and overworld map (M key) are present in scene
+- No Phase 6 or Phase 8 code was lost during conflict resolution
+
+---
+
 ## Phase 7: The Tower
 
 Full design: `docs/plans/2026-02-28-tower-design.md`
