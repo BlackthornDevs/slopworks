@@ -227,7 +227,8 @@ Phase 4 is now assigned to Joe. Use these existing systems:
 
 ### TASK J-013: Auto-turret simulation layer
 
-**Status:** Pending
+**Status:** Complete (2026-03-01)
+**Commits:** `6312a91`
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -258,7 +259,8 @@ Build the turret as a plain C# simulation object (D-004 pattern). The turret det
 
 ### TASK J-014: Turret MonoBehaviour wrapper and placement
 
-**Status:** Pending
+**Status:** Complete (2026-03-01)
+**Commits:** `2e4cc15`
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
