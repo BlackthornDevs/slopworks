@@ -1,42 +1,67 @@
 # Joe's session handoff
 
-Updated by Joe's Claude at the end of each session. Read this at the start of every session to recover context.
+Updated by Joe's Claude at the end of each session.
 
 ---
 
-## Last updated: 2026-02-28
+## Last updated: 2026-03-02 (by Kevin -- Phase 6 Building Exploration complete)
+
+### What was completed by Kevin (2026-03-02)
+
+- **Phase 6: Building Exploration complete on kevin/main.** Full implementation: building simulation layer, warehouse layout generator, MEP restore points, entry/exit portals, building enemies, supply dock production, HUD integration. 59 new tests (755/755 total).
+- **No shared file changes.** Phase 6 added 9 new files in `Scripts/World/`, modified `StructuralPlaytestSetup.cs` and `PlayerHUD.cs`. No asmdef, ProjectSettings, or Core changes. Zero merge risk for Joe.
+- **New file ownership:** `Scripts/World/Building*.cs`, `Scripts/World/MEP*.cs` are Kevin's. Joe's Tower work (`Scripts/World/Tower*`) has no overlap.
+- **Phase 6 pattern note:** `renderer.material.color` causes EditMode test failures due to material leak. Use `var mat = new Material(renderer.sharedMaterial); mat.color = color; renderer.sharedMaterial = mat;` instead.
 
 ### What was completed
 
-J-007 through J-010 — all four code review fixes from Kevin's review of Phase 3.
+- **J-013: Auto-turret simulation layer** (`6312a91`) -- TurretController (pure C#), TurretDefinitionSO, 22 passing tests. Done in previous session.
+- **J-014: Turret MonoBehaviour wrapper and placement** (`2e4cc15`) -- TurretBehaviour wrapper with OverlapSphere enemy detection and barrel rotation. PlaceTurret added to BuildingPlacementService. Turret tool mode in StructuralPlaytestSetup (slot 7). Pre-loads 32 ammo per turret.
+- **J-015: Turret playtest scene** (`0a99c34`) -- Extended PreSeedFactory with ammo storage -> belt -> turret chain. Fixed ConnectionResolver to handle PortOwnerType.Turret (was throwing on turret input ports). Added P key to trigger pre-seed at runtime. Full loop verified: ammo flows from storage through belt to turret, turret fires at enemies, enemies die.
+- **PlaytestEnvironment** (`04a3ecd`) -- Reusable post-apocalyptic arena generator with procedural ground texture, perimeter walls, interior ruins, props, lighting, fog, and dust particles.
+- **Bug fixes:**
+  - PlayerController ground check now includes GridPlane layer (jumping on runtime ground)
+  - DestroySceneCameras() added to bootstrapper (scene camera conflict)
+  - ConnectionResolver.CreateSource/CreateDestination handle PortOwnerType.Turret
 
-**J-007 (Critical):** Converted EnemySpawner, WaveControllerBehaviour, FaunaController, WeaponBehaviour from MonoBehaviour to NetworkBehaviour. Added `IsServerInitialized` guards to all server-only methods. WeaponBehaviour now validates damage server-side via `[ServerRpc] ServerFireWeapon(Vector3 origin, Vector3 direction)` — client does client-prediction raycast for visuals, server re-validates. Added FishNet.Runtime reference to Slopworks.Runtime.asmdef.
+### Shared file changes (CRITICAL)
 
-**J-008 (High):** Extracted `FaunaAI.cs` (plain C#) from FaunaController following D-004 pattern. Covers attack timing, threat evaluation, pack coordination, alert evaluation, aggression management, strafe direction. FaunaController is now a thin wrapper. 23 EditMode tests in FaunaAITests.cs.
+- **`Scripts/Core/PhysicsLayers.cs`** -- added `FaunaMask`
+- **`Scripts/Automation/PortOwnerType.cs`** -- added `Turret` value to enum
+- **`Scripts/Automation/BuildingPlacementService.cs`** -- added `PlaceTurret` method with `skipFoundationCheck` parameter
+- **`Scripts/Automation/ConnectionResolver.cs`** -- added `PortOwnerType.Turret` cases to CreateSource and CreateDestination (falls through to Storage since turret ports own a StorageContainer)
+- **`Scripts/Player/PlayerController.cs`** -- added `(1 << PhysicsLayers.GridPlane)` to GroundMask
 
-**J-009 (Medium):** Eliminated all `GameObject.Find` and `FindAnyObjectByType` calls from combat and UI code. PlayerHUD uses `[SerializeField]` references wired by PlaytestSetup. WeaponBehaviour's `_hitMarker` is a SerializeField. Added `sourcePosition` field to DamageData so EnemyKnockback resolves knockback direction from damage data instead of `GameObject.Find(sourceId)`.
-
-**J-010 (Low):** Added `_cachedTargetHealth` field to FaunaController. Cached on target change in UpdatePerception, used in MeleeAttack. GetComponent called once per target, not per attack.
+No asmdef changes. No ProjectSettings changes. No new packages.
 
 ### What needs attention
 
-All tasks complete. Ready to merge to master — Phase 3 code review fixes are done.
+- ConnectionResolver now has Turret cases that fall through to Storage. If Kevin adds a new PortOwnerType, both CreateSource and CreateDestination need updating or they'll throw.
+- The `skipFoundationCheck` parameter on PlaceTurret defaults to `false`. Only the manual turret placement in the playtest bootstrapper passes `true`. PreSeedFactory turret uses `false` (foundations are laid first).
+- PlaytestEnvironment generates ruins with a 12-unit clear zone around center. If arena size changes, this value may need adjusting.
+- Known minor issue: CameraModeController gets null PlayerController reference (GetComponent before AddComponent in CreatePlayer). FPS mode works, isometric V-key toggle would break.
 
 ### Next task
 
-All tasks complete, awaiting new assignments.
+**J-023 (Critical): Merge master into joe/main and resolve conflicts BEFORE creating your turret PR.** Master now has Phase 6 (Building Exploration) and Phase 8 (Supply Chain) that your branch is missing. The main conflict is in StructuralPlaytestSetup.cs -- see J-023 in tasks-joe.md for detailed conflict resolution guidance. This must be done before any PR or before starting J-016.
+
+After J-023: J-016 (Tower data model and simulation layer, Phase 7 start). Pure C# simulation following D-004 pattern. Read `docs/plans/2026-02-28-tower-design.md` before starting.
 
 ### Blockers
 
-None.
+None. Phase 4 (Turret Defenses) is fully complete.
 
 ### Test status
 
-FaunaAITests.cs added (23 tests). Existing tests unaffected — no signature changes to HealthComponent, WeaponController, or WaveController.
+697/697 passing, 0 failing, 0 skipped, 0 compilation errors, 0 warnings.
+
+No new test files this session (J-013 tests added in previous session).
 
 ### Key context
 
-- `Slopworks.Runtime.asmdef` now references FishNet.Runtime — all combat scripts can use NetworkBehaviour
-- DamageData has a new `sourcePosition` field (Vector3) with backward-compatible constructors
-- PlaytestSetup.SetupHUD() now wires all serialized references via SerializedObject
-- FaunaAI is a standalone testable class — future AI changes should go there, not in FaunaController
+- Turret visual: dark red cylinder base + barrel pivot + elongated cube barrel. Barrel rotates toward current target.
+- Turret pre-loads 32 "iron_scrap" ammo via TryInsertStack. When ammo runs out, turret stops firing.
+- Turret has 1 input port at direction (-1,0) so inserters can deliver ammo from belts to the west.
+- PreSeedFactory turret chain: ammo storage at (5,5) -> belt (6,5)-(8,5) -> turret at (9,5). 200 iron scrap pre-loaded in ammo storage.
+- P key triggers PreSeedFactory at runtime (one-shot, guarded by _preSeedTriggered flag).
+- PlaytestEnvironment uses seeded System.Random (seed 42, arena size 40). Ground texture is procedural 512x512 Texture2D.

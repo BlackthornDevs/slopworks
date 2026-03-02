@@ -11,6 +11,11 @@ public class StorageContainer : IItemSource, IItemDestination
     private readonly ItemSlot[] _slots;
     private readonly int _maxStackSize;
 
+    /// <summary>
+    /// Fired after a slot is modified. Argument is the slot index.
+    /// </summary>
+    public event Action<int> OnSlotChanged;
+
     public int SlotCount => _slots.Length;
 
     public bool IsEmpty
@@ -96,6 +101,7 @@ public class StorageContainer : IItemSource, IItemDestination
                 _slots[i] = new ItemSlot { item = _slots[i].item, count = remaining };
             }
 
+            OnSlotChanged?.Invoke(i);
             return true;
         }
 
@@ -136,6 +142,7 @@ public class StorageContainer : IItemSource, IItemDestination
             if (_slots[i].item.definitionId == itemId && _slots[i].count < _maxStackSize)
             {
                 _slots[i] = new ItemSlot { item = _slots[i].item, count = _slots[i].count + 1 };
+                OnSlotChanged?.Invoke(i);
                 return true;
             }
         }
@@ -146,6 +153,7 @@ public class StorageContainer : IItemSource, IItemDestination
             if (_slots[i].IsEmpty)
             {
                 _slots[i] = new ItemSlot { item = ItemInstance.Create(itemId), count = 1 };
+                OnSlotChanged?.Invoke(i);
                 return true;
             }
         }
@@ -165,6 +173,18 @@ public class StorageContainer : IItemSource, IItemDestination
                 $"Slot index {index} is out of range [0, {_slots.Length - 1}].");
 
         return _slots[index];
+    }
+
+    /// <summary>
+    /// Directly sets a slot's contents. Used by UI for click-to-transfer operations.
+    /// </summary>
+    public void SetSlot(int index, ItemSlot slot)
+    {
+        if (index < 0 || index >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        _slots[index] = slot;
+        OnSlotChanged?.Invoke(index);
     }
 
     /// <summary>
@@ -243,6 +263,7 @@ public class StorageContainer : IItemSource, IItemDestination
                 int toAdd = Math.Min(canAdd, remaining);
                 _slots[i] = new ItemSlot { item = _slots[i].item, count = _slots[i].count + toAdd };
                 remaining -= toAdd;
+                OnSlotChanged?.Invoke(i);
             }
         }
 
@@ -254,6 +275,7 @@ public class StorageContainer : IItemSource, IItemDestination
                 int toAdd = Math.Min(_maxStackSize, remaining);
                 _slots[i] = new ItemSlot { item = ItemInstance.Create(itemId), count = toAdd };
                 remaining -= toAdd;
+                OnSlotChanged?.Invoke(i);
             }
         }
 
@@ -276,6 +298,7 @@ public class StorageContainer : IItemSource, IItemDestination
             {
                 totalRemoved += _slots[i].count;
                 _slots[i] = ItemSlot.Empty;
+                OnSlotChanged?.Invoke(i);
             }
         }
         return totalRemoved;

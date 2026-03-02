@@ -37,7 +37,7 @@ public class FaunaController : NetworkBehaviour
 
     private void Start()
     {
-        if (!IsServerInitialized) return;
+        if (NetworkObject != null && !IsServerInitialized) return;
 
         var healthBehaviour = GetComponent<HealthBehaviour>();
         if (healthBehaviour == null)
@@ -180,7 +180,7 @@ public class FaunaController : NetworkBehaviour
 
     private void ServiceTick()
     {
-        if (!IsServerInitialized) return;
+        if (NetworkObject != null && !IsServerInitialized) return;
 
         UpdatePerception();
         UpdatePackState();
@@ -292,7 +292,7 @@ public class FaunaController : NetworkBehaviour
 
     private void MeleeAttack()
     {
-        if (!IsServerInitialized) return;
+        if (NetworkObject != null && !IsServerInitialized) return;
         if (_currentTarget == null) return;
         if (!_ai.CanAttack(Time.time)) return;
 
@@ -393,7 +393,7 @@ public class FaunaController : NetworkBehaviour
 
     private void OnDeath()
     {
-        if (!IsServerInitialized) return;
+        if (NetworkObject != null && !IsServerInitialized) return;
 
         if (_pack != null)
         {

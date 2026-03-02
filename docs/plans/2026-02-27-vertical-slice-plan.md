@@ -915,9 +915,83 @@ public interface IInteractable
 
 ---
 
-## Phase 5: Building Exploration (Placeholder)
+## Parallel Execution Schedule
 
-### Task 5.1: Placeholder building scene
+Phases 1-3 are complete. Phase 4 is in progress (Joe). Remaining phases are assigned for parallel execution:
+
+| Round | Kevin | Joe |
+|-------|-------|-----|
+| 1 | Phase 5 (Core UI + Inventory + Scene Mgmt) | Phase 4 (Turret Defenses) -- in progress |
+| 2 | Phase 6 (Building Exploration) | Phase 7 (The Tower) |
+| 3 | Phase 8 (Supply Chain Network) | Phase 9 (Save System + Full Loop) |
+
+Round 2 has no file overlap: Kevin works in `Scripts/World/`, `Scripts/Core/`, `Scripts/UI/`; Joe works in `Scripts/World/Tower*`, `Scripts/Combat/InteriorFauna*`, `Scenes/Tower_Core.unity`. Round 3 has integration points that require coordination.
+
+---
+
+## Phase 5: Core UI + Player Inventory + Scene Management (Kevin)
+
+> Prerequisites for every subsequent phase. HUD, inventory, and scene transitions must exist before building exploration, the tower, or supply chains can function.
+
+### Task 5.1: Scene loader and transition system
+
+**Files:**
+- Create: `Assets/_Slopworks/Scripts/Core/SceneLoader.cs`
+- Modify: `Bootstrap.cs`
+
+**Steps:**
+
+1. Implement scene loader (additive loading, Core scenes always resident):
+   - `LoadSceneAsync(string sceneName, LoadSceneMode.Additive)` with progress callback
+   - `UnloadSceneAsync(string sceneName)` for cleanup
+   - Transition flow: fade out -> unload old -> load new -> fade in
+   - Core_Network and Core_GameManager are never unloaded
+2. Create loading screen UI (simple panel with progress bar).
+3. Add transition trigger interface: `ISceneTransitionTrigger` with destination scene name.
+4. **Test:** Trigger a scene transition, verify additive load/unload, verify Core scenes persist.
+5. Commit.
+
+### Task 5.2: Basic HUD
+
+**Files:**
+- Create: `Assets/Scenes/HomeBase/HomeBase_UI.unity`
+- Create: UI scripts in `Assets/_Slopworks/Scripts/UI/`
+
+**Steps:**
+
+1. Create HUD elements:
+   - Health bar (bound to player HealthComponent)
+   - Hotbar (9 slots, number keys to select)
+   - Threat meter display
+   - Build mode indicator
+   - Crosshair
+   - Interaction prompt ("Press E to ...")
+   - Wave incoming warning
+2. HUD scene loads additively via SceneLoader from 5.1.
+3. Commit.
+
+### Task 5.3: Player inventory
+
+**Files:**
+- Create: `Assets/_Slopworks/Scripts/Player/PlayerInventory.cs`
+- Create: Inventory UI scripts
+
+**Steps:**
+
+1. Implement player inventory (36 slots + 9 hotbar) using existing `InventoryContainer`.
+2. Implement pickup system (walk over items on ground, auto-collect).
+3. Implement inventory UI (Tab to open/close).
+4. Implement manual crafting at workstations (interact with machine, select recipe, craft from inventory).
+5. **Test:** Pick up items, open inventory, see items. Craft at a workstation. Hotbar reflects inventory changes.
+6. Commit.
+
+---
+
+## Phase 6: Building Exploration (Kevin)
+
+> First BIM building interior. Establishes the pattern for clearing and claiming buildings that the tower and overworld build on.
+
+### Task 6.1: Placeholder building scene
 
 **Files:**
 - Create: `Assets/Scenes/Buildings/Building_Warehouse.unity`
@@ -930,39 +1004,51 @@ public interface IInteractable
    - NavMesh baked for fauna
    - Enemy spawners placed in dark corners
    - MEP interaction points (placeholder cubes that trigger "restore" on interact)
-
 2. Implement building manager:
    - Track which MEP systems are restored
    - When all systems restored, fire `BuildingClaimed` event
    - Building produces resources after claiming
-
-3. **Test:** Load building scene, navigate interior, fight fauna, interact with MEP points, claim building.
-
-4. Commit.
-
----
-
-### Task 5.2: Scene transitions
-
-**Files:**
-- Create: `Assets/_Slopworks/Scripts/Core/SceneLoader.cs`
-- Modify: `Bootstrap.cs`
-
-**Steps:**
-
-1. Implement scene loader per `docs/reference/team-workflow.md` (additive loading, Core always resident).
-2. Add transition triggers:
-   - Overworld: click building icon -> load building scene
-   - Building: interact with exit door -> load home base
-3. Loading screen during transitions (simple UI panel with progress bar).
-4. **Test:** Walk to transition trigger, load building, clear it, return to base.
+3. Scene transitions use SceneLoader from Phase 5 (enter building -> additive load, exit -> unload).
+4. **Test:** Load building scene, navigate interior, fight fauna, interact with MEP points, claim building, return to home base.
 5. Commit.
 
 ---
 
-## Phase 6: Supply Chain (Overworld)
+## Phase 7: The Tower (Joe)
 
-### Task 6.1: Overworld map
+> Repeatable FPS combat gauntlet for progression, rare materials, and factory upgrades. Full design in `docs/plans/2026-02-28-tower-design.md`. Joe's tasks are J-016 through J-021 in `docs/coordination/tasks-joe.md`.
+
+### Task 7.1: Tower data model and simulation layer (J-016)
+
+Plain C# classes following D-004 pattern. `TowerController` tracks run state (current building, cleared chunks, carried loot, banked fragments, tier). `FloorChunkDefinition` is a data class for spawn points, loot nodes, stair connections. `TowerBuildingDefinitionSO` is a read-only SO with chunk list and boss floor config. All classes are pure C# with no MonoBehaviour dependency. EditMode tests cover run init, chunk clearing, fragment banking, tier progression, loot-on-death clearing.
+
+### Task 7.2: Tower loot system (J-017)
+
+Data-driven loot system. `LootDropDefinition` is a configurable data class (itemId, rarity, dropWeight, min/maxAmount, floor/tier filters). `TowerLootTable` resolves drops from data -- all tuning happens in data, not code. Adding/removing/rebalancing loot requires zero code changes. Tests cover drop resolution with weight/rarity/floor/tier filters.
+
+### Task 7.3: Tower MonoBehaviour wrapper + elevator (J-018)
+
+`TowerBehaviour` wraps `TowerController`. `Tower_Core.unity` is the persistent scene with elevator, lobby geometry, and tower UI. Elevator panel shows floor buttons, triggers chunk swap (destroy current prefab, instantiate next). Depends on Phase 5 (scene management + inventory).
+
+### Task 7.4: Tower enemy population (J-019)
+
+Data-driven enemy spawn configuration per floor chunk. `FloorChunkDefinition` holds spawn entries (faunaDefinition, count, tierMultiplier). 1 new interior fauna type as proof of concept. Enemies spawn on chunk load, cleared floors stay cleared for the run.
+
+### Task 7.5: Boss encounter (J-020)
+
+Boss floor locked until required fragments banked (configurable, default 4). Hand-designed arena. Boss uses existing `FaunaDefinitionSO` with elevated stats. Boss kill rewards use `LootDropDefinition` system. Tier increment and fragment cycle reset on boss death.
+
+### Task 7.6: Tower playtest scene (J-021)
+
+End-to-end playtest: enter tower, explore floors, fight enemies, collect loot + fragments, extract or die. Verify loot banking on extract, loot loss on death, fragment persistence, boss unlock, boss fight, tier progression.
+
+---
+
+## Phase 8: Supply Chain Network (Kevin)
+
+> Connects claimed buildings to home base via overworld supply lines. Resources flow passively, giving the player a reason to clear more buildings.
+
+### Task 8.1: Overworld map
 
 **Files:**
 - Create: `Assets/Scenes/Overworld/Overworld_Map.unity`
@@ -974,20 +1060,16 @@ public interface IInteractable
    - Grid-based tile map
    - Home base icon at center
    - Building icons at fixed positions (3-4 buildings)
+   - Tower node (requires power connection to activate elevator)
    - Supply line visuals (simple lines between connected nodes)
-
 2. Implement click-to-select on buildings:
    - Show building info panel (type, status, production)
    - Show recipe configuration UI
    - Show supply line routing UI
-
 3. **Test:** Navigate overworld, click buildings, see info panels. Click supply lines to see routing.
-
 4. Commit.
 
----
-
-### Task 6.2: Supply line resource flow
+### Task 8.2: Supply line resource flow
 
 **Files:**
 - Create: `Assets/_Slopworks/Scripts/Automation/SupplyLineManager.cs`
@@ -999,62 +1081,23 @@ public interface IInteractable
    - Each claimed building is a node with configurable recipe
    - Produces output on a timer
    - Output routes to connected nodes per configured ratios
-
 2. Implement supply line manager:
    - Tracks connections between building nodes and home base
    - Resources flow along supply lines at configured rates
    - Resources arrive at destination after transport delay (based on distance)
-   - Supply lines have a vulnerability rating (used by wave system later)
-
+   - Supply lines have a vulnerability rating (used by wave system)
 3. Connect supply line outputs to home base inventory (items appear in a "supply dock" storage container).
-
-4. **Test:** Claim a building, configure it as a foundry, set output to home base. Wait for resources to arrive. Verify resource flow.
-
-5. Commit.
-
----
-
-## Phase 7: Polish and Vertical Slice Assembly
-
-### Task 7.1: Basic HUD
-
-**Files:**
-- Create: `Assets/Scenes/HomeBase/HomeBase_UI.unity`
-- Create: UI scripts in `Assets/_Slopworks/Scripts/UI/`
-
-**Steps:**
-
-1. Create HUD elements:
-   - Health bar
-   - Hotbar (9 slots)
-   - Threat meter display
-   - Build mode indicator
-   - Crosshair
-   - Interaction prompt ("Press E to ...")
-   - Wave incoming warning
-
-2. Commit.
-
----
-
-### Task 7.2: Player inventory
-
-**Files:**
-- Create: `Assets/_Slopworks/Scripts/Player/PlayerInventory.cs`
-- Create: Inventory UI
-
-**Steps:**
-
-1. Implement player inventory (36 slots + 9 hotbar).
-2. Implement pickup system (walk over items on ground).
-3. Implement inventory UI (Tab to open/close, drag-and-drop later).
-4. Implement manual crafting at workstations (interact with machine, select recipe, craft).
-5. **Test:** Pick up items, open inventory, see items. Craft at a workstation.
+4. Tower node integration: power connection from player network activates the tower elevator.
+5. **Test:** Claim a building, configure production, set output to home base. Wait for resources to arrive. Verify resource flow. Connect power to tower node, verify elevator activates.
 6. Commit.
 
 ---
 
-### Task 7.3: Local JSON save system
+## Phase 9: Save System + Full Loop Assembly (Joe assists)
+
+> Persistence layer and integration testing. Joe handles save/load implementation while Kevin connects all systems.
+
+### Task 9.1: Local JSON save system
 
 **Files:**
 - Create: `Assets/_Slopworks/Scripts/Core/SaveSystem.cs`
@@ -1063,44 +1106,38 @@ public interface IInteractable
 **Steps:**
 
 1. Implement save/load to local JSON file:
-   - Save: player inventory, placed buildings, claimed buildings, threat level
+   - Save: player inventory, placed buildings (factory grid state), claimed buildings, supply line config, threat level, tower progress (banked fragments, current tier)
    - Save location: `Application.persistentDataPath + "/saves/"`
    - Format per `docs/reference/crafting-inventory.md` (definitionId strings, save version)
-
 2. Auto-save every 5 minutes and on quit.
-
 3. Load on game start.
-
-4. **Test:** Build a base, save, quit, reload. Verify base and inventory persist.
-
+4. **Test:** Build a base, run the tower, save, quit, reload. Verify base, inventory, and tower progress persist.
 5. Commit.
 
----
-
-### Task 7.4: Connect the full loop
+### Task 9.2: Connect the full loop
 
 **Steps:**
 
 1. Verify the full gameplay loop works end-to-end:
    - Start at home base
-   - Build foundations and machines
+   - Build foundations, machines, turret defenses
    - Open overworld, scout a building
    - Travel to building, clear fauna, restore MEP systems, claim it
    - Return to overworld, configure building production and supply line to base
-   - Resources flow to base
-   - Use resources to craft better equipment and defenses
-   - Defense wave attacks base
+   - Resources flow to base, use them to craft equipment and turret ammo
+   - Enter the tower, explore floors, fight enemies, collect loot
+   - Extract with loot or die and lose it
+   - Bank key fragments, unlock boss, beat boss for tier upgrade
+   - Defense wave attacks base, turrets defend
    - Survive, expand to next building
-
 2. Fix integration issues between systems.
-
 3. Commit as "vertical slice complete".
 
 ---
 
-## Phase 8: Multiplayer (Post-Vertical-Slice)
+## Phase 10: Multiplayer (Post-Vertical-Slice)
 
-### Task 8.1: FishNet integration
+### Task 10.1: FishNet integration
 
 Convert single-player systems to networked:
 - Add NetworkObject and NetworkBehaviour to player, machines, belt segments
@@ -1109,7 +1146,7 @@ Convert single-player systems to networked:
 - Convert machine simulation to server-only (add `if (!IsServerInitialized) return;` guards)
 - Test with ParrelSync (two editor instances)
 
-### Task 8.2: FishySteamworks transport
+### Task 10.2: FishySteamworks transport
 
 - Install Facepunch.Steamworks
 - Install FishySteamworks
@@ -1120,17 +1157,21 @@ Convert single-player systems to networked:
 
 ## Open Items (Backlog)
 
+Items covered by phases above have been removed. Remaining backlog:
+
 - Supabase integration (lobby discovery, persistent saves, cross-session state)
 - BIM import pipeline (Revit FBX -> Unity, material remapping, LOD, navmesh)
 - Art style pass (replace placeholder cubes with real assets)
 - Audio and music
-- Fauna variety and behavior patterns
-- Tech tree and progression curve
-- Loot and equipment system
-- Power grid system (generator placement, power routing, satisfaction calculation)
+- Tech tree and progression curve (tower tiers drive this)
 - GPU instanced belt item rendering (replace GameObjects with DrawMeshInstancedProcedural)
 - Zoop-style batch placement for foundations
 - Day/night cycle
 - GameCI build pipeline
 - MCP Unity integration for Claude Code workflow
-- Review SebLague/Curve-Editor (https://github.com/SebLague/Curve-Editor) for belt path math -- Bezier curves, path creation, 2D curve editing. Document reusable math for curved belt placement and visual path rendering
+- Review SebLague/Curve-Editor (https://github.com/SebLague/Curve-Editor) for belt path math
+- Tower building pool expansion (additional BIM models for variety)
+- Interior fauna variety (new enemy types for upper tower floors)
+- Tower modifiers and blueprints (specific items and effects to design)
+- Supply line vulnerability and defense events (waves target supply lines)
+- Equipment and gear system (weapons, armor, tools with durability and upgrades)

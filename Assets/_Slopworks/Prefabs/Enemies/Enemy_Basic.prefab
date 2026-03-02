@@ -164,5 +164,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed37dbc0ab6544a38aa43ab0c5923b6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::FaunaController
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 0}
+  _networkObjectCache: {fileID: 0}
   _def: {fileID: 11400000, guid: c8ee4e854e8ee4375bba582724c26daf, type: 2}
   _onDeathEvent: {fileID: 11400000, guid: 508849b1a0b1e42e7aca664935845b1c, type: 2}

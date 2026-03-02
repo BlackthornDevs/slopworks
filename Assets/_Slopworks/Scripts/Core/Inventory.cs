@@ -11,6 +11,11 @@ public class Inventory
 
     public int SlotCount => _slots.Length;
 
+    /// <summary>
+    /// Fired after a slot is modified. Argument is the slot index.
+    /// </summary>
+    public event Action<int> OnSlotChanged;
+
     /// <param name="slotCount">Number of inventory slots.</param>
     /// <param name="getMaxStackSize">
     /// Callback that returns the max stack size for a given definitionId.
@@ -71,6 +76,7 @@ public class Inventory
             int toAdd = Math.Min(remaining, spaceInSlot);
             _slots[i].count += toAdd;
             remaining -= toAdd;
+            OnSlotChanged?.Invoke(i);
         }
 
         // Second pass: fill empty slots
@@ -86,6 +92,7 @@ public class Inventory
                 count = toAdd
             };
             remaining -= toAdd;
+            OnSlotChanged?.Invoke(i);
         }
 
         return true;
@@ -120,6 +127,8 @@ public class Inventory
 
             if (_slots[i].count <= 0)
                 _slots[i] = ItemSlot.Empty;
+
+            OnSlotChanged?.Invoke(i);
         }
 
         return true;
@@ -177,7 +186,40 @@ public class Inventory
     public void Clear()
     {
         for (int i = 0; i < _slots.Length; i++)
+        {
             _slots[i] = ItemSlot.Empty;
+            OnSlotChanged?.Invoke(i);
+        }
+    }
+
+    /// <summary>
+    /// Directly sets a slot's contents. Used by UI for drag-and-drop operations.
+    /// </summary>
+    public void SetSlot(int index, ItemSlot slot)
+    {
+        if (index < 0 || index >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        _slots[index] = slot;
+        OnSlotChanged?.Invoke(index);
+    }
+
+    /// <summary>
+    /// Swaps the contents of two slots.
+    /// </summary>
+    public void SwapSlots(int indexA, int indexB)
+    {
+        if (indexA < 0 || indexA >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(indexA));
+        if (indexB < 0 || indexB >= _slots.Length)
+            throw new ArgumentOutOfRangeException(nameof(indexB));
+
+        var temp = _slots[indexA];
+        _slots[indexA] = _slots[indexB];
+        _slots[indexB] = temp;
+
+        OnSlotChanged?.Invoke(indexA);
+        OnSlotChanged?.Invoke(indexB);
     }
 
     /// <summary>

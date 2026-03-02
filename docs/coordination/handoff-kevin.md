@@ -1,73 +1,65 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-02-28 (session end)
+Last updated: 2026-03-02 14:00
 Branch: kevin/main
-Last commit: f2e4aef Wire all subsystems into FactorySimulation tick loop, add playtest
+Last commit: (pending -- Phase 8 implementation)
 
 ## What was completed this session
 
-### Automation connectivity systems (796377b)
-- `Scripts/Automation/IItemSource.cs` / `IItemDestination.cs` -- universal item transfer interfaces
-- `Scripts/Automation/BeltOutputAdapter.cs`, `BeltInputAdapter.cs` -- belt endpoint adapters
-- `Scripts/Automation/MachineOutputAdapter.cs`, `MachineInputAdapter.cs` -- machine slot adapters
-- `Scripts/Automation/Inserter.cs` + `InserterBehaviour.cs` -- grab/swing/deposit transfer arm
-- `Scripts/Automation/StorageContainer.cs` + `StorageDefinitionSO.cs` + `StorageBehaviour.cs` -- slot-based stacking storage
-- `Scripts/Automation/BeltNetwork.cs` + `BeltNetworkBehaviour.cs` -- belt-to-belt connections with held-item-in-transit
-- `Scripts/Automation/IPowerNode.cs`, `PowerNetwork.cs`, `PowerNetworkManager.cs`, `SimplePowerNode.cs`, `PowerNetworkBehaviour.cs` -- BFS flood-fill power grid
-- Tests: InserterTests (33), StorageContainerTests (26), BeltNetworkTests (15), PowerNetworkTests (30)
+### Phase 8: Supply Chain Network (full implementation)
 
-### FactorySimulation orchestration (f2e4aef)
-- `Scripts/Automation/FactorySimulation.cs` -- now orchestrates ALL subsystems in tick order:
-  1. Power network rebuild (if dirty)
-  2. Belt segments tick
-  3. Belt network transfers
-  4. Inserters tick
-  5. Machines tick
-- `Scripts/Automation/FactorySimulationBehaviour.cs` -- exposes belt speed config
-- `Scripts/Automation/FactoryPlaytestSetup.cs` -- self-contained playtest MonoBehaviour
-- `Scenes/Playtest.unity` -- has FactoryPlaytestSetup component, camera positioned
-- 14 new integration tests including full end-to-end pipeline (storage -> belt -> machine -> belt -> storage)
+**Simulation layer (5 new files in Scripts/World/):**
+- `SupplyLine.cs` -- pure C# transport connection with configurable delay, in-flight item tracking, IDisposable, OnItemDelivered/OnItemLost events
+- `SupplyLineManager.cs` -- manages N supply lines, TickAll(), TotalInFlight/TotalDelivered aggregates
+- `OverworldNodeType.cs` -- enum: HomeBase, Building, Tower
+- `OverworldNode.cs` -- data class with NodeId, DisplayName, NodeType, map coords, BuildingState ref, IsActive property
+- `OverworldMap.cs` -- node registry with RegisterNode/GetNode/GetNodes
 
-### Infrastructure fixes (9580bc9)
-- Moved `Assets/_Slopworks/Input/` to `Assets/_Slopworks/Scripts/Input/` (inside asmdef scope)
-- Added TMPro GUID to `Slopworks.Runtime.asmdef` references
-- Fixed jawn's player script compilation errors
+**UI (1 new file in Scripts/UI/):**
+- `OverworldMapUI.cs` -- OnGUI overlay opened with M key, shows nodes (home base, buildings, tower), supply line connections, selected node info panel, supply summary
 
-### Jawn task assignment (466b16c, 03d986e)
-- Wrote J-003 through J-006 in `docs/coordination/tasks-joe.md` (Phase 3 combat systems)
-- Resolved merge conflict with jawn's J-002 completion notes
+**Bootstrapper integration (StructuralPlaytestSetup.cs, +129 lines, -29 lines):**
+- Supply dock now placed via `_automationService.PlaceStorage()` on grid cell (15,7) with foundation
+- Proper port nodes (output-only on all 4 faces) -- connectable to belts
+- Port indicators (red output arrows) matching smelter/storage pattern
+- Removed direct OnItemProduced wiring -- items now travel via SupplyLine with 10s transport delay
+- CreateSupplyChain() creates SupplyLineManager, SupplyLine, OverworldMap with 3 nodes, OverworldMapUI
+- SupplyLineManager ticked in FixedUpdate after BuildingManager
+- M key toggles overworld map with cursor unlock/lock
+- Escape closes map, all input suppressed while map open
+- Supply status line in OnGUI: "Supply: X in transit | Y delivered"
+- "[M] Overworld map" added to controls help
+- SupplyLine disposed in OnDestroy
+
+**Tests (34 new tests, 4 test files):**
+- `SupplyLineTests.cs` -- 14 tests: construction, in-flight, transport delay, delivery events, loss events, dispose, unclaimed building
+- `SupplyLineManagerTests.cs` -- 6 tests: register/unregister, query by source, tick all, aggregates
+- `OverworldMapTests.cs` -- 8 tests: node registration, query, IsActive per type
+- `SupplyChainIntegrationTests.cs` -- 6 tests: full pipeline, unclaimed produces nothing, accumulation, dock full loss, dispose unsubscribes, multi-building independence
 
 ## What's in progress (not yet committed)
-- Deleted TMP font material .meta files (jawn's TMP cleanup remnants, harmless)
-- New `.claude/skills/slopworks-handoff/` skill (will commit with this handoff)
+
+None -- committing now.
 
 ## Next task to pick up
 
-**Build the PortNode / spatial connection system** -- this is the bridge between the simulation layer (which is complete and tested) and actual gameplay.
-
-Specifically (Phase 1, Task 1.6 completion):
-1. **PortNode system** -- A component or plain C# class representing a spatial connection point. Every machine, storage, and belt endpoint exposes typed nodes (input/output) at world positions derived from MachinePort.localOffset + building rotation.
-2. **Connection resolver** -- When a belt endpoint is placed adjacent to a port node, snap to it and auto-create the inserter or belt network link.
-3. **Belt placement on grid** -- Click-drag belt segments that align to the grid and snap to port nodes.
-4. **Machine/storage placement** -- Place buildings via BuildModeController, spawning port nodes.
-5. **Visual belt items** -- Simple GameObjects moving along belts (GPU instancing deferred).
-
-The port node system is the linchpin -- build it first.
-
-Reference: `docs/plans/2026-02-27-vertical-slice-plan.md` Phase 1 Tasks 1.2, 1.3, 1.6.
+- **Manual playtest Phase 8** -- claim building, wait 30s (production) + 10s (transport), verify items arrive at supply dock. Open overworld map with M, verify nodes and line connections visible. Connect belt to supply dock output port.
+- **Phase 9 or vertical slice polish** depending on priorities
 
 ## Blockers or decisions needed
-- None. The user confirmed the approach (port nodes with snap connections).
+
+None.
 
 ## Test status
-- 276/276 passing, 0 failures, 0 skipped
-- 0 compilation errors, 3 warnings (all pre-existing: FishNet deprecation, jawn's unused field)
+
+789/789 EditMode tests passing (755 existing + 34 new), 0 failures.
 
 ## Key context the next session needs
-- `MachinePort` struct already exists with `localOffset`, `direction`, and `PortType` (Input/Output) -- use this as the data source for spatial port nodes
-- `MachineDefinitionSO.ports` is the array of port definitions per machine type
-- The adapters (BeltInputAdapter, MachineInputAdapter, etc.) already exist -- the connection resolver just needs to create the right adapter + Inserter and register it with FactorySimulation
-- StorageContainer implements both IItemSource and IItemDestination directly -- no adapter needed
-- Belt speed at 50Hz: speed 2 = 1 tile/sec, speed 4 = 2 tiles/sec
-- Inserter swing duration is in seconds, belt tick speed is in subdivisions per tick -- they're on different time scales by design
-- The playtest scene creates everything in code -- the real build system will use the grid + port nodes instead
+
+- Supply dock at grid cell (15,7), placed through BuildingPlacementService with output-only ports
+- First delivery takes ~40s after claiming building (30s production interval + 10s transport delay)
+- Overworld map is OnGUI overlay (M key), not a separate scene (per D-009)
+- Tower node on map is inactive (placeholder) -- will activate when Joe's tower power system is wired
+- Supply dock has output ports only (red indicators) since items arrive via supply line, not belts
+- No shared file changes this session -- no asmdef, ProjectSettings, or Core changes
+- Joe's shared file changes from Phase 4 (PhysicsLayers, PortOwnerType, BuildingPlacementService, ConnectionResolver, PlayerController) still need merging via master PR

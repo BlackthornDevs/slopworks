@@ -243,8 +243,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36d0800a76a7441158dc40c82b854c82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::WeaponBehaviour
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 0}
+  _networkObjectCache: {fileID: 0}
   _weaponDefinition: {fileID: 11400000, guid: 40766daf16084461692c1321a03ce300, type: 2}
   _camera: {fileID: 2980269953171773878}
+  _hitMarker: {fileID: 0}
 --- !u!114 &7310743053435581595
 MonoBehaviour:
   m_ObjectHideFlags: 0

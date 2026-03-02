@@ -31,9 +31,22 @@ If multiple tasks share the same priority, pick the **lowest J-number** first (e
 1. Mark its status as `Complete` with the date and commit hash
 2. Update `docs/coordination/handoff-joe.md` with what you did, what's next, and any blockers
 3. Run all EditMode tests -- they must pass before you push
+3b. Check for shared file changes. If you modified ANY of these, note it prominently in handoff-joe.md:
+    - Slopworks.Runtime.asmdef or any .asmdef file
+    - Anything in ProjectSettings/
+    - Anything in Scripts/Core/
+    - Any ScriptableObject definition (fields, not assets)
+    - Any new package dependency
 4. Commit and push to `joe/main`
 5. Check this file again for the next task (repeat the priority rules)
-6. If no pending tasks remain, write a note in `handoff-joe.md` saying "all tasks complete, awaiting new assignments" and stop
+6. If no pending tasks remain, use the `slopworks-handoff-joe` skill to run the full handoff process
+
+### When you finish ALL tasks
+
+When no pending tasks remain:
+1. Use the `slopworks-handoff-joe` skill to run the full handoff process
+2. This ensures compilation verification, test reporting, and shared-file change tracking
+3. Do not just write "all tasks complete" -- run the skill
 
 ### When you hit a blocker
 
@@ -140,10 +153,47 @@ Added `_cachedTargetHealth` field. UpdatePerception caches HealthBehaviour once 
 
 ---
 
+## asmdef reference fixes
+
+### TASK J-011: Add NPBehave reference to Slopworks.Runtime.asmdef
+
+**Status:** Complete (2026-02-28)
+**Commits:** `1bd6bc1`, `4aa4351`
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Scripts/` (shared file)
+
+J-005 vendored NPBehave and J-007 converted combat scripts to NetworkBehaviour, but the NPBehave GUID reference (`b23d0b8134b59074db4ef602bb53a3c5`) was not added to `Slopworks.Runtime.asmdef` on joe/main. This causes compilation failures when merging to other branches.
+
+**Acceptance criteria:**
+- `Slopworks.Runtime.asmdef` includes `GUID:b23d0b8134b59074db4ef602bb53a3c5` in its references array
+- Zero compilation errors after recompile
+- Note this in handoff as a shared file change
+
+### TASK J-012: Add FishNet and NPBehave references to Slopworks.Tests.EditMode.asmdef
+
+**Status:** Complete (2026-02-28)
+**Commits:** `1bd6bc1`, `4aa4351`
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Tests/` (shared file)
+
+`PackCoordinatorTests.cs` uses `FaunaController` (which extends `NetworkBehaviour`) and `PackCoordinator` (which uses `NPBehave.Blackboard`). The test assembly needs direct references to both transitive dependencies to compile.
+
+**Acceptance criteria:**
+- `Slopworks.Tests.EditMode.asmdef` includes `GUID:7c88a4a7926ee5145ad2dfa06f454c67` (FishNet.Runtime) and `GUID:b23d0b8134b59074db4ef602bb53a3c5` (NPBehave) in its references array
+- All 666 EditMode tests pass
+- Zero compilation errors after recompile
+- Note both asmdef changes in handoff as shared file changes
+
+**Depends on:** J-011
+
+---
+
 ## Phase 3 completion notes
 
 **All tasks (J-003 through J-006) complete and merged to master** (2026-02-28, commit `7bdb704`).
-**Code review fixes (J-007 through J-010) complete** (2026-02-28, commit `9b71b82`). Ready to merge to master.
+**Code review fixes (J-007 through J-010) complete** (2026-02-28, commit `9b71b82`). Merged to master.
 
 ### Additional work beyond task specs
 
@@ -159,9 +209,391 @@ Added `_cachedTargetHealth` field. UpdatePerception caches HealthBehaviour once 
 
 ### Interfaces available for Phase 4
 
-Kevin's turret system can use:
-- `HealthComponent` / `HealthBehaviour` — attach to anything that takes damage
-- `DamageData` / `DamageType` — pass to `HealthComponent.TakeDamage()`
-- `FaunaDefinitionSO` — define new enemy types with pack behavior fields
-- `GameEventSO` (EnemyDied) — listen for enemy deaths
-- `PhysicsLayers` constants — layer masks for raycasts
+Phase 4 is now assigned to Joe. Use these existing systems:
+- `HealthComponent` / `HealthBehaviour` -- attach to anything that takes damage
+- `DamageData` / `DamageType` -- pass to `HealthComponent.TakeDamage()`
+- `FaunaDefinitionSO` -- define new enemy types with pack behavior fields
+- `GameEventSO` (EnemyDied) -- listen for enemy deaths
+- `PhysicsLayers` constants -- layer masks for raycasts
+- `BuildingPlacementService` -- place turrets on factory grid (like machines)
+- `PortNode` system -- turrets can have input ports for ammo delivery via belts
+- `PowerNetwork` / `PowerNetworkManager` -- turrets check `GetSatisfaction()` to operate
+- `StorageContainer` -- turret internal ammo inventory
+- `MachineDefinitionSO` / `MachinePort` -- reference pattern for turret SO + port definitions
+
+---
+
+## Phase 4: Turret Defenses
+
+### TASK J-013: Auto-turret simulation layer
+
+**Status:** Complete (2026-03-01)
+**Commits:** `6312a91`
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`
+
+Build the turret as a plain C# simulation object (D-004 pattern). The turret detects enemies, rotates toward them, and fires on interval. It consumes ammo from an internal `StorageContainer` and requires power to operate.
+
+**Files to create:**
+- `Scripts/Combat/TurretController.cs` -- plain C# turret logic
+- `Scripts/Combat/TurretDefinitionSO.cs` -- read-only turret stats (range, fire rate, damage, ammo type, power consumption)
+- `Tests/Editor/EditMode/TurretControllerTests.cs` -- EditMode tests
+
+**Implementation:**
+1. `TurretDefinitionSO`: range, fireInterval, damagePerShot, damageType, ammoItemId, powerConsumption, size, ports (MachinePort[] for ammo input)
+2. `TurretController`: plain C# class, takes TurretDefinitionSO
+   - `Tick(float deltaTime)` -- called by simulation
+   - Internally owns a `StorageContainer` for ammo
+   - Tracks current target, rotation toward target, fire cooldown
+   - Target selection: nearest enemy within range (pass candidate list, don't use Physics)
+   - Fire: consume 1 ammo from internal storage, return `TurretFireEvent` struct (target, damage)
+   - Power check: takes satisfaction float (0-1), won't fire if satisfaction < threshold (e.g. 0.5)
+   - Does NOT do raycasting or Unity physics -- pure simulation logic
+3. Tests: fire rate timing, ammo consumption, no-ammo stops firing, no-power stops firing, target selection (nearest), no target when out of range
+
+**Acceptance criteria:**
+- TurretController is pure C# with no MonoBehaviour dependency
+- All tests pass
+- Follows D-004 pattern (simulation object, not MonoBehaviour)
+
+### TASK J-014: Turret MonoBehaviour wrapper and placement
+
+**Status:** Complete (2026-03-01)
+**Commits:** `2e4cc15`
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`
+**Depends on:** J-013
+
+Build the thin MonoBehaviour wrapper and integrate turret placement into the playtest scene.
+
+**Files to create:**
+- `Scripts/Combat/TurretBehaviour.cs` -- thin wrapper
+- Modify `Scripts/Building/StructuralPlaytestSetup.cs` -- add tool [8] for turret placement
+
+**Implementation:**
+1. `TurretBehaviour`: thin wrapper around TurretController
+   - `FixedUpdate`: call `TurretController.Tick()` with nearby enemies
+   - Uses `OverlapSphere` to find enemies in range, passes to controller
+   - When controller returns a fire event, apply `DamageData` to target's `HealthComponent`
+   - Visual: rotate barrel transform toward current target
+2. Add turret as tool [8] in StructuralPlaytestSetup:
+   - Create `TurretDefinitionSO` at runtime (like smelter/storage)
+   - Place via `BuildingPlacementService.PlaceMachine()` (turrets are machines that consume ammo)
+   - Port definition: one input port for ammo belt connection
+   - Turret visual: cylinder base + elongated cube barrel
+   - Port indicators like machines (blue input for ammo)
+3. Add turret stats to OnGUI overlay
+
+**Acceptance criteria:**
+- Turret placeable on foundations via tool [8]
+- Turret auto-targets and kills enemies in range
+- Turret consumes ammo from internal storage
+- Belt can deliver ammo to turret via port connection
+- Turret stops firing when out of ammo
+
+### TASK J-015: Turret playtest scene
+
+**Status:** Complete (2026-03-01)
+**Commits:** `0a99c34`
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`, `Scenes/`
+**Depends on:** J-014
+
+Create a combined turret defense playtest that verifies the full loop: place turrets, feed them ammo via belts, trigger enemy waves, watch turrets defend.
+
+**Implementation:**
+1. Either extend StructuralPlaytest scene or create a new `TurretPlaytest.unity`
+2. Pre-seed option: storage with ammo -> belt -> turret, enemy spawner nearby
+3. Wave trigger key (e.g. W) to spawn a wave of enemies
+4. Verify: ammo flows on belt -> inserter loads turret -> turret fires at enemies -> enemies die
+5. Verify: turret stops when ammo runs out, stops when power disconnected (if power network wired)
+
+**Acceptance criteria:**
+- Playable end-to-end: build turret, connect ammo supply, trigger wave, watch defense
+- Turret kills enemies, consumes ammo, logs activity
+- Enemies path toward base and get intercepted
+
+---
+
+## Pre-PR merge task
+
+### TASK J-023: Merge master into joe/main and resolve conflicts before PR
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+
+Master now contains Phase 6 (Building Exploration) and Phase 8 (Supply Chain Network) from Kevin. Your branch is missing both. You MUST merge master and resolve all conflicts before creating a PR for your turret work.
+
+**Steps:**
+1. `git fetch origin master && git merge origin/master`
+2. Resolve merge conflicts in `StructuralPlaytestSetup.cs` -- this is the big one. Details below.
+3. Verify compilation: `recompile_scripts` via MCP
+4. Run ALL EditMode tests -- they must all pass (789+ tests expected)
+5. Do a quick manual playtest: hit Play, verify turrets still work, verify building portal and supply dock are present
+
+**StructuralPlaytestSetup.cs conflict details:**
+
+Master has these additions that your branch does not have -- preserve ALL of them:
+
+- **Phase 6 (Building Exploration):** BuildingManager, BuildingLayoutGenerator, MEPRestorePointBehaviour, building portal system, building entry/exit, building enemies, MEP restore flow. Look for methods like `CreateBuildingManager()`, `CreateBuildingPortal()`, building-related fields (`_buildingManager`, `_warehouseState`, etc.), and Update() logic for building entry (F key near portal).
+
+- **Phase 8 (Supply Chain):** SupplyLineManager, SupplyLine, OverworldMap, OverworldMapUI. Look for `CreateSupplyChain()`, supply-related fields (`_supplyLineManager`, `_warehouseSupplyLine`, `_overworldMap`, `_overworldMapUI`), M key toggle in Update(), supply status in OnGUI(), `_supplyLineManager.TickAll()` in FixedUpdate(), and `_warehouseSupplyLine.Dispose()` in OnDestroy().
+
+- **Supply dock rewrite:** `CreateSupplyDock()` was completely rewritten to use `_automationService.PlaceStorage()` at grid cell (15,7) with output-only ports and SpawnPortIndicators(). Do NOT keep the old hand-placed supply dock code.
+
+**Your turret additions to integrate:**
+- Tool slot 7 for turret placement (no conflict -- Kevin uses slots 1-6)
+- `ToolMode.TurretPlace` enum value
+- P key for pre-seed factory
+- `CreateTurretDefinition()`, turret placement logic in Update()
+- PlaytestEnvironment replacing CreateGroundPlane()
+
+**Shared file changes (yours, already on joe/main):**
+- `PhysicsLayers.cs` -- added FaunaMask (additive, no conflict expected)
+- `PortOwnerType.cs` -- added Turret (additive, no conflict expected)
+- `BuildingPlacementService.cs` -- added PlaceTurret (additive, no conflict expected)
+- `ConnectionResolver.cs` -- added Turret cases (additive, no conflict expected)
+- `PlayerController.cs` -- added GridPlane to GroundMask (additive, no conflict expected)
+
+**Acceptance criteria:**
+- Zero compilation errors after merge
+- All EditMode tests pass (should be 789+ after merge)
+- Turret placement and firing still works
+- Building portal, supply dock, and overworld map (M key) are present in scene
+- No Phase 6 or Phase 8 code was lost during conflict resolution
+
+---
+
+## Phase 7: The Tower
+
+Full design: `docs/plans/2026-02-28-tower-design.md`
+
+**Parallel with:** Kevin's Phase 6 (Building Exploration). No file overlap -- Kevin works in `Scripts/World/BuildingManager*`, `Scenes/Buildings/`; you work in `Scripts/World/Tower*`, `Scripts/Combat/InteriorFauna*`, `Scenes/Tower_Core.unity`.
+
+### TASK J-016: Tower data model and simulation layer
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`
+**Depends on:** J-015
+
+Build the tower simulation as plain C# classes following D-004 pattern. This task can start before Phase 5 (Inventory) is done since it's pure C# simulation.
+
+**Files to create:**
+- `Scripts/World/TowerController.cs` -- plain C# run state manager
+- `Scripts/World/TowerBuildingDefinitionSO.cs` -- read-only SO with chunk list and boss floor config
+- `Scripts/World/FloorChunkDefinition.cs` -- data class for spawn points, loot nodes, stair connections
+- `Tests/Editor/EditMode/TowerControllerTests.cs` -- EditMode tests
+
+**Implementation:**
+1. `TowerController`: plain C# class tracking run state
+   - Current building reference, list of cleared chunk indices, carried loot list, banked fragment count, current difficulty tier
+   - `StartRun(TowerBuildingDefinitionSO building)` -- initialize run state, randomize fragment placement across non-boss chunks
+   - `ClearChunk(int chunkIndex)` -- mark chunk as cleared
+   - `CollectLoot(ItemInstance item)` -- add to carried loot
+   - `CollectFragment()` -- add to carried fragments (not yet banked)
+   - `Extract()` -- bank all carried loot and fragments, return banked fragment count
+   - `Die()` -- clear all carried loot and fragments (not banked ones), return to home base
+   - `UnlockBoss()` -- returns true if banked fragments >= required count (configurable, default 4)
+   - `CompleteBoss()` -- increment tier, reset banked fragments to 0, start new cycle
+2. `FloorChunkDefinition`: serializable data class
+   - `spawnPoints` (list of Vector3), `lootNodes` (list of Vector3), `stairConnections` (list of int for connected chunk indices)
+   - `hasFragment` (set at runtime by TowerController per run)
+3. `TowerBuildingDefinitionSO`: ScriptableObject
+   - `buildingName`, `chunks` (list of FloorChunkDefinition), `bossChunkIndex`, `requiredFragments` (default 4)
+
+**Acceptance criteria:**
+- All classes are plain C# with no MonoBehaviour dependency
+- Tests cover: run initialization, chunk clearing tracking, fragment collection, extraction banks loot/fragments, death clears carried but keeps banked, boss unlock check, boss completion resets cycle, tier progression
+- Follows D-004 pattern
+
+### TASK J-017: Tower loot system (data-driven)
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`
+**Depends on:** J-016
+
+Build a data-driven loot system where all tuning happens in data, not code.
+
+**Files to create:**
+- `Scripts/World/TowerLootTable.cs` -- plain C# loot resolver
+- `Scripts/World/LootDropDefinition.cs` -- configurable data class
+- `Tests/Editor/EditMode/TowerLootTableTests.cs` -- EditMode tests
+
+**Implementation:**
+1. `LootDropDefinition`: serializable data class with fields:
+   - `itemId` (string), `rarity` (enum: Common, Uncommon, Rare, Epic, Legendary)
+   - `dropWeight` (float), `minAmount` (int), `maxAmount` (int)
+   - `minFloorElevation` (int, 0 = any), `maxFloorElevation` (int, 0 = any)
+   - `tierRequirement` (int, 0 = any tier)
+2. `TowerLootTable`: takes a list of `LootDropDefinition` entries
+   - `ResolveDrop(int currentFloor, int currentTier, System.Random rng)` -- filters entries by floor/tier, weighted random selection, returns (itemId, amount) or null
+   - `ResolveDrops(int count, int currentFloor, int currentTier, System.Random rng)` -- resolve multiple drops
+   - Key fragments use the same system (just another entry with specific rarity)
+3. Create a few placeholder tower item IDs to prove the system works (specific items/values will be tuned later)
+
+**Key principle:** All loot quality, type, rarity, and floor distribution must be editable via data (SO fields or serialized lists) without touching code. The system is the deliverable, not the specific loot values.
+
+**Acceptance criteria:**
+- `LootDropDefinition` is fully configurable with all fields above
+- `TowerLootTable` resolves drops from data only
+- Adding/removing/rebalancing loot requires zero code changes
+- Tests cover: weighted drop resolution, rarity filtering, floor elevation filtering, tier filtering, empty table returns no drops, amount randomization within min/max range
+
+### TASK J-018: Tower MonoBehaviour wrapper + elevator system
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`, `Scenes/`
+**Depends on:** J-016, Phase 5 complete (scene management + inventory from Kevin)
+
+Build the thin MonoBehaviour wrapper and the tower scene with elevator navigation.
+
+**Files to create:**
+- `Scripts/World/TowerBehaviour.cs` -- thin wrapper around TowerController
+- `Scenes/Tower_Core.unity` -- persistent tower scene
+
+**Implementation:**
+1. `TowerBehaviour`: wraps TowerController
+   - Manages chunk instantiation/destruction on elevator selection
+   - Elevator panel UI: shows floor buttons, locked boss floor indicator
+   - Transition effect: fade or elevator animation (brief, no pop-in)
+   - Lobby is always loaded (floor 1 chunk)
+   - Extraction: lobby exit point triggers `TowerController.Extract()` and scene transition back to home base
+   - Death: listens for player death event, calls `TowerController.Die()`, transitions to home base
+2. `Tower_Core.unity`: persistent scene
+   - Elevator geometry and panel UI
+   - Lobby geometry (floor 1 chunk instantiated here)
+   - Tower state UI (carried loot count, fragment count, floor indicator)
+   - Uses additive loading via SceneLoader from Phase 5
+
+**Acceptance criteria:**
+- Player can enter tower, ride elevator to any floor, see chunk load
+- Transition is smooth (no pop-in)
+- Lobby exit triggers extraction flow (loot/fragments banked)
+- Player death triggers loot loss and return to home base
+- Scene uses additive loading via SceneLoader
+
+### TASK J-019: Tower enemy population + interior fauna
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`, `Scripts/World/`
+**Depends on:** J-016, J-018
+
+Add data-driven enemy spawning per floor chunk and one new interior fauna type.
+
+**Files to create/modify:**
+- `Scripts/Combat/InteriorFaunaDefinitionSO.cs` (or extend existing `FaunaDefinitionSO`)
+- Modify `FloorChunkDefinition` to hold spawn entries
+
+**Implementation:**
+1. Spawn entry data class: `faunaDefinition` (FaunaDefinitionSO ref), `count` (int), `tierMultiplier` (float)
+2. `FloorChunkDefinition` holds a list of spawn entries -- which fauna types appear on which floors is configured in data, not code
+3. Create 1 new interior fauna type as proof of concept (fast, close-quarters, uses existing FaunaAI with different parameters). Specific stats are tunable later.
+4. Enemies spawn when chunk loads (instantiate at spawn points from FloorChunkDefinition)
+5. Cleared floors stay cleared for the run (TowerController tracks cleared chunks)
+
+**Acceptance criteria:**
+- Spawn entries are configurable per chunk without code changes
+- Adding new enemy types to a floor = adding a data entry, no code changes
+- Tier scaling multiplier works (higher tier = tougher enemies)
+- Cleared floors don't respawn within same run
+- Interior fauna type is functional with existing combat systems
+
+### TASK J-020: Boss encounter
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`, `Scripts/Combat/`
+**Depends on:** J-017, J-019
+
+Build the boss floor as the tier-gating mechanic.
+
+**Files to create:**
+- Boss floor chunk prefab (large arena room)
+- Boss enemy configuration (FaunaDefinitionSO with elevated stats)
+
+**Implementation:**
+1. Boss floor locked on elevator panel until banked fragments >= required count (configured on TowerBuildingDefinitionSO, default 4)
+2. Hand-designed arena in a large room (primitives, ProBuilder, or simple geometry)
+3. Boss uses existing FaunaDefinitionSO with elevated stats -- no special boss class needed for vertical slice
+4. Boss kill rewards use the same `LootDropDefinition` system (guaranteed drops configured in data)
+5. On boss death event: `TowerController.CompleteBoss()` increments tier, resets fragment counter
+
+**Acceptance criteria:**
+- Boss floor locked/unlocked correctly by fragment count
+- Boss kill fires death event picked up by TowerBehaviour
+- Rewards come from loot system (data-driven, not hardcoded)
+- Tier increments after boss kill
+- Fragment counter resets after boss kill
+- Fragment requirement is configurable on the SO
+
+### TASK J-022: Integrate consolidated PlayerHUD into Dev_Test
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/UI/`, `Scripts/Combat/`
+**Depends on:** J-012
+
+After merging master, Dev_Test should pick up the consolidated PlayerHUD, inventory system, and hotbar with pages. Wire these into Dev_Test's existing bootstrapper.
+
+**What changed on master:**
+- `HUDController.cs` deleted, replaced by consolidated `PlayerHUD.cs`
+- PlayerHUD creates all HUD elements: crosshair, health bar, ammo, wave status, damage flash, interaction prompt, build mode indicator, hotbar with pages
+- New `HotbarPage.cs` -- hotbar page data types
+- `HotbarSlotUI.cs` gains `SetEntry()` for non-inventory page display
+- `Phase5PlaytestSetup.cs` deleted (merged into StructuralPlaytestSetup)
+
+**What to do:**
+1. Replace HUDController references with PlayerHUD in Dev_Test setup code
+2. Add PlayerInventory + ItemPickupTrigger to the player if not already present
+3. Wire PlayerHUD.Initialize() for combat (health, weapon, cameraShake, waveController)
+4. Wire PlayerHUD.InitializeInventory() for inventory + camera
+5. Add InventoryUI and RecipeSelectionUI to the HUD canvas
+6. Verify all existing combat HUD features still work (health text, ammo, wave status, damage flash)
+
+**Acceptance criteria:**
+- Dev_Test player has working inventory (Tab opens grid)
+- Hotbar shows items, B toggles to build page (build page can be empty for now)
+- All Joe's combat HUD features work: health, ammo, wave status, damage flash
+- Crosshair visible at center screen
+
+### TASK J-021: Tower playtest scene
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`, `Scripts/Combat/`, `Scenes/`
+**Depends on:** J-018, J-019, J-020
+
+End-to-end playtest of the full tower loop per phase completion standard.
+
+**Files:**
+- `Scenes/Tower_Core.unity` (finalized with all systems)
+- Optional: `Scripts/World/TowerPlaytestSetup.cs` if separate bootstrapper needed
+
+**Implementation:**
+1. Full loop playtest: enter tower -> ride elevator -> explore floor -> fight enemies -> collect loot + fragments -> extract or die -> re-enter
+2. Verify: loot banking on extract, loot loss on death, fragment persistence across runs, boss unlock at threshold, boss fight and rewards, tier progression after boss kill
+3. Extensive debug logging per phase completion standard (every action, state change, and validation failure logged)
+4. Debug keys for testing: force-spawn fragments, force-unlock boss, set tier, add items to inventory
+
+**Acceptance criteria:**
+- Full loop playable: enter -> explore -> fight -> collect -> extract/die -> re-enter
+- All reward types drop correctly from data-driven loot table
+- Death clears carried loot but keeps equipped gear and banked fragments
+- Boss floor locks/unlocks correctly based on banked fragment count
+- Tier progression works end-to-end
+- Console logs make every state transition visible
