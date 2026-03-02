@@ -227,7 +227,8 @@ Phase 4 is now assigned to Joe. Use these existing systems:
 
 ### TASK J-013: Auto-turret simulation layer
 
-**Status:** Pending (re-implementation -- original commits lost from Legion PC, never reached origin)
+**Status:** Complete (2026-03-01, recovered 2026-03-02)
+**Commits:** `6312a91` (original), `4f7d813` (merge recovery)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -258,7 +259,8 @@ Build the turret as a plain C# simulation object (D-004 pattern). The turret det
 
 ### TASK J-014: Turret MonoBehaviour wrapper and placement
 
-**Status:** Pending (re-implementation -- original commits lost)
+**Status:** Complete (2026-03-01, recovered 2026-03-02)
+**Commits:** `2e4cc15` (original), `4f7d813` (merge recovery)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -293,7 +295,8 @@ Build the thin MonoBehaviour wrapper and integrate turret placement into the pla
 
 ### TASK J-015: Turret playtest scene
 
-**Status:** Pending (re-implementation -- original commits lost)
+**Status:** Complete (2026-03-01, recovered 2026-03-02)
+**Commits:** `0a99c34` (original), `4f7d813` (merge recovery)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`, `Scenes/`
