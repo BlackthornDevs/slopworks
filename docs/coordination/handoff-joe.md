@@ -4,7 +4,14 @@ Updated by Joe's Claude at the end of each session.
 
 ---
 
-## Last updated: 2026-03-01 (by Kevin -- combat scripts patched for local play)
+## Last updated: 2026-03-02 (by Kevin -- Phase 6 Building Exploration complete)
+
+### What was completed by Kevin (2026-03-02)
+
+- **Phase 6: Building Exploration complete on kevin/main.** Full implementation: building simulation layer, warehouse layout generator, MEP restore points, entry/exit portals, building enemies, supply dock production, HUD integration. 59 new tests (755/755 total).
+- **No shared file changes.** Phase 6 added 9 new files in `Scripts/World/`, modified `StructuralPlaytestSetup.cs` and `PlayerHUD.cs`. No asmdef, ProjectSettings, or Core changes. Zero merge risk for Joe.
+- **New file ownership:** `Scripts/World/Building*.cs`, `Scripts/World/MEP*.cs` are Kevin's. Joe's Tower work (`Scripts/World/Tower*`) has no overlap.
+- **Phase 6 pattern note:** `renderer.material.color` causes EditMode test failures due to material leak. Use `var mat = new Material(renderer.sharedMaterial); mat.color = color; renderer.sharedMaterial = mat;` instead.
 
 ### What was completed by Kevin (2026-03-01, session 2)
 

@@ -1,45 +1,56 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-01 20:00
+Last updated: 2026-03-02 00:00
 Branch: kevin/main
-Last commit: (pending -- this session's changes not yet committed)
+Last commit: d00dfbf Implement Phase 6: Building Exploration
 
 ## What was completed this session
 
-### Combat integration into StructuralPlaytest
+### Phase 6: Building Exploration (full implementation)
 
-Added all combat systems to StructuralPlaytestSetup so every game system can be tested in one scene:
+**Simulation layer (9 new files in Scripts/World/):**
+- `MEPSystemType.cs` -- enum: Electrical, Plumbing, Mechanical, HVAC
+- `MEPRestorePoint.cs` -- data class with idempotent Restore()
+- `BuildingDefinitionSO.cs` -- read-only SO definition
+- `BuildingState.cs` -- pure C# class tracking building state, production timer, events
+- `BuildingManager.cs` -- manages multiple buildings, TickAll()
+- `BuildingLayoutGenerator.cs` -- static utility creating 30x20 warehouse from primitives
+- `MEPRestorePointBehaviour.cs` -- IInteractable MonoBehaviour for E key interaction
+- `BuildingEntryTrigger.cs` -- teleport player into building on trigger enter
+- `BuildingExitTrigger.cs` -- teleport player back to home base
 
-- **Combat definitions at runtime.** WeaponDefinitionSO (test_rifle: 25 dmg, 2 fire rate, 50 range, 12 mag), FaunaDefinitionSO (test_grunt: 50 HP, 3 speed, 10 attack dmg, pack behavior), GameEventSO for enemy death. `StructuralPlaytestSetup.cs:CreateDefinitions()`
-- **Player weapon wiring.** WeaponBehaviour added via inactive-then-activate pattern, weapon definition and camera set via reflection, CameraRecoil + CameraShake on FPS camera, MuzzleFlash child object, HitMarkerUI on HUD canvas. `StructuralPlaytestSetup.cs:WirePlayerCombat()`
-- **Enemy template.** Inactive capsule prefab with Rigidbody, NavMeshAgent, HealthBehaviour, FaunaController, EnemyHitFlash, EnemyKnockback. Red colored, Fauna layer. `StructuralPlaytestSetup.cs:CreateEnemyTemplate()`
-- **Spawn points + wave system.** 4 spawn points around build area, EnemySpawner + WaveControllerBehaviour on inactive-then-activate GO, 3 wave definitions (3, 5, 8 enemies). `StructuralPlaytestSetup.cs:CreateSpawnPointsAndWaves()`
-- **NavMesh baking.** Ground plane marked as NavigationStatic, legacy NavMeshBuilder.BuildNavMesh() used (AI Navigation package installed but NavMeshSurface requires asmdef change). `StructuralPlaytestSetup.cs:BakeNavMesh()`
-- **HUD combat wiring.** CameraShake and WaveController passed to PlayerHUD.Initialize() (were null before). HitMarkerUI wired to WeaponBehaviour. `StructuralPlaytestSetup.cs:CreateHUD(), WireHUD()`
-- **Wave trigger + OnGUI.** G key spawns next wave. OnGUI shows wave count, enemies remaining, HP, ammo (all null-safe). `StructuralPlaytestSetup.cs:HandleWaveTrigger(), OnGUI()`
+**Bootstrapper integration (StructuralPlaytestSetup.cs, +274 lines):**
+- Warehouse generated at (200,0,200) with 4 rooms
+- 4 MEP restore points in mechanical room (interactable, color-coded)
+- Entry/exit portal triggers near factory
+- Building enemies: 2 waves (3+4) auto-start on entry
+- Supply dock storage near factory, wired to OnItemProduced
+- BuildingManager.TickAll() in FixedUpdate
+- OnGUI building status line + portal help text
 
-### NetworkBehaviour local play pattern (IMPORTANT -- affects Joe's combat scripts)
+**PlayerHUD.cs (+26 lines):**
+- Added SetBuildingStatus(string text) method
+- Building status text element at top-left
 
-FishNet NetworkBehaviours cannot work with runtime-created objects (no registered prefab collection, no proper spawn). Instead of booting FishNet as host, patched all combat scripts to gracefully handle missing NetworkObject:
+**Tests (59 new tests, 4 test files):**
+- `BuildingStateTests.cs` -- 21 tests: restore, claim, production, manager
+- `BuildingLayoutGeneratorTests.cs` -- 29 tests: geometry, layers, colliders, spawns, offsets
+- `MEPRestorePointBehaviourTests.cs` -- 16 tests: IInteractable, visuals, edge cases
+- `BuildingIntegrationTests.cs` -- 14 tests: end-to-end pipelines, event ordering, timer precision
 
-**Pattern:** `if (NetworkObject != null && !IsServerInitialized) return;` instead of `if (!IsServerInitialized) return;`
-
-When NetworkObject is null (local play without FishNet), the guard is skipped entirely. When NetworkObject is present (multiplayer with FishNet), the guard works as normal. Backward-compatible.
-
-**Files patched (all in Scripts/Combat/):**
-- `WeaponBehaviour.cs` -- IsOwner guard in OnFire, routing to local vs server damage paths
-- `EnemySpawner.cs:11` -- IsServerInitialized guard, removed ServerManager.Spawn() (just Instantiate)
-- `WaveControllerBehaviour.cs:33,62,82` -- three IsServerInitialized guards
-- `FaunaController.cs:40,183,295,396` -- four IsServerInitialized guards
+**Bug fixes found during testing:**
+- `renderer.material.color` causes EditMode material leak -- fixed to create new Material via sharedMaterial in both BuildingLayoutGenerator.SetColor() and MEPRestorePointBehaviour.UpdateVisual()
+- Float accumulation: 100 * 0.02f < 2.0f in IEEE 754 -- fixed timer precision test with margin
 
 ## What's in progress (not yet committed)
 
-All work complete and ready to commit.
+None -- all committed.
 
 ## Next task to pick up
 
-- **Belt flow investigation.** Automated chain (storage -> belt -> smelter -> belt -> output) may have port connection issues. Check belt link count and inserter activity.
-- **Phase 6 (Building Exploration)** per vertical slice plan.
+- **Manual playtest Phase 6** -- press Play in StructuralPlaytest, verify: enter portal, fight building enemies, restore 4 MEP points, claim building, check supply dock for production, exit portal works
+- **Phase 8 (Supply Chain)** per vertical slice plan -- connects building production to overworld
+- **Belt flow investigation** -- automated chain may have port connection issues (noted last session)
 
 ## Blockers or decisions needed
 
@@ -47,15 +58,15 @@ None.
 
 ## Test status
 
-675/675 EditMode tests passing, 0 failures, 0 skipped.
+755/755 EditMode tests passing, 0 failures, 0 skipped.
 
 ## Key context the next session needs
 
-- Combat scripts (WeaponBehaviour, EnemySpawner, WaveControllerBehaviour, FaunaController) now use `NetworkObject != null && !IsServerInitialized` guard pattern -- these changes are on kevin/main and need to reach Joe via master PR eventually
-- FishNet cannot spawn runtime-created objects -- don't try to boot FishNet in bootstrappers, use the guard pattern instead
-- NavMesh baking uses legacy `NavMeshBuilder.BuildNavMesh()` with `isStatic = true` on ground plane -- works but deprecated. Would prefer NavMeshSurface but it requires adding Unity.AI.Navigation to Slopworks.Runtime.asmdef
-- Enemy template is an inactive GameObject (not a disk prefab) -- EnemySpawner.SpawnWave() calls Instantiate() which clones it
-- Spawn points at (30,0,30), (1,0,30), (30,0,1), (1,0,1) -- clamped to stay on ground plane (200x200 grid)
-- WeaponBehaviour uses inactive-then-activate pattern because Awake() creates WeaponController from null _weaponDefinition otherwise
-- WaveControllerBehaviour uses inactive-then-activate because Awake() creates WaveController from _waves list
-- All prior session context still applies (StorageUI, HotbarPage, MachineBehaviour.Initialize patterns, etc.)
+- Building at (200,0,200) is a separate NavMesh island from home base. Enemies inside cannot path to home base.
+- Building waves auto-start when player enters (via entry trigger callback), not via G key
+- Home base G-key waves still work independently
+- Supply dock produces 1 iron_ingot every 30 seconds after claiming
+- Portal entry trigger is at (centerX+15, centerZ+15) -- near the factory, look for the yellow marker cube
+- renderer.material.color is banned in EditMode tests -- always use sharedMaterial with new Material() pattern
+- Phase 6 does NOT touch shared files (no asmdef, no ProjectSettings, no Core scripts) -- no merge risk for Joe
+- Combat scripts on kevin/main still have the D-011 guard pattern changes from last session that haven't reached master yet
