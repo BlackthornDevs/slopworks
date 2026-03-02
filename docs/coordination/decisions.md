@@ -149,3 +149,23 @@ Settled decisions that both agents follow. Do not re-litigate unless new informa
 **Rationale:** Runtime-created objects in playtest scenes will never have a NetworkObject. Booting FishNet as local host was attempted and failed -- NetworkManager.Awake() requires SpawnablePrefabs, and runtime NetworkObjects don't get properly initialized through FishNet's spawn pipeline. The null-check pattern is backward-compatible, requires no FishNet changes, and lets the same scripts work in both local and networked modes.
 
 **Impact:** All NetworkBehaviour scripts in playtest scenes must use this pattern. Applied to WeaponBehaviour, EnemySpawner, WaveControllerBehaviour, FaunaController. Future NetworkBehaviour scripts that need to work in local playtests should follow the same pattern. Do not attempt to boot FishNet in bootstrapper scenes.
+
+---
+
+## D-012: IPlaytestFeatureProvider for multi-developer scene integration
+
+**Date:** 2026-03-02
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Two developers have exclusive bootstrapper scenes. No single place where all features run together. Merging to master doesn't verify feature coexistence.
+
+**Decision:** Each dev's bootstrapper implements `IPlaytestFeatureProvider` interface. `MasterPlaytestSetup` orchestrator discovers all providers on its GameObject and calls them in 7-phase order. Bootstrappers detect master mode via `GetComponent<MasterPlaytestSetup>() != null` and skip their standalone Awake.
+
+**Phases:** (1) CreateDefinitions, (2) ConfigureBuildPage, (3) RegisterToolHandlers, (4) CreateWorldObjects, (5) CreateCombatSetup, (6) PreSeed, (7) WireHUD. Runtime: FixedTick, UpdateInput, DrawGUI, Cleanup.
+
+**Wave controller deconfliction:** First non-null return from `CreateCombatSetup()` wins. Kevin returns his controller (also creates building enemies). Joe returns null in master mode.
+
+**WireHUD timing:** Providers return no-yield coroutines (`yield break`). Orchestrator handles the 2-frame delay once. Standalone bootstrappers have their own delayed wrappers.
+
+**Rationale:** Neither dev works in the master scene directly. It serves as a merge gate: all features must coexist before a PR to master can be approved. The interface contract is explicit about what each provider contributes.
+
+**Impact:** New files: `IPlaytestFeatureProvider.cs`, `MasterPlaytestSetup.cs`, `MasterPlaytest.unity`. Modified: both bootstrappers (implement interface + `_isStandalone` guard), `PlaytestToolController.cs` (static helpers), `PlaytestValidator.cs` (master scene checks).
