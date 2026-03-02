@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// Kevin's consolidated playtest bootstrapper. Grows each phase.
 /// Drop on an empty GameObject, hit Play, and test the full gameplay loop:
-/// FPS player, inventory, crafting, building, belts, machines, combat.
+/// FPS player, inventory, crafting, building, belts, machines, combat, supply chain.
 ///
 /// Controls:
 ///   WASD - Move, Mouse - Look, Space - Jump, Shift - Sprint
@@ -20,6 +20,7 @@ using UnityEngine.InputSystem;
 ///   Escape - Cancel / return to items page
 ///   PageUp/PageDown - Change active level
 ///   F - Fill storage with iron ore
+///   M - Overworld map
 ///   Left click - Fire weapon / place building
 ///
 /// Everything is created at runtime -- no prefabs or assets required.
@@ -91,6 +92,12 @@ public class StructuralPlaytestSetup : MonoBehaviour
     private StorageContainer _supplyDockContainer;
     private StorageBehaviour _supplyDockBehaviour;
     private StorageDefinitionSO _supplyDockDef;
+
+    // -- Supply chain --
+    private SupplyLineManager _supplyLineManager;
+    private SupplyLine _warehouseSupplyLine;
+    private OverworldMap _overworldMap;
+    private OverworldMapUI _overworldMapUI;
 
     // -- Tracking --
     private readonly List<BuildingData> _foundations = new();
@@ -177,13 +184,14 @@ public class StructuralPlaytestSetup : MonoBehaviour
         BakeNavMesh();
         CreateHUD(player);
         CreateSupplyDock();
+        CreateSupplyChain();
 
         Debug.Log("playtest: setup complete");
         Debug.Log("controls: WASD=move, Mouse=look, Space=jump, Shift=sprint");
         Debug.Log("controls: B=toggle build/items, 1-9=select slot, Tab=inventory, E=interact");
         Debug.Log("controls: R=rotate, Esc=cancel, PgUp/PgDn=level, F=fill storage");
         Debug.Log("controls: G=spawn next wave, LMB=fire weapon (items page)");
-        Debug.Log("controls: [Portal] Enter/exit building");
+        Debug.Log("controls: [Portal] Enter/exit building, [M] Overworld map");
     }
 
     private void FixedUpdate()
@@ -193,6 +201,9 @@ public class StructuralPlaytestSetup : MonoBehaviour
 
         if (_buildingManager != null)
             _buildingManager.TickAll(Time.fixedDeltaTime);
+
+        if (_supplyLineManager != null)
+            _supplyLineManager.TickAll(Time.fixedDeltaTime);
     }
 
     private void Update()
@@ -200,6 +211,27 @@ public class StructuralPlaytestSetup : MonoBehaviour
         var kb = Keyboard.current;
         var mouse = Mouse.current;
         if (kb == null || mouse == null) return;
+
+        // Overworld map toggle
+        if (kb[Key.M].wasPressedThisFrame && _overworldMapUI != null)
+        {
+            _overworldMapUI.Toggle();
+            Cursor.lockState = _overworldMapUI.IsOpen ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = _overworldMapUI.IsOpen;
+        }
+
+        // Close map with Escape (before other Escape handling)
+        if (kb[Key.Escape].wasPressedThisFrame && _overworldMapUI != null && _overworldMapUI.IsOpen)
+        {
+            _overworldMapUI.Toggle();
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            return; // consume the Escape press
+        }
+
+        // Suppress tool input while map is open
+        if (_overworldMapUI != null && _overworldMapUI.IsOpen)
+            return;
 
         HandleToolSelection(kb);
         HandleDigitKeys(kb);
@@ -242,7 +274,7 @@ public class StructuralPlaytestSetup : MonoBehaviour
         float w = 420;
         float h = 22;
 
-        int lineCount = 20;
+        int lineCount = 21;
         if (_currentTool == ToolMode.Wall && _pendingWall) lineCount++;
         if (_currentTool == ToolMode.Wall && !_pendingWall) lineCount++;
         if (_currentTool == ToolMode.Ramp) lineCount++;
@@ -292,12 +324,17 @@ public class StructuralPlaytestSetup : MonoBehaviour
         string locationInfo = _insideBuilding ? " [INSIDE]" : "";
         DrawLine(ref y, x, w, h, $"{buildingStatus}{locationInfo}");
 
+        // Supply chain status
+        int inTransit = _supplyLineManager != null ? _supplyLineManager.TotalInFlight : 0;
+        int delivered = _supplyLineManager != null ? _supplyLineManager.TotalDelivered : 0;
+        DrawLine(ref y, x, w, h, $"Supply: {inTransit} in transit | {delivered} delivered");
+
         y += 4;
         DrawLine(ref y, x, w, h, "[B] Toggle build/items  [1-7] Select tool/slot  [V] FPS/Iso");
         DrawLine(ref y, x, w, h, "[PgUp/PgDn] Level  [R] Rotate  [Esc] Cancel  [F] Fill");
         DrawLine(ref y, x, w, h, "[Tab] Inventory  [E] Interact  [WASD] Move  [Space] Jump");
         DrawLine(ref y, x, w, h, "[G] Spawn wave  |  Port colors: BLUE=input RED=output");
-        DrawLine(ref y, x, w, h, "[Portal] Enter/exit building");
+        DrawLine(ref y, x, w, h, "[Portal] Enter/exit building  [M] Overworld map");
 
         if (_currentTool == ToolMode.Wall)
         {
@@ -332,6 +369,8 @@ public class StructuralPlaytestSetup : MonoBehaviour
 
     private void OnDestroy()
     {
+        _warehouseSupplyLine?.Dispose();
+
         if (_playerHUD != null)
         {
             _playerHUD.OnBuildToolSelected -= OnHotbarBuildToolSelected;
@@ -1122,47 +1161,108 @@ public class StructuralPlaytestSetup : MonoBehaviour
         Debug.Log("playtest: building enemies created (2 waves: 3, 4 enemies, auto-start on entry)");
     }
 
+    private static readonly Vector2Int SupplyDockCell = new Vector2Int(15, 7);
+
     private void CreateSupplyDock()
     {
-        float centerX = 10f * FactoryGrid.CellSize;
-        float centerZ = 10f * FactoryGrid.CellSize;
-
-        // Supply dock near the factory
-        var dockObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        dockObj.name = "SupplyDock";
-        dockObj.transform.position = new Vector3(centerX + 12, 0.5f, centerZ + 4);
-        dockObj.transform.localScale = new Vector3(2, 1, 2);
-        SetColor(dockObj, new Color(0.3f, 0.6f, 0.4f));
-
-        dockObj.layer = PhysicsLayers.Interactable;
-
-        // Create storage container for supply dock
-        _supplyDockContainer = new StorageContainer(8, 64);
-
-        // StorageBehaviour for interaction (inactive-then-activate pattern)
-        dockObj.SetActive(false);
-        _supplyDockBehaviour = dockObj.AddComponent<StorageBehaviour>();
+        // Supply dock definition -- larger capacity than normal storage, output-only ports
+        // (items arrive via supply line, players/belts extract from it)
         _supplyDockDef = ScriptableObject.CreateInstance<StorageDefinitionSO>();
         _supplyDockDef.storageId = "supply_dock";
         _supplyDockDef.displayName = "Supply Dock";
         _supplyDockDef.slotCount = 8;
         _supplyDockDef.maxStackSize = 64;
+        _supplyDockDef.size = Vector2Int.one;
+        _supplyDockDef.ports = new[]
+        {
+            // Output ports on all 4 sides (belts pull items out)
+            new MachinePort { localOffset = Vector2Int.zero, direction = new Vector2Int(-1, 0), type = PortType.Output },
+            new MachinePort { localOffset = Vector2Int.zero, direction = new Vector2Int(1, 0), type = PortType.Output },
+            new MachinePort { localOffset = Vector2Int.zero, direction = new Vector2Int(0, -1), type = PortType.Output },
+            new MachinePort { localOffset = Vector2Int.zero, direction = new Vector2Int(0, 1), type = PortType.Output },
+        };
+
+        // Place foundation under the dock if not already placed
+        var foundationData = _placementService.PlaceFoundation(_foundationDef, SupplyDockCell, 0);
+        if (foundationData != null)
+        {
+            _foundations.Add(foundationData);
+            SpawnFoundationVisual(foundationData, SupplyDockCell, 0);
+        }
+
+        // Place through the automation service so it gets grid registration and port nodes
+        var result = _automationService.PlaceStorage(_supplyDockDef, SupplyDockCell, 0);
+        if (result == null)
+        {
+            Debug.LogError("playtest: failed to place supply dock at " + SupplyDockCell);
+            return;
+        }
+
+        _automationBuildings.Add(result);
+        _supplyDockContainer = (StorageContainer)result.SimulationObject;
+
+        // Spawn visual using the same pattern as placed storage, but green to distinguish
+        var worldPos = _grid.CellToWorld(SupplyDockCell, 0);
+        var dockObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        dockObj.name = "SupplyDock";
+
+        var defaultCollider = dockObj.GetComponent<Collider>();
+        if (defaultCollider != null) Destroy(defaultCollider);
+        dockObj.layer = PhysicsLayers.Interactable;
+        var boxCollider = dockObj.AddComponent<BoxCollider>();
+        boxCollider.size = Vector3.one;
+
+        dockObj.transform.position = worldPos + Vector3.up * 0.5f;
+        dockObj.transform.localScale = new Vector3(0.85f, 1.0f, 0.85f);
+        SetColor(dockObj, new Color(0.3f, 0.6f, 0.4f));
+
+        // StorageBehaviour for interaction (inactive-then-activate pattern)
+        dockObj.SetActive(false);
+        _supplyDockBehaviour = dockObj.AddComponent<StorageBehaviour>();
         _supplyDockBehaviour.Initialize(_supplyDockDef, _supplyDockContainer);
         dockObj.SetActive(true);
 
-        // Wire production to supply dock
-        _warehouseState.OnItemProduced += (itemId, amount) =>
-        {
-            for (int i = 0; i < amount; i++)
-            {
-                if (_supplyDockContainer.TryInsert(itemId))
-                    Debug.Log($"supply dock: received 1 {itemId} from warehouse");
-                else
-                    Debug.Log($"supply dock: full, {itemId} lost");
-            }
-        };
+        result.BuildingData.Instance = dockObj;
 
-        Debug.Log("playtest: supply dock created near factory");
+        // Port indicators (same as machines -- red output arrows on all faces)
+        SpawnPortIndicators(result.Ports, worldPos, dockObj.transform);
+
+        Debug.Log($"playtest: supply dock placed at ({SupplyDockCell.x},{SupplyDockCell.y}) on grid with port nodes");
+    }
+
+    // -- Supply chain --
+
+    private void CreateSupplyChain()
+    {
+        // Supply line manager
+        _supplyLineManager = new SupplyLineManager();
+
+        // Supply line: warehouse -> supply dock, 10s transport delay
+        _warehouseSupplyLine = new SupplyLine(_warehouseState, _supplyDockContainer, 10f);
+        _warehouseState.OnItemProduced += (itemId, amount) =>
+            Debug.Log($"supply line: {amount} {itemId} produced, in transit (10s delay)");
+        _warehouseSupplyLine.OnItemDelivered += (itemId, amount) =>
+            Debug.Log($"supply line: delivered {amount} {itemId} to supply dock");
+        _warehouseSupplyLine.OnItemLost += (itemId, amount) =>
+            Debug.Log($"supply line: lost {amount} {itemId} (dock full)");
+        _supplyLineManager.RegisterLine(_warehouseSupplyLine);
+
+        // Overworld map
+        _overworldMap = new OverworldMap();
+        _overworldMap.RegisterNode(new OverworldNode(
+            "home_base", "Home Base", OverworldNodeType.HomeBase, 0.5f, 0.5f));
+        _overworldMap.RegisterNode(new OverworldNode(
+            _warehouseState.BuildingId, _warehouseState.DisplayName,
+            OverworldNodeType.Building, 0.3f, 0.7f, _warehouseState));
+        _overworldMap.RegisterNode(new OverworldNode(
+            "tower_01", "Broadcast Tower", OverworldNodeType.Tower, 0.7f, 0.3f));
+
+        // Overworld map UI
+        var mapUIObj = new GameObject("OverworldMapUI");
+        _overworldMapUI = mapUIObj.AddComponent<OverworldMapUI>();
+        _overworldMapUI.Initialize(_overworldMap, _supplyLineManager, () => 0f);
+
+        Debug.Log("playtest: supply chain created (warehouse -> dock, 10s delay)");
     }
 
     // -- Pre-seed factory --
