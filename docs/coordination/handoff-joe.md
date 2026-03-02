@@ -4,14 +4,35 @@ Updated by Joe's Claude at the end of each session.
 
 ---
 
-## Last updated: 2026-03-02 (by Kevin -- Phase 6 Building Exploration complete)
+## Last updated: 2026-03-02 (by Kevin -- bootstrapper refactoring)
 
 ### What was completed by Kevin (2026-03-02)
 
-- **Phase 6: Building Exploration complete on kevin/main.** Full implementation: building simulation layer, warehouse layout generator, MEP restore points, entry/exit portals, building enemies, supply dock production, HUD integration. 59 new tests (755/755 total).
-- **No shared file changes.** Phase 6 added 9 new files in `Scripts/World/`, modified `StructuralPlaytestSetup.cs` and `PlayerHUD.cs`. No asmdef, ProjectSettings, or Core changes. Zero merge risk for Joe.
-- **New file ownership:** `Scripts/World/Building*.cs`, `Scripts/World/MEP*.cs` are Kevin's. Joe's Tower work (`Scripts/World/Tower*`) has no overlap.
-- **Phase 6 pattern note:** `renderer.material.color` causes EditMode test failures due to material leak. Use `var mat = new Material(renderer.sharedMaterial); mat.color = color; renderer.sharedMaterial = mat;` instead.
+**MAJOR CHANGE: StructuralPlaytestSetup.cs no longer exists.**
+
+It was split into 5 files to eliminate merge conflicts:
+
+| File | Location | Owner | Purpose |
+|------|----------|-------|---------|
+| `PlaytestContext.cs` | `Scripts/Debug/` | Shared | Data class holding all refs from bootstrap |
+| `PlaytestBootstrap.cs` | `Scripts/Debug/` | Shared (Kevin primary) | Plain C# one-shot setup (grid, sim, player, HUD, combat) |
+| `PlaytestToolController.cs` | `Scripts/Debug/` | Shared (Kevin primary) | All shared tool handling, visuals, OnGUI, simulation tick |
+| `KevinPlaytestSetup.cs` | `Scripts/Debug/` | Kevin exclusive | Building exploration, supply chain, overworld map |
+| `JoePlaytestSetup.cs` | `Scripts/Debug/` | Joe exclusive | Skeleton with commented turret placeholders |
+
+Scene renamed: `StructuralPlaytest.unity` -> `KevinPlaytest.unity`
+
+**How to test after merging master:**
+1. Run all EditMode tests in Unity Test Runner (Window > General > Test Runner > EditMode tab > Run All). Expect 789 passing.
+2. Create a scene with a GameObject that has `JoePlaytestSetup` as its only component.
+3. Hit Play. Verify shared tools work (foundation, wall, belt, machine, etc.).
+4. Port turret code into `JoePlaytestSetup.cs` (see J-023 in tasks-joe.md for details).
+5. Re-test with turrets wired up.
+
+**Previous Kevin work (still on kevin/main):**
+- Phase 6: Building Exploration -- building simulation, warehouse layout, MEP restore, portals, building enemies
+- Phase 8: Supply Chain Network -- supply lines, overworld map, supply dock
+- Phase 6 pattern note: `renderer.material.color` causes EditMode test failures due to material leak. Use `var mat = new Material(renderer.sharedMaterial); mat.color = color; renderer.sharedMaterial = mat;` instead.
 
 ### What was completed
 
@@ -43,7 +64,7 @@ No asmdef changes. No ProjectSettings changes. No new packages.
 
 ### Next task
 
-**J-023 (Critical): Merge master into joe/main and resolve conflicts BEFORE creating your turret PR.** Master now has Phase 6 (Building Exploration) and Phase 8 (Supply Chain) that your branch is missing. The main conflict is in StructuralPlaytestSetup.cs -- see J-023 in tasks-joe.md for detailed conflict resolution guidance. This must be done before any PR or before starting J-016.
+**J-023 (Critical): Merge master into joe/main and port turret code to JoePlaytestSetup.cs.** StructuralPlaytestSetup.cs is deleted on master. The merge should be mostly clean -- no more massive conflict resolution. After merging, port turret code into the commented placeholders in `JoePlaytestSetup.cs`. See J-023 in tasks-joe.md for the full API reference and step-by-step instructions.
 
 After J-023: J-016 (Tower data model and simulation layer, Phase 7 start). Pure C# simulation following D-004 pattern. Read `docs/plans/2026-02-28-tower-design.md` before starting.
 
