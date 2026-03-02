@@ -419,13 +419,15 @@ Build the tower simulation as plain C# classes following D-004 pattern. This tas
 
 ### TASK J-017: Tower loot system (data-driven)
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`
 **Depends on:** J-016
 
 Build a data-driven loot system where all tuning happens in data, not code.
+
+**Result:** Created TowerLootTable (plain C#), LootDropDefinition (data class), LootRarity enum, LootDrop result struct. 23 EditMode tests covering weighted selection, floor elevation filtering, tier filtering, combined filters, amount randomization, multiple drops, edge cases. All tuning is data-driven.
 
 **Files to create:**
 - `Scripts/World/TowerLootTable.cs` -- plain C# loot resolver
