@@ -8,48 +8,51 @@ Updated by Joe's Claude at the end of each session.
 
 ### What was completed
 
-- **J-013: Auto-turret simulation layer** (`6312a91`) -- TurretController (pure C#), TurretDefinitionSO, 22 passing tests. Committed in previous session.
-- **J-014: Turret MonoBehaviour wrapper and placement** (`2e4cc15`) -- TurretBehaviour wrapper with OverlapSphere enemy detection and barrel rotation. PlaceTurret added to BuildingPlacementService. Turret tool mode in StructuralPlaytestSetup (slot 7). Pre-loads 32 ammo per turret. Added skipFoundationCheck option for playtest convenience.
-- **PlaytestEnvironment** (`04a3ecd`) -- Reusable post-apocalyptic arena generator. Procedural ground texture, irregular perimeter walls, interior ruins, props (barrels, crates, debris, pipes), directional + point lighting, fog, dust particles. Integrated into StructuralPlaytestSetup replacing flat ground plane.
+- **J-013: Auto-turret simulation layer** (`6312a91`) -- TurretController (pure C#), TurretDefinitionSO, 22 passing tests. Done in previous session.
+- **J-014: Turret MonoBehaviour wrapper and placement** (`2e4cc15`) -- TurretBehaviour wrapper with OverlapSphere enemy detection and barrel rotation. PlaceTurret added to BuildingPlacementService. Turret tool mode in StructuralPlaytestSetup (slot 7). Pre-loads 32 ammo per turret.
+- **J-015: Turret playtest scene** (`0a99c34`) -- Extended PreSeedFactory with ammo storage -> belt -> turret chain. Fixed ConnectionResolver to handle PortOwnerType.Turret (was throwing on turret input ports). Added P key to trigger pre-seed at runtime. Full loop verified: ammo flows from storage through belt to turret, turret fires at enemies, enemies die.
+- **PlaytestEnvironment** (`04a3ecd`) -- Reusable post-apocalyptic arena generator with procedural ground texture, perimeter walls, interior ruins, props, lighting, fog, and dust particles.
 - **Bug fixes:**
-  - PlayerController ground check now includes GridPlane layer (jumping wasn't working on runtime ground)
-  - DestroySceneCameras() added to bootstrapper (scene camera was overriding player camera)
+  - PlayerController ground check now includes GridPlane layer (jumping on runtime ground)
+  - DestroySceneCameras() added to bootstrapper (scene camera conflict)
+  - ConnectionResolver.CreateSource/CreateDestination handle PortOwnerType.Turret
 
 ### Shared file changes (CRITICAL)
 
-- **`Scripts/Core/PhysicsLayers.cs`** -- added `FaunaMask` (line ~30, `public static readonly int FaunaMask = (1 << Fauna);`)
+- **`Scripts/Core/PhysicsLayers.cs`** -- added `FaunaMask`
 - **`Scripts/Automation/PortOwnerType.cs`** -- added `Turret` value to enum
 - **`Scripts/Automation/BuildingPlacementService.cs`** -- added `PlaceTurret` method with `skipFoundationCheck` parameter
+- **`Scripts/Automation/ConnectionResolver.cs`** -- added `PortOwnerType.Turret` cases to CreateSource and CreateDestination (falls through to Storage since turret ports own a StorageContainer)
 - **`Scripts/Player/PlayerController.cs`** -- added `(1 << PhysicsLayers.GridPlane)` to GroundMask
 
 No asmdef changes. No ProjectSettings changes. No new packages.
 
 ### What needs attention
 
-- TurretBehaviour uses `Physics.OverlapSphereNonAlloc` with a 32-element buffer on the Fauna layer. If Kevin adds more enemy types that aren't on the Fauna layer, turrets won't detect them.
-- The `skipFoundationCheck` parameter on PlaceTurret defaults to `false` -- production code is unaffected. Only the playtest bootstrapper passes `true`.
-- PlaytestEnvironment generates ruins with a 12-unit clear zone around center. If arena size or build area changes, this value may need adjusting.
-- Known minor issue: CameraModeController gets null PlayerController reference because CreatePlayer calls GetComponent before AddComponent. FPS mode works fine, but V-key isometric toggle would break. Not a blocker for current tasks.
+- ConnectionResolver now has Turret cases that fall through to Storage. If Kevin adds a new PortOwnerType, both CreateSource and CreateDestination need updating or they'll throw.
+- The `skipFoundationCheck` parameter on PlaceTurret defaults to `false`. Only the manual turret placement in the playtest bootstrapper passes `true`. PreSeedFactory turret uses `false` (foundations are laid first).
+- PlaytestEnvironment generates ruins with a 12-unit clear zone around center. If arena size changes, this value may need adjusting.
+- Known minor issue: CameraModeController gets null PlayerController reference (GetComponent before AddComponent in CreatePlayer). FPS mode works, isometric V-key toggle would break.
 
 ### Next task
 
-J-015: Turret playtest scene (verify full loop -- place turrets, feed ammo via belts, trigger waves, watch defense). May already be satisfied by the current StructuralPlaytest setup since turrets, belts, and enemies all work together there. Needs a pass to confirm the ammo delivery chain works end-to-end.
+J-016: Tower data model and simulation layer (Phase 7 start). Pure C# simulation following D-004 pattern. Read `docs/plans/2026-02-28-tower-design.md` before starting.
 
 ### Blockers
 
-None.
+None. Phase 4 (Turret Defenses) is fully complete.
 
 ### Test status
 
 697/697 passing, 0 failing, 0 skipped, 0 compilation errors, 0 warnings.
 
-New test files: none this session (J-013 tests were added in previous session).
+No new test files this session (J-013 tests added in previous session).
 
 ### Key context
 
-- Turret visual: dark red cylinder base (0.8x0.4x0.8) + barrel pivot + elongated cube barrel (0.15x0.15x0.6). Barrel pivot rotates toward current target.
-- Turret pre-loads 32 "iron_scrap" ammo via `TryInsertStack`. When ammo runs out, turret stops firing.
-- Turret has 1 input port (ammo belt connection) so inserters can deliver ammo from belts.
-- PlaytestEnvironment uses seeded `System.Random` (not UnityEngine.Random) for deterministic generation. Default seed 42, arena size 40.
-- Environment generates under a root GameObject "PlaytestEnvironment" with child groups for walls, ruins, props, lighting, particles.
-- Ground texture is procedural Texture2D (512x512) with Perlin noise at multiple frequencies + grid lines at cell intervals.
+- Turret visual: dark red cylinder base + barrel pivot + elongated cube barrel. Barrel rotates toward current target.
+- Turret pre-loads 32 "iron_scrap" ammo via TryInsertStack. When ammo runs out, turret stops firing.
+- Turret has 1 input port at direction (-1,0) so inserters can deliver ammo from belts to the west.
+- PreSeedFactory turret chain: ammo storage at (5,5) -> belt (6,5)-(8,5) -> turret at (9,5). 200 iron scrap pre-loaded in ammo storage.
+- P key triggers PreSeedFactory at runtime (one-shot, guarded by _preSeedTriggered flag).
+- PlaytestEnvironment uses seeded System.Random (seed 42, arena size 40). Ground texture is procedural 512x512 Texture2D.

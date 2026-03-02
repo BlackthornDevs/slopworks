@@ -295,7 +295,8 @@ Build the thin MonoBehaviour wrapper and integrate turret placement into the pla
 
 ### TASK J-015: Turret playtest scene
 
-**Status:** Pending
+**Status:** Complete (2026-03-01)
+**Commits:** `0a99c34`
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`, `Scenes/`
