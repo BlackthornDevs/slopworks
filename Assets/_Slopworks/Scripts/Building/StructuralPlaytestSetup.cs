@@ -158,7 +158,10 @@ public class StructuralPlaytestSetup : MonoBehaviour
         CreateEnvironment();
 
         if (_preSeedFactory)
+        {
             PreSeedFactory();
+            _preSeedTriggered = true;
+        }
 
         var player = CreatePlayer();
 
@@ -202,6 +205,7 @@ public class StructuralPlaytestSetup : MonoBehaviour
         HandleLevelChange(kb);
         HandleFillStorage(kb, mouse);
         HandleWaveTrigger(kb);
+        HandlePreSeedTrigger(kb);
 
         switch (_currentTool)
         {
@@ -289,7 +293,7 @@ public class StructuralPlaytestSetup : MonoBehaviour
         DrawLine(ref y, x, w, h, "[B] Toggle build/items  [1-8] Select tool/slot  [V] FPS/Iso");
         DrawLine(ref y, x, w, h, "[PgUp/PgDn] Level  [R] Rotate  [Esc] Cancel  [F] Fill");
         DrawLine(ref y, x, w, h, "[Tab] Inventory  [E] Interact  [WASD] Move  [Space] Jump");
-        DrawLine(ref y, x, w, h, "[G] Spawn wave  |  Port colors: BLUE=input RED=output");
+        DrawLine(ref y, x, w, h, "[G] Spawn wave  [P] Pre-seed factory  |  BLUE=input RED=output");
 
         if (_currentTool == ToolMode.Wall)
         {
@@ -633,6 +637,18 @@ public class StructuralPlaytestSetup : MonoBehaviour
         {
             _waveController.BeginNextWave();
             Debug.Log("playtest: wave triggered via G key");
+        }
+    }
+
+    private bool _preSeedTriggered;
+
+    private void HandlePreSeedTrigger(Keyboard kb)
+    {
+        if (kb.pKey.wasPressedThisFrame && !_preSeedTriggered)
+        {
+            _preSeedTriggered = true;
+            PreSeedFactory();
+            Debug.Log("playtest: pre-seed factory triggered via P key");
         }
     }
 
@@ -1022,6 +1038,50 @@ public class StructuralPlaytestSetup : MonoBehaviour
             _automationBuildings.Add(outResult);
             SpawnStorageVisual(outResult, new Vector2Int(13, 7));
             Debug.Log("Pre-seed: output storage placed at (13,7)");
+        }
+
+        // -- Turret defense chain --
+        // Ammo storage at (5,5), pre-filled with 200 iron scrap
+        var ammoResult = _automationService.PlaceStorage(_storageDef, new Vector2Int(5, 5), 0);
+        if (ammoResult != null)
+        {
+            _automationBuildings.Add(ammoResult);
+            SpawnStorageVisual(ammoResult, new Vector2Int(5, 5));
+            var ammoStorage = (StorageContainer)ammoResult.SimulationObject;
+            for (int i = 0; i < 200; i++)
+                ammoStorage.TryInsert("iron_scrap");
+            Debug.Log("Pre-seed: ammo storage placed at (5,5) with 200 iron scrap");
+        }
+        else
+        {
+            Debug.LogWarning("Pre-seed: FAILED to place ammo storage at (5,5)");
+        }
+
+        // Belt from (6,5) to (8,5) -- feeds east toward turret
+        var ammoBeltResult = _automationService.PlaceBelt(new Vector2Int(6, 5), new Vector2Int(8, 5));
+        if (ammoBeltResult != null)
+        {
+            _automationBuildings.Add(ammoBeltResult);
+            SpawnBeltVisual(ammoBeltResult, new Vector2Int(6, 5), new Vector2Int(8, 5));
+            Debug.Log("Pre-seed: ammo belt placed from (6,5) to (8,5)");
+        }
+        else
+        {
+            Debug.LogWarning("Pre-seed: FAILED to place ammo belt from (6,5) to (8,5)");
+        }
+
+        // Turret at (9,5), rotation 0 (input port faces west toward belt)
+        var turretResult = _automationService.PlaceTurret(_turretDef, new Vector2Int(9, 5), 0, 0);
+        if (turretResult != null)
+        {
+            _automationBuildings.Add(turretResult);
+            SpawnTurretVisual(turretResult, new Vector2Int(9, 5));
+            int connections = CountConnections(turretResult.Ports);
+            Debug.Log($"Pre-seed: turret placed at (9,5), {connections} port connections");
+        }
+        else
+        {
+            Debug.LogWarning("Pre-seed: FAILED to place turret at (9,5)");
         }
 
         Debug.Log($"Pre-seed complete: {_simulation.InserterCount} auto-inserters, {_simulation.BeltNetwork.ConnectionCount} belt links");
