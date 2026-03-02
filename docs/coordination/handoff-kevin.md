@@ -1,73 +1,61 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-02-28 (session end)
+Last updated: 2026-03-01 20:00
 Branch: kevin/main
-Last commit: f2e4aef Wire all subsystems into FactorySimulation tick loop, add playtest
+Last commit: (pending -- this session's changes not yet committed)
 
 ## What was completed this session
 
-### Automation connectivity systems (796377b)
-- `Scripts/Automation/IItemSource.cs` / `IItemDestination.cs` -- universal item transfer interfaces
-- `Scripts/Automation/BeltOutputAdapter.cs`, `BeltInputAdapter.cs` -- belt endpoint adapters
-- `Scripts/Automation/MachineOutputAdapter.cs`, `MachineInputAdapter.cs` -- machine slot adapters
-- `Scripts/Automation/Inserter.cs` + `InserterBehaviour.cs` -- grab/swing/deposit transfer arm
-- `Scripts/Automation/StorageContainer.cs` + `StorageDefinitionSO.cs` + `StorageBehaviour.cs` -- slot-based stacking storage
-- `Scripts/Automation/BeltNetwork.cs` + `BeltNetworkBehaviour.cs` -- belt-to-belt connections with held-item-in-transit
-- `Scripts/Automation/IPowerNode.cs`, `PowerNetwork.cs`, `PowerNetworkManager.cs`, `SimplePowerNode.cs`, `PowerNetworkBehaviour.cs` -- BFS flood-fill power grid
-- Tests: InserterTests (33), StorageContainerTests (26), BeltNetworkTests (15), PowerNetworkTests (30)
+### Combat integration into StructuralPlaytest
 
-### FactorySimulation orchestration (f2e4aef)
-- `Scripts/Automation/FactorySimulation.cs` -- now orchestrates ALL subsystems in tick order:
-  1. Power network rebuild (if dirty)
-  2. Belt segments tick
-  3. Belt network transfers
-  4. Inserters tick
-  5. Machines tick
-- `Scripts/Automation/FactorySimulationBehaviour.cs` -- exposes belt speed config
-- `Scripts/Automation/FactoryPlaytestSetup.cs` -- self-contained playtest MonoBehaviour
-- `Scenes/Playtest.unity` -- has FactoryPlaytestSetup component, camera positioned
-- 14 new integration tests including full end-to-end pipeline (storage -> belt -> machine -> belt -> storage)
+Added all combat systems to StructuralPlaytestSetup so every game system can be tested in one scene:
 
-### Infrastructure fixes (9580bc9)
-- Moved `Assets/_Slopworks/Input/` to `Assets/_Slopworks/Scripts/Input/` (inside asmdef scope)
-- Added TMPro GUID to `Slopworks.Runtime.asmdef` references
-- Fixed jawn's player script compilation errors
+- **Combat definitions at runtime.** WeaponDefinitionSO (test_rifle: 25 dmg, 2 fire rate, 50 range, 12 mag), FaunaDefinitionSO (test_grunt: 50 HP, 3 speed, 10 attack dmg, pack behavior), GameEventSO for enemy death. `StructuralPlaytestSetup.cs:CreateDefinitions()`
+- **Player weapon wiring.** WeaponBehaviour added via inactive-then-activate pattern, weapon definition and camera set via reflection, CameraRecoil + CameraShake on FPS camera, MuzzleFlash child object, HitMarkerUI on HUD canvas. `StructuralPlaytestSetup.cs:WirePlayerCombat()`
+- **Enemy template.** Inactive capsule prefab with Rigidbody, NavMeshAgent, HealthBehaviour, FaunaController, EnemyHitFlash, EnemyKnockback. Red colored, Fauna layer. `StructuralPlaytestSetup.cs:CreateEnemyTemplate()`
+- **Spawn points + wave system.** 4 spawn points around build area, EnemySpawner + WaveControllerBehaviour on inactive-then-activate GO, 3 wave definitions (3, 5, 8 enemies). `StructuralPlaytestSetup.cs:CreateSpawnPointsAndWaves()`
+- **NavMesh baking.** Ground plane marked as NavigationStatic, legacy NavMeshBuilder.BuildNavMesh() used (AI Navigation package installed but NavMeshSurface requires asmdef change). `StructuralPlaytestSetup.cs:BakeNavMesh()`
+- **HUD combat wiring.** CameraShake and WaveController passed to PlayerHUD.Initialize() (were null before). HitMarkerUI wired to WeaponBehaviour. `StructuralPlaytestSetup.cs:CreateHUD(), WireHUD()`
+- **Wave trigger + OnGUI.** G key spawns next wave. OnGUI shows wave count, enemies remaining, HP, ammo (all null-safe). `StructuralPlaytestSetup.cs:HandleWaveTrigger(), OnGUI()`
 
-### Jawn task assignment (466b16c, 03d986e)
-- Wrote J-003 through J-006 in `docs/coordination/tasks-joe.md` (Phase 3 combat systems)
-- Resolved merge conflict with jawn's J-002 completion notes
+### NetworkBehaviour local play pattern (IMPORTANT -- affects Joe's combat scripts)
+
+FishNet NetworkBehaviours cannot work with runtime-created objects (no registered prefab collection, no proper spawn). Instead of booting FishNet as host, patched all combat scripts to gracefully handle missing NetworkObject:
+
+**Pattern:** `if (NetworkObject != null && !IsServerInitialized) return;` instead of `if (!IsServerInitialized) return;`
+
+When NetworkObject is null (local play without FishNet), the guard is skipped entirely. When NetworkObject is present (multiplayer with FishNet), the guard works as normal. Backward-compatible.
+
+**Files patched (all in Scripts/Combat/):**
+- `WeaponBehaviour.cs` -- IsOwner guard in OnFire, routing to local vs server damage paths
+- `EnemySpawner.cs:11` -- IsServerInitialized guard, removed ServerManager.Spawn() (just Instantiate)
+- `WaveControllerBehaviour.cs:33,62,82` -- three IsServerInitialized guards
+- `FaunaController.cs:40,183,295,396` -- four IsServerInitialized guards
 
 ## What's in progress (not yet committed)
-- Deleted TMP font material .meta files (jawn's TMP cleanup remnants, harmless)
-- New `.claude/skills/slopworks-handoff/` skill (will commit with this handoff)
+
+All work complete and ready to commit.
 
 ## Next task to pick up
 
-**Build the PortNode / spatial connection system** -- this is the bridge between the simulation layer (which is complete and tested) and actual gameplay.
-
-Specifically (Phase 1, Task 1.6 completion):
-1. **PortNode system** -- A component or plain C# class representing a spatial connection point. Every machine, storage, and belt endpoint exposes typed nodes (input/output) at world positions derived from MachinePort.localOffset + building rotation.
-2. **Connection resolver** -- When a belt endpoint is placed adjacent to a port node, snap to it and auto-create the inserter or belt network link.
-3. **Belt placement on grid** -- Click-drag belt segments that align to the grid and snap to port nodes.
-4. **Machine/storage placement** -- Place buildings via BuildModeController, spawning port nodes.
-5. **Visual belt items** -- Simple GameObjects moving along belts (GPU instancing deferred).
-
-The port node system is the linchpin -- build it first.
-
-Reference: `docs/plans/2026-02-27-vertical-slice-plan.md` Phase 1 Tasks 1.2, 1.3, 1.6.
+- **Belt flow investigation.** Automated chain (storage -> belt -> smelter -> belt -> output) may have port connection issues. Check belt link count and inserter activity.
+- **Phase 6 (Building Exploration)** per vertical slice plan.
 
 ## Blockers or decisions needed
-- None. The user confirmed the approach (port nodes with snap connections).
+
+None.
 
 ## Test status
-- 276/276 passing, 0 failures, 0 skipped
-- 0 compilation errors, 3 warnings (all pre-existing: FishNet deprecation, jawn's unused field)
+
+675/675 EditMode tests passing, 0 failures, 0 skipped.
 
 ## Key context the next session needs
-- `MachinePort` struct already exists with `localOffset`, `direction`, and `PortType` (Input/Output) -- use this as the data source for spatial port nodes
-- `MachineDefinitionSO.ports` is the array of port definitions per machine type
-- The adapters (BeltInputAdapter, MachineInputAdapter, etc.) already exist -- the connection resolver just needs to create the right adapter + Inserter and register it with FactorySimulation
-- StorageContainer implements both IItemSource and IItemDestination directly -- no adapter needed
-- Belt speed at 50Hz: speed 2 = 1 tile/sec, speed 4 = 2 tiles/sec
-- Inserter swing duration is in seconds, belt tick speed is in subdivisions per tick -- they're on different time scales by design
-- The playtest scene creates everything in code -- the real build system will use the grid + port nodes instead
+
+- Combat scripts (WeaponBehaviour, EnemySpawner, WaveControllerBehaviour, FaunaController) now use `NetworkObject != null && !IsServerInitialized` guard pattern -- these changes are on kevin/main and need to reach Joe via master PR eventually
+- FishNet cannot spawn runtime-created objects -- don't try to boot FishNet in bootstrappers, use the guard pattern instead
+- NavMesh baking uses legacy `NavMeshBuilder.BuildNavMesh()` with `isStatic = true` on ground plane -- works but deprecated. Would prefer NavMeshSurface but it requires adding Unity.AI.Navigation to Slopworks.Runtime.asmdef
+- Enemy template is an inactive GameObject (not a disk prefab) -- EnemySpawner.SpawnWave() calls Instantiate() which clones it
+- Spawn points at (30,0,30), (1,0,30), (30,0,1), (1,0,1) -- clamped to stay on ground plane (200x200 grid)
+- WeaponBehaviour uses inactive-then-activate pattern because Awake() creates WeaponController from null _weaponDefinition otherwise
+- WaveControllerBehaviour uses inactive-then-activate because Awake() creates WaveController from _waves list
+- All prior session context still applies (StorageUI, HotbarPage, MachineBehaviour.Initialize patterns, etc.)

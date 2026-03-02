@@ -10,9 +10,12 @@ public class BuildingPlacementServiceTests
     private FactorySimulation _simulation;
     private ConnectionResolver _connectionResolver;
     private BuildingPlacementService _service;
+    private StructuralPlacementService _structuralService;
+    private SnapPointRegistry _snapRegistry;
 
     private MachineDefinitionSO _machineDef;
     private StorageDefinitionSO _storageDef;
+    private FoundationDefinitionSO _foundationDef;
 
     [SetUp]
     public void SetUp()
@@ -22,6 +25,9 @@ public class BuildingPlacementServiceTests
         _simulation = new FactorySimulation(_ => null);
         _connectionResolver = new ConnectionResolver(_portRegistry, _simulation);
         _service = new BuildingPlacementService(_grid, _portRegistry, _connectionResolver, _simulation);
+
+        _snapRegistry = new SnapPointRegistry();
+        _structuralService = new StructuralPlacementService(_grid, _snapRegistry);
 
         _machineDef = ScriptableObject.CreateInstance<MachineDefinitionSO>();
         _machineDef.machineId = "smelter";
@@ -66,6 +72,11 @@ public class BuildingPlacementServiceTests
                 type = PortType.Output
             }
         };
+
+        _foundationDef = ScriptableObject.CreateInstance<FoundationDefinitionSO>();
+        _foundationDef.foundationId = "foundation_1x1";
+        _foundationDef.size = Vector2Int.one;
+        _foundationDef.generatesSnapPoints = true;
     }
 
     [TearDown]
@@ -73,6 +84,53 @@ public class BuildingPlacementServiceTests
     {
         Object.DestroyImmediate(_machineDef);
         Object.DestroyImmediate(_storageDef);
+        Object.DestroyImmediate(_foundationDef);
+    }
+
+    private void PlaceFoundationsAt(params Vector2Int[] cells)
+    {
+        foreach (var cell in cells)
+            _structuralService.PlaceFoundation(_foundationDef, cell, 0);
+    }
+
+    private void PlaceFoundationRect(Vector2Int origin, Vector2Int size, int level = 0)
+    {
+        for (int x = origin.x; x < origin.x + size.x; x++)
+            for (int y = origin.y; y < origin.y + size.y; y++)
+                _structuralService.PlaceFoundation(_foundationDef, new Vector2Int(x, y), level);
+    }
+
+    // -- Foundation requirement --
+
+    [Test]
+    public void PlaceMachine_WithoutFoundation_ReturnsNull()
+    {
+        var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
+        Assert.IsNull(result);
+    }
+
+    [Test]
+    public void PlaceStorage_WithoutFoundation_ReturnsNull()
+    {
+        var result = _service.PlaceStorage(_storageDef, new Vector2Int(10, 10), 0);
+        Assert.IsNull(result);
+    }
+
+    [Test]
+    public void PlaceBelt_WithoutFoundation_ReturnsNull()
+    {
+        var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
+        Assert.IsNull(result);
+    }
+
+    [Test]
+    public void PlaceBelt_OnFoundation_Succeeds()
+    {
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
+        var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
+        Assert.IsNotNull(result);
     }
 
     // -- Machine placement --
@@ -80,6 +138,7 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceMachine_ReturnsResult()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
         Assert.IsNotNull(result);
         Assert.IsNotNull(result.BuildingData);
@@ -90,22 +149,28 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceMachine_RegistersMachineWithSimulation()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
         Assert.AreEqual(1, _simulation.MachineCount);
     }
 
     [Test]
-    public void PlaceMachine_OccupiesGridCells()
+    public void PlaceMachine_FoundationsRemainOnGrid()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
 
+        // Foundations should still be on the grid (automation doesn't overwrite them)
         Assert.IsNotNull(_grid.GetAt(new Vector2Int(5, 5)));
+        Assert.IsTrue(_grid.GetAt(new Vector2Int(5, 5)).IsStructural);
         Assert.IsNotNull(_grid.GetAt(new Vector2Int(6, 6)));
+        Assert.IsTrue(_grid.GetAt(new Vector2Int(6, 6)).IsStructural);
     }
 
     [Test]
     public void PlaceMachine_PortsAtCorrectPositions()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
 
         // Input at (5,5) + (0,0) = (5,5), facing west
@@ -124,22 +189,24 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceMachine_Rotated90_PortsRotated()
     {
-        var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 90);
+        PlaceFoundationRect(new Vector2Int(5, 4), new Vector2Int(2, 2));
+        var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 4), 90);
 
-        // Input at (5,5) + rotate((0,0), 90) = (5,5), direction rotate((-1,0), 90) = (0,1)
+        // Input at (5,4) + rotate((0,0), 90) = (5,4), direction rotate((-1,0), 90) = (0,1)
         var inputPort = result.Ports[0];
-        Assert.AreEqual(new Vector2Int(5, 5), inputPort.Cell);
+        Assert.AreEqual(new Vector2Int(5, 4), inputPort.Cell);
         Assert.AreEqual(new Vector2Int(0, 1), inputPort.Direction);
 
-        // Output at (5,5) + rotate((1,1), 90) = (5,5) + (1,-1) = (6,4)
+        // Output at (5,4) + rotate((1,1), 90) = (5,4) + (1,-1) = (6,3)
         var outputPort = result.Ports[1];
-        Assert.AreEqual(new Vector2Int(6, 4), outputPort.Cell);
+        Assert.AreEqual(new Vector2Int(6, 3), outputPort.Cell);
         Assert.AreEqual(new Vector2Int(0, -1), outputPort.Direction);
     }
 
     [Test]
-    public void PlaceMachine_OccupiedCell_ReturnsNull()
+    public void PlaceMachine_OverlappingAutomation_ReturnsNull()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(4, 4));
         _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
         var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
         Assert.IsNull(result);
@@ -150,6 +217,7 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceStorage_ReturnsResult()
     {
+        PlaceFoundationsAt(new Vector2Int(10, 10));
         var result = _service.PlaceStorage(_storageDef, new Vector2Int(10, 10), 0);
         Assert.IsNotNull(result);
         Assert.IsInstanceOf<StorageContainer>(result.SimulationObject);
@@ -161,6 +229,9 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceBelt_StraightLine_ReturnsResult()
     {
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
         var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
         Assert.IsNotNull(result);
         Assert.IsInstanceOf<BeltSegment>(result.SimulationObject);
@@ -170,6 +241,9 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceBelt_RegistersBeltWithSimulation()
     {
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
         _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
         Assert.AreEqual(1, _simulation.BeltCount);
     }
@@ -177,6 +251,9 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceBelt_PortsAtEndpoints()
     {
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
         var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
 
         // Input at start (3,5), facing west (opposite of belt direction east)
@@ -195,6 +272,7 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceBelt_SameCell_ReturnsNull()
     {
+        PlaceFoundationsAt(new Vector2Int(3, 5));
         var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(3, 5));
         Assert.IsNull(result);
     }
@@ -207,8 +285,11 @@ public class BuildingPlacementServiceTests
     }
 
     [Test]
-    public void PlaceBelt_OccupiedPath_ReturnsNull()
+    public void PlaceBelt_OverlappingPath_ReturnsNull()
     {
+        // Place foundations covering both belt paths
+        PlaceFoundationRect(new Vector2Int(3, 3), new Vector2Int(5, 5));
+
         _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
         var result = _service.PlaceBelt(new Vector2Int(4, 3), new Vector2Int(4, 7));
         Assert.IsNull(result);
@@ -219,10 +300,14 @@ public class BuildingPlacementServiceTests
     [Test]
     public void PlaceBeltAdjacentToMachineOutput_AutoConnects()
     {
-        // Machine with east output at (6,6)
+        // Machine with east output at (6,6) -- needs 2x2 foundations at (5,5)
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
 
         // Belt starting at (7,6) with input facing west -- should connect to machine output
+        PlaceFoundationsAt(
+            new Vector2Int(7, 6), new Vector2Int(8, 6),
+            new Vector2Int(9, 6), new Vector2Int(10, 6));
         _service.PlaceBelt(new Vector2Int(7, 6), new Vector2Int(10, 6));
 
         Assert.AreEqual(1, _simulation.InserterCount);
@@ -232,9 +317,15 @@ public class BuildingPlacementServiceTests
     public void PlaceBeltsThenConnect_AutoConnects()
     {
         // Belt 1: (3,5) -> (6,5), output at (6,5) facing east
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
         _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
 
         // Belt 2: (7,5) -> (10,5), input at (7,5) facing west
+        PlaceFoundationsAt(
+            new Vector2Int(7, 5), new Vector2Int(8, 5),
+            new Vector2Int(9, 5), new Vector2Int(10, 5));
         _service.PlaceBelt(new Vector2Int(7, 5), new Vector2Int(10, 5));
 
         Assert.AreEqual(1, _simulation.BeltNetwork.ConnectionCount);
@@ -245,19 +336,25 @@ public class BuildingPlacementServiceTests
     [Test]
     public void Remove_Machine_UnregistersAndCleansUp()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         var result = _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
         Assert.AreEqual(1, _simulation.MachineCount);
 
         _service.Remove(result.BuildingData);
 
         Assert.AreEqual(0, _simulation.MachineCount);
-        Assert.IsNull(_grid.GetAt(new Vector2Int(5, 5)));
+        // Foundations should still be on the grid
+        Assert.IsNotNull(_grid.GetAt(new Vector2Int(5, 5)));
+        Assert.IsTrue(_grid.GetAt(new Vector2Int(5, 5)).IsStructural);
         Assert.AreEqual(0, _portRegistry.Count);
     }
 
     [Test]
     public void Remove_Belt_UnregistersAndCleansUp()
     {
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
         var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
         Assert.AreEqual(1, _simulation.BeltCount);
 
@@ -270,12 +367,35 @@ public class BuildingPlacementServiceTests
     [Test]
     public void Remove_WithConnection_TearsDownConnection()
     {
+        PlaceFoundationRect(new Vector2Int(5, 5), new Vector2Int(2, 2));
         _service.PlaceMachine(_machineDef, new Vector2Int(5, 5), 0);
+
+        PlaceFoundationsAt(
+            new Vector2Int(7, 6), new Vector2Int(8, 6),
+            new Vector2Int(9, 6), new Vector2Int(10, 6));
         var beltResult = _service.PlaceBelt(new Vector2Int(7, 6), new Vector2Int(10, 6));
         Assert.AreEqual(1, _simulation.InserterCount);
 
         _service.Remove(beltResult.BuildingData);
 
         Assert.AreEqual(0, _simulation.InserterCount);
+    }
+
+    [Test]
+    public void RemoveBelt_FreesAutomationCells()
+    {
+        PlaceFoundationsAt(
+            new Vector2Int(3, 5), new Vector2Int(4, 5),
+            new Vector2Int(5, 5), new Vector2Int(6, 5));
+        var result = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
+
+        // Should not be able to place another belt on the same cells
+        var overlap = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
+        Assert.IsNull(overlap);
+
+        // After removal, should be able to place again
+        _service.Remove(result.BuildingData);
+        var reuse = _service.PlaceBelt(new Vector2Int(3, 5), new Vector2Int(6, 5));
+        Assert.IsNotNull(reuse);
     }
 }

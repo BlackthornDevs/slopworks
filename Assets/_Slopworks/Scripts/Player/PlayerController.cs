@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
@@ -12,6 +13,8 @@ public class PlayerController : MonoBehaviour
     private SlopworksControls _controls;
     private Rigidbody _rb;
     private Transform _cameraTransform;
+    private PlayerInventory _playerInventory;
+    private IInteractable _currentInteractable;
 
     private float _pitch;
     private bool _isGrounded;
@@ -28,6 +31,8 @@ public class PlayerController : MonoBehaviour
         _rb = GetComponent<Rigidbody>();
         _cameraTransform = GetComponentInChildren<Camera>().transform;
 
+        _playerInventory = GetComponent<PlayerInventory>();
+
         _rb.freezeRotation = true;
         _rb.interpolation = RigidbodyInterpolation.Interpolate;
 
@@ -37,6 +42,8 @@ public class PlayerController : MonoBehaviour
     private void OnEnable()
     {
         _controls.Exploration.Enable();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private void OnDisable()
@@ -48,6 +55,8 @@ public class PlayerController : MonoBehaviour
     {
         Look();
         CheckJump();
+        HandleHotbarInput();
+        HandleInteraction();
     }
 
     private void FixedUpdate()
@@ -95,6 +104,47 @@ public class PlayerController : MonoBehaviour
         if (_isGrounded && _controls.Exploration.Jump.WasPressedThisFrame())
         {
             _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, _jumpForce, _rb.linearVelocity.z);
+        }
+    }
+
+    private static readonly Key[] HotbarKeys =
+    {
+        Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5,
+        Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9
+    };
+
+    private void HandleHotbarInput()
+    {
+        if (_playerInventory == null) return;
+
+        var kb = Keyboard.current;
+        if (kb == null) return;
+
+        for (int i = 0; i < HotbarKeys.Length; i++)
+        {
+            if (kb[HotbarKeys[i]].wasPressedThisFrame)
+            {
+                _playerInventory.SelectHotbarSlot(i);
+                break;
+            }
+        }
+    }
+
+    private void HandleInteraction()
+    {
+        var ray = new Ray(_cameraTransform.position, _cameraTransform.forward);
+        if (Physics.Raycast(ray, out var hit, 3f, PhysicsLayers.InteractMask))
+        {
+            _currentInteractable = hit.collider.GetComponent<IInteractable>();
+        }
+        else
+        {
+            _currentInteractable = null;
+        }
+
+        if (_currentInteractable != null && _controls.Exploration.Interact.WasPressedThisFrame())
+        {
+            _currentInteractable.Interact(gameObject);
         }
     }
 }

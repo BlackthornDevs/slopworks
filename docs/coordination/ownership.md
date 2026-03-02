@@ -52,6 +52,19 @@ These live on `master` and both branches merge from it:
 | `Prefabs/Buildings/` | Kevin |
 | `Prefabs/FX/` | Joe |
 
+## Shared UI components
+
+These components are used by both developers' playtest scenes and should go through master:
+- `PlayerHUD.cs` -- consolidated HUD (crosshair, health bar, ammo, wave status, hotbar with pages, build mode indicator, interaction prompt, damage flash)
+- `HotbarSlotUI.cs` -- individual hotbar slot with inventory binding and `SetEntry()` for non-inventory pages
+- `HotbarPage.cs` -- hotbar page data types (HotbarPage, HotbarEntry)
+- `HealthBarUI.cs` -- health bar fill display
+- `InteractionPromptUI.cs` -- raycast-based interaction prompt
+- `InventoryUI.cs` -- full inventory grid panel
+- `RecipeSelectionUI.cs` -- machine recipe selection modal with live status display
+- `StorageUI.cs` -- storage interaction split panel (player inventory + storage)
+- `InventorySlotUI.cs` -- single inventory grid slot
+
 ## Render pipeline assets
 
 Joe owns URP Pipeline Asset and Renderer Asset configuration. Kevin requests render changes via `docs/render-requests.md` (per CLAUDE.md).

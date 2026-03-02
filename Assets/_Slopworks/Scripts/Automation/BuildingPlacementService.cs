@@ -19,6 +19,12 @@ public class BuildingPlacementService
     /// </summary>
     private readonly Dictionary<BuildingData, object> _simulationObjects = new();
 
+    /// <summary>
+    /// Tracks cells occupied by automation buildings (belts, machines, storage).
+    /// Automation buildings coexist on foundation cells rather than occupying the grid directly.
+    /// </summary>
+    private readonly HashSet<Vector3Int> _automationCells = new();
+
     public BuildingPlacementService(
         FactoryGrid grid,
         PortNodeRegistry portRegistry,
@@ -39,11 +45,11 @@ public class BuildingPlacementService
     {
         var effectiveSize = GetEffectiveSize(def.size, rotation);
 
-        if (!_grid.CanPlace(cell, effectiveSize, level))
+        if (!HasFoundationsAndNoOverlap(cell, effectiveSize, level))
             return null;
 
         var buildingData = new BuildingData(def.machineId, cell, effectiveSize, rotation, level);
-        _grid.Place(cell, effectiveSize, level, buildingData);
+        OccupyAutomationCells(cell, effectiveSize, level);
 
         var machine = new Machine(def);
         _simulation.RegisterMachine(machine);
@@ -62,11 +68,11 @@ public class BuildingPlacementService
     {
         var effectiveSize = GetEffectiveSize(def.size, rotation);
 
-        if (!_grid.CanPlace(cell, effectiveSize, level))
+        if (!HasFoundationsAndNoOverlap(cell, effectiveSize, level))
             return null;
 
         var buildingData = new BuildingData(def.storageId, cell, effectiveSize, rotation, level);
-        _grid.Place(cell, effectiveSize, level, buildingData);
+        OccupyAutomationCells(cell, effectiveSize, level);
 
         var storage = new StorageContainer(def.slotCount, def.maxStackSize);
         _simulationObjects[buildingData] = storage;
@@ -100,20 +106,20 @@ public class BuildingPlacementService
 
         int lengthInTiles = Mathf.Abs(diff.x) + Mathf.Abs(diff.y);
 
-        // Check all cells in the path are empty
+        // Check all cells have foundations and no automation overlap
         for (int i = 0; i <= lengthInTiles; i++)
         {
             var checkCell = startCell + direction * i;
-            if (!_grid.CanPlace(checkCell, Vector2Int.one, level))
+            if (!HasFoundationsAndNoOverlap(checkCell, Vector2Int.one, level))
                 return null;
         }
 
-        // Place all cells on the grid
+        // Track automation cells (belts coexist on foundation grid cells)
         var buildingData = new BuildingData("belt", startCell, new Vector2Int(1, 1), 0, level);
         for (int i = 0; i <= lengthInTiles; i++)
         {
             var placeCell = startCell + direction * i;
-            _grid.Place(placeCell, Vector2Int.one, level, buildingData);
+            _automationCells.Add(new Vector3Int(placeCell.x, placeCell.y, level));
         }
 
         var belt = new BeltSegment(lengthInTiles);
@@ -158,8 +164,31 @@ public class BuildingPlacementService
         else if (simObject is BeltSegment belt)
             _simulation.UnregisterBelt(belt);
 
-        // Remove from grid
-        _grid.Remove(data.Origin, data.Size, data.Level);
+        // Clear automation cells (not grid -- automation buildings don't occupy the grid)
+        if (simObject is BeltSegment removedBelt)
+        {
+            // Belts span multiple cells along their path -- recalculate from ports
+            var beltPorts = ports;
+            if (beltPorts.Count == 2)
+            {
+                var startCell = beltPorts[0].Cell;
+                var endCell = beltPorts[1].Cell;
+                var diff = endCell - startCell;
+                var dir = new Vector2Int(
+                    diff.x != 0 ? (diff.x > 0 ? 1 : -1) : 0,
+                    diff.y != 0 ? (diff.y > 0 ? 1 : -1) : 0);
+                int len = Mathf.Abs(diff.x) + Mathf.Abs(diff.y);
+                for (int i = 0; i <= len; i++)
+                {
+                    var c = startCell + dir * i;
+                    _automationCells.Remove(new Vector3Int(c.x, c.y, data.Level));
+                }
+            }
+        }
+        else
+        {
+            ClearAutomationCells(data.Origin, data.Size, data.Level);
+        }
         _simulationObjects.Remove(data);
     }
 
@@ -209,6 +238,41 @@ public class BuildingPlacementService
         foreach (var port in ports)
             _portRegistry.Register(port);
         _connectionResolver.ResolveConnectionsFor(ports);
+    }
+
+    /// <summary>
+    /// Check that all cells in the footprint have a structural foundation
+    /// and no existing automation building.
+    /// </summary>
+    private bool HasFoundationsAndNoOverlap(Vector2Int origin, Vector2Int size, int level)
+    {
+        for (int x = origin.x; x < origin.x + size.x; x++)
+        {
+            for (int y = origin.y; y < origin.y + size.y; y++)
+            {
+                var cell = new Vector2Int(x, y);
+                var existing = _grid.GetAt(cell, level);
+                if (existing == null || !existing.IsStructural)
+                    return false;
+                if (_automationCells.Contains(new Vector3Int(x, y, level)))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private void OccupyAutomationCells(Vector2Int origin, Vector2Int size, int level)
+    {
+        for (int x = origin.x; x < origin.x + size.x; x++)
+            for (int y = origin.y; y < origin.y + size.y; y++)
+                _automationCells.Add(new Vector3Int(x, y, level));
+    }
+
+    private void ClearAutomationCells(Vector2Int origin, Vector2Int size, int level)
+    {
+        for (int x = origin.x; x < origin.x + size.x; x++)
+            for (int y = origin.y; y < origin.y + size.y; y++)
+                _automationCells.Remove(new Vector3Int(x, y, level));
     }
 
     private static Vector2Int GetEffectiveSize(Vector2Int size, int rotation)

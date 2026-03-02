@@ -51,13 +51,13 @@ public class WeaponBehaviour : NetworkBehaviour
 
     private void Update()
     {
-        _weapon.Tick(Time.deltaTime);
+        _weapon?.Tick(Time.deltaTime);
     }
 
     private void OnFire(InputAction.CallbackContext ctx)
     {
-        if (_camera == null) return;
-        if (!IsOwner) return;
+        if (_camera == null || _weapon == null) return;
+        if (NetworkObject != null && !IsOwner) return;
         if (!_weapon.TryFire()) return;
 
         // visual feedback runs on the owning client immediately
@@ -85,11 +85,19 @@ public class WeaponBehaviour : NetworkBehaviour
         }
 
         // server validates the shot and applies damage
-        ServerFireWeapon(origin, direction);
+        if (NetworkObject != null)
+            ServerFireWeapon(origin, direction);
+        else
+            ApplyDamageLocal(origin, direction);
     }
 
     [ServerRpc]
     private void ServerFireWeapon(Vector3 origin, Vector3 direction)
+    {
+        ApplyDamageLocal(origin, direction);
+    }
+
+    private void ApplyDamageLocal(Vector3 origin, Vector3 direction)
     {
         if (Physics.Raycast(origin, direction, out RaycastHit hit, _weapon.Range, PhysicsLayers.WeaponHitMask))
         {

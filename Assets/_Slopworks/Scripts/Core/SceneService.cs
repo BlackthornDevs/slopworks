@@ -5,6 +5,15 @@ using UnityEngine.SceneManagement;
 
 public class SceneService : MonoBehaviour, ISceneService
 {
+    public string CurrentGroup { get; private set; }
+
+    public void TransitionTo(string groupName, Action onComplete = null)
+    {
+        // Stub: will be replaced by SceneLoaderBehaviour in Task 2
+        CurrentGroup = groupName;
+        onComplete?.Invoke();
+    }
+
     public void LoadScene(string sceneName, Action onComplete = null)
     {
         StartCoroutine(LoadSceneAsync(sceneName, onComplete));

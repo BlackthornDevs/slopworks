@@ -95,17 +95,16 @@ Keep it concise. Don't duplicate what's in CLAUDE.md or the handoff file.
 - Push to `kevin/main`
 - Report the final commit hash
 
-### 7b. Push coordination docs to master (if Joe's tasks changed)
+### 7b. Create PR to master (if Joe's tasks or coordination docs changed)
 
-If `tasks-joe.md`, `handoff-joe.md`, `contradictions.md`, or `decisions.md` were updated:
+**Never push directly to master.** If `tasks-joe.md`, `handoff-joe.md`, `contradictions.md`, `decisions.md`, or `.claude/CLAUDE.md` were updated:
 
-1. Switch to master: `git checkout master && git pull origin master`
-2. Cherry-pick only the coordination files: `git checkout kevin/main -- .claude/CLAUDE.md docs/coordination/tasks-joe.md docs/coordination/handoff-joe.md docs/coordination/contradictions.md docs/coordination/decisions.md` (only files that changed)
-3. Commit: "Update coordination docs for Joe"
-4. Push to master: `git push origin master`
-5. Switch back: `git checkout kevin/main && git merge origin/master --no-edit && git push origin kevin/main`
+1. Push to `kevin/main` first (step 7)
+2. Create a PR: `gh pr create --base master --head kevin/main --title "Update coordination docs" --body "Updated tasks/handoff/decisions for Joe"`
+3. If the user approves, merge: `gh pr merge --merge`
+4. Pull master back: `git fetch origin master && git merge origin/master --no-edit`
 
-This ensures Joe picks up new tasks on his next `git merge origin/master`. Do NOT push any Phase implementation code to master -- only coordination and CLAUDE.md files.
+This ensures Joe picks up new tasks on his next `git merge origin/master`. All changes to master go through PRs -- no exceptions.
 
 ### 8. Summary to user
 
@@ -119,6 +118,7 @@ Print a brief summary:
 
 - NEVER add Co-Authored-By lines to commits
 - The handoff file is the primary way the next session recovers context -- make it thorough
+- **NEVER push directly to master.** Always create a PR via `gh pr create`. This is a hard rule.
 - Joe's Claude auto-picks tasks from `tasks-joe.md` on master. Step 7b ensures he gets them.
-- Only push coordination files to master (step 7b), never Phase implementation code
-- If you made changes to shared code (Scripts/Core/, ScriptableObjects/, ProjectSettings/), note this prominently -- it needs a separate merge to master for jawn to pick up
+- Only merge coordination files to master (step 7b), never Phase implementation code
+- If you made changes to shared code (Scripts/Core/, ScriptableObjects/, ProjectSettings/), note this prominently -- it needs a separate PR to master for jawn to pick up

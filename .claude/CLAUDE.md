@@ -34,11 +34,15 @@ Joe's Claude follows the auto-pickup protocol in `docs/coordination/tasks-joe.md
 10. **When all tasks are done:** use the `slopworks-handoff-joe` skill for session end
 
 No need to wait for Kevin to assign work. Tasks are pre-assigned in `tasks-joe.md`.
-Kevin adds new tasks by pushing to master. Joe picks them up on the next merge.
+Kevin adds new tasks via PR to master. Joe picks them up on the next merge.
+
+**To merge to master:** Push to `joe/main`, then `gh pr create --base master --head joe/main`. Do NOT push directly to master.
 
 ### Kevin's session workflow
 
 Kevin reads `docs/coordination/handoff-kevin.md` at session start. Uses the `slopworks-handoff` skill at session end to write handoff notes.
+
+**To merge to master:** Push to `kevin/main`, then `gh pr create --base master --head kevin/main`. Run the `code-review` skill on the PR before merging. Use `gh pr merge` to merge, not `git push origin master`.
 
 ---
 
@@ -57,6 +61,8 @@ These are non-negotiable. Violating any of them creates bugs that are hard to fi
 **Never use RPCs for persistent state.** Late-joining players don't receive RPCs fired before they connected. Anything a new client needs on join — machine status, craft progress, inventory, belt contents — goes in SyncVar or SyncList.
 
 **No direct LLM API calls.** Use `claude -p` or `gemini -p` via subprocess. This applies to all tooling and automation code in this repo.
+
+**Never push directly to master.** All changes to master go through a pull request. Push to your branch (`kevin/main` or `joe/main`), then create a PR with `gh pr create`. The other agent or the lead developer reviews before merging. This applies to both Kevin's and Joe's Claude agents -- no exceptions, even for "small" changes like coordination docs. Use `gh pr merge` after review, not `git push origin master`.
 
 **Never cache GetComponent, FindObjectOfType, or FindObjectsOfType results inside Update or FixedUpdate.** Cache in Awake or Start. One allocation per frame across thousands of objects adds up.
 
@@ -118,6 +124,24 @@ Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoB
 Existing playtest scenes to reference:
 - `PortNodePlaytestSetup.cs` — factory automation chain (belts, machines, inserters)
 - `StructuralPlaytestSetup.cs` — structural building (foundations, walls, ramps, multi-level)
+
+---
+
+## Testing requirements
+
+**Unit tests are necessary but not sufficient.** Phase 5 shipped 675 passing EditMode tests and still had 5 bugs that only appeared during manual playtest. Every bug was at an integration seam: component ordering, Unity lifecycle timing, UI hierarchy, input system wiring. Pure C# simulation tests don't catch these.
+
+Every phase must include tests at two levels:
+
+1. **Simulation tests** — pure C# logic (Inventory.AddItem returns correct count, Machine.Tick advances state). These are the existing EditMode tests. Keep writing them.
+
+2. **Integration tests** — verify that systems actually work together the way a player experiences them. These catch the bugs that simulation tests miss:
+   - **Component dependency chains** — if B.Awake() calls GetComponent<A>(), test what happens when A is missing or added in the wrong order
+   - **Bootstrapper ordering** — test that setup sequences produce working references, not just that individual systems work in isolation
+   - **UI structure** — test that runtime-created UI elements have correct parents, nonzero dimensions, and expected component configurations
+   - **End-to-end flows** — test the full user action (player walks over item -> item enters inventory -> hotbar updates), not just each step alone
+
+**Do not mark a phase complete based on passing unit tests alone.** If the playtest scene reveals bugs, the test suite had gaps. Write the missing integration test before (or alongside) fixing the bug so the same class of problem is caught automatically next time.
 
 ---
 
