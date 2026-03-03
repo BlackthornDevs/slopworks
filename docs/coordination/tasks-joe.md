@@ -623,7 +623,7 @@ After completing J-023 (merge master + port turret code), verify that the consol
 
 ### TASK J-025: Fix SO mutation in TowerController.RandomizeFragments
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`
