@@ -34,7 +34,7 @@ J-024 is blocked on C-009. Next eligible by priority:
 
 ### Test status
 
-885/886 passing, 1 failing (pre-existing MCP flake), 0 skipped, 0 compilation errors, 0 warnings.
+885/886 passing, 1 failing (pre-existing MCP flake), 0 skipped, 0 compilation errors, 6 warnings (all pre-existing).
 
 ### Key context
 
