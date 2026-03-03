@@ -82,7 +82,7 @@ public class TowerControllerTests
         int fragmentCount = 0;
         for (int i = 0; i < _building.chunks.Count; i++)
         {
-            if (_building.chunks[i].hasFragment)
+            if (_tower.HasFragment(i))
                 fragmentCount++;
         }
 
@@ -95,7 +95,7 @@ public class TowerControllerTests
     {
         _tower.StartRun(_building);
 
-        Assert.IsFalse(_building.chunks[_building.bossChunkIndex].hasFragment);
+        Assert.IsFalse(_tower.HasFragment(_building.bossChunkIndex));
     }
 
     [Test]
@@ -468,7 +468,7 @@ public class TowerControllerTests
         int fragmentCount = 0;
         for (int i = 0; i < smallBuilding.chunks.Count; i++)
         {
-            if (smallBuilding.chunks[i].hasFragment)
+            if (_tower.HasFragment(i))
                 fragmentCount++;
         }
         Assert.AreEqual(2, fragmentCount);
@@ -494,6 +494,53 @@ public class TowerControllerTests
         _tower.Extract(); // second extract with nothing carried
 
         Assert.AreEqual(1, _tower.BankedLoot.Count);
+    }
+
+    [Test]
+    public void TwoRunsOnSameSOHaveIndependentFragmentState()
+    {
+        // First run: record which chunks have fragments
+        _tower.StartRun(_building);
+        var firstRunFragments = new HashSet<int>();
+        for (int i = 0; i < _building.chunks.Count; i++)
+        {
+            if (_tower.HasFragment(i))
+                firstRunFragments.Add(i);
+        }
+        Assert.AreEqual(_building.requiredFragments, firstRunFragments.Count);
+
+        // Second run on the same SO: fragment state should be freshly randomized
+        _tower.StartRun(_building);
+        int secondRunCount = 0;
+        for (int i = 0; i < _building.chunks.Count; i++)
+        {
+            if (_tower.HasFragment(i))
+                secondRunCount++;
+        }
+
+        // The count must still be exactly requiredFragments (not accumulated from first run)
+        Assert.AreEqual(_building.requiredFragments, secondRunCount);
+    }
+
+    [Test]
+    public void TwoControllersOnSameSOHaveIndependentFragmentState()
+    {
+        // Two controllers sharing the same SO should not interfere with each other
+        var tower2 = new TowerController();
+
+        _tower.StartRun(_building);
+        tower2.StartRun(_building);
+
+        // Each controller should have exactly requiredFragments
+        int count1 = 0, count2 = 0;
+        for (int i = 0; i < _building.chunks.Count; i++)
+        {
+            if (_tower.HasFragment(i)) count1++;
+            if (tower2.HasFragment(i)) count2++;
+        }
+
+        Assert.AreEqual(_building.requiredFragments, count1);
+        Assert.AreEqual(_building.requiredFragments, count2);
     }
 
     [Test]

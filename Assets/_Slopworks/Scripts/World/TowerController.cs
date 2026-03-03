@@ -9,6 +9,7 @@ public class TowerController
 {
     private TowerBuildingDefinitionSO _building;
     private readonly HashSet<int> _clearedChunks = new HashSet<int>();
+    private readonly HashSet<int> _fragmentChunks = new HashSet<int>();
     private readonly List<ItemInstance> _carriedLoot = new List<ItemInstance>();
     private readonly List<ItemInstance> _bankedLoot = new List<ItemInstance>();
     private int _carriedFragments;
@@ -25,12 +26,21 @@ public class TowerController
     public bool IsRunActive => _isRunActive;
 
     /// <summary>
+    /// Check if the given chunk index has a fragment this run.
+    /// </summary>
+    public bool HasFragment(int chunkIndex)
+    {
+        return _fragmentChunks.Contains(chunkIndex);
+    }
+
+    /// <summary>
     /// Initialize a new run. Resets carried state and randomizes fragment placement.
     /// </summary>
     public void StartRun(TowerBuildingDefinitionSO building)
     {
         _building = building;
         _clearedChunks.Clear();
+        _fragmentChunks.Clear();
         _carriedLoot.Clear();
         _carriedFragments = 0;
         _isRunActive = true;
@@ -122,10 +132,6 @@ public class TowerController
 
     private void RandomizeFragments()
     {
-        // Clear previous fragment flags
-        for (int i = 0; i < _building.chunks.Count; i++)
-            _building.chunks[i].hasFragment = false;
-
         // Collect non-boss chunk indices
         var candidates = new List<int>();
         for (int i = 0; i < _building.chunks.Count; i++)
@@ -148,6 +154,6 @@ public class TowerController
         }
 
         for (int i = 0; i < fragmentsToPlace; i++)
-            _building.chunks[candidates[i]].hasFragment = true;
+            _fragmentChunks.Add(candidates[i]);
     }
 }
