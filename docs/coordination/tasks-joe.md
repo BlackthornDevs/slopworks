@@ -621,6 +621,28 @@ After completing J-023 (merge master + port turret code), verify that the consol
 - All HUD features work in JoePlaytestSetup scene
 - No separate bootstrapper or HUD wiring code needed -- shared bootstrap handles it
 
+### TASK J-025: Fix SO mutation in TowerController.RandomizeFragments
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`
+**Depends on:** J-016
+
+Code review on PR #13 found that `RandomizeFragments()` writes `_building.chunks[i].hasFragment` directly on the ScriptableObject's child objects. This violates the hard rule: "Never mutate ScriptableObjects at runtime." Even though `hasFragment` is `[NonSerialized]`, the in-memory instances are shared. If `StartRun` is called twice on the same SO, the second run inherits stale state.
+
+**Fix:** Remove `hasFragment` from `FloorChunkDefinition`. Track fragment placement in a `HashSet<int> _fragmentChunks` on `TowerController` instead. Update `RandomizeFragments` to populate the HashSet. Add a `HasFragment(int chunkIndex)` method on TowerController. Update any code that reads `chunks[i].hasFragment` to use the new method.
+
+**Update tests:** Add a test that calls `StartRun` twice on the same SO and verifies fragment state is independent between runs.
+
+**Acceptance criteria:**
+- `FloorChunkDefinition.hasFragment` field is removed
+- Fragment state tracked entirely on `TowerController`
+- New test proves two runs on same SO don't share fragment state
+- All existing TowerController tests still pass
+
+---
+
 ### TASK J-021: Tower playtest scene
 
 **Status:** Pending

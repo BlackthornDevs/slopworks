@@ -34,6 +34,7 @@ Who owns what. The owner is responsible for implementation on their branch. Owne
 
 These live on `master` and both branches merge from it:
 - `Scripts/Core/` -- interfaces, base types, registries
+- `Scripts/Core/PhysicsLayers.cs` -- layer constants and raycast masks (D-013: never edit on feature branches)
 - `ScriptableObjects/Items/` -- item definitions
 - `ScriptableObjects/Recipes/` -- recipe definitions
 - `ScriptableObjects/Events/` -- event bus assets

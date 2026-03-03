@@ -169,3 +169,17 @@ Settled decisions that both agents follow. Do not re-litigate unless new informa
 **Rationale:** Neither dev works in the master scene directly. It serves as a merge gate: all features must coexist before a PR to master can be approved. The interface contract is explicit about what each provider contributes.
 
 **Impact:** New files: `IPlaytestFeatureProvider.cs`, `MasterPlaytestSetup.cs`, `MasterPlaytest.unity`. Modified: both bootstrappers (implement interface + `_isStandalone` guard), `PlaytestToolController.cs` (static helpers), `PlaytestValidator.cs` (master scene checks).
+
+---
+
+## D-013: PhysicsLayers.cs is master-only
+
+**Date:** 2026-03-02
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Both kevin/main and joe/main independently added mask fields to `PhysicsLayers.cs`, causing a merge conflict on master. PhysicsLayers is in `Scripts/Core/` which is documented as shared (master only) in ownership.md, but the rule was not enforced.
+
+**Decision:** `PhysicsLayers.cs` must never be edited on feature branches. All changes go through a direct PR to master. Both branches then merge master to pick up the change. This matches the existing ownership.md rule for `Scripts/Core/`.
+
+**Rationale:** PhysicsLayers is a single flat file with layer constants and mask fields. Any two developers adding fields at adjacent lines will produce a merge conflict. Since the file has no logical sections that can be owned separately, the only safe workflow is sequential edits through master.
+
+**Impact:** Before adding a new layer or mask, create a small PR to master with just the PhysicsLayers change. Do not bundle it with feature work on kevin/main or joe/main.

@@ -14,19 +14,19 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 1
-  m_FogColor: {r: 0.38, g: 0.33, b: 0.28, a: 1}
+  m_Fog: 0
+  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.015
+  m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.68, g: 0.48, b: 0.22, a: 1}
-  m_AmbientEquatorColor: {r: 0.32, g: 0.24, b: 0.16, a: 1}
-  m_AmbientGroundColor: {r: 0.1, g: 0.08, b: 0.06, a: 1}
+  m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
+  m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
-  m_AmbientMode: 1
+  m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: b8d8bc20be59b4ac8985dbc460f321bd, type: 2}
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -118,8 +118,8 @@ NavMeshSettings:
     preserveTilesOutsideBounds: 0
     debug:
       m_Flags: 0
-  m_NavMeshData: {fileID: 23800000, guid: 595dbcf33a92540d78b00d4aa49ea8e1, type: 2}
---- !u!1 &78107645
+  m_NavMeshData: {fileID: 0}
+--- !u!1 &2019789576
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,37 +127,69 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 78107647}
-  - component: {fileID: 78107646}
+  - component: {fileID: 2019789580}
+  - component: {fileID: 2019789579}
+  - component: {fileID: 2019789578}
+  - component: {fileID: 2019789577}
   m_Layer: 0
-  m_Name: PlaytestBootstrapper
+  m_Name: JoePlaytestSetup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &78107646
+--- !u!114 &2019789577
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 78107645}
+  m_GameObject: {fileID: 2019789576}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e180ffc94bf4b064ba57dc1f31e60f3f, type: 3}
+  m_Script: {fileID: 11500000, guid: 07b57c19bef47534fa0b2ee352a0f892, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Slopworks.Runtime::StructuralPlaytestSetup
-  _preSeedFactory: 0
+  m_EditorClassIdentifier: Slopworks.Runtime::PlaytestLogger
+  _enabled: 0
+  _logMovement: 0
+  _logBreadcrumbs: 1
+  _breadcrumbInterval: 5
+--- !u!114 &2019789578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019789576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dcddd3cee728de419d6e95186c97bd2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::PlaytestValidator
+  _runOnPlay: 1
+  _delayFrames: 5
+  _autoQuit: 1
+--- !u!114 &2019789579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2019789576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 882207905748ee24fa360e7b4d0b86f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::JoePlaytestSetup
+  _preSeedFactory: 1
   _beltSpeed: 4
-  _worldItemCount: 5
---- !u!4 &78107647
+--- !u!4 &2019789580
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 78107645}
+  m_GameObject: {fileID: 2019789576}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -170,4 +202,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 78107647}
+  - {fileID: 2019789580}

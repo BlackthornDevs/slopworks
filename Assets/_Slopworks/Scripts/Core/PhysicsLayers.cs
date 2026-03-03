@@ -18,6 +18,9 @@ public static class PhysicsLayers
     public static readonly int PlacementMask =
         (1 << Terrain) | (1 << BIM_Static) | (1 << GridPlane);
 
+    public static readonly int StructuralPlacementMask =
+        (1 << Terrain) | (1 << BIM_Static) | (1 << GridPlane) | (1 << Structures);
+
     public static readonly int WeaponHitMask =
         (1 << Player) | (1 << Fauna) | (1 << BIM_Static) | (1 << Structures);
 

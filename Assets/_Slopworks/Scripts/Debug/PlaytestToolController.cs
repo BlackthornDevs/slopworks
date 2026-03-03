@@ -76,10 +76,7 @@ public class PlaytestToolController : MonoBehaviour
     private ToolMode _currentTool = ToolMode.None;
     private int _currentLevel;
 
-    // Ramp 2-step
-    private bool _pendingRamp;
-    private Vector2Int _pendingRampCell;
-    private int _pendingRampDirIndex;
+    // Ramp state (legacy preview for CancelPendingRamp cleanup)
     private GameObject _pendingRampPreview;
 
     // Foundation drag
@@ -88,10 +85,9 @@ public class PlaytestToolController : MonoBehaviour
     private Vector2Int _dragEnd;
     private readonly List<GameObject> _ghostPool = new();
 
-    // Wall 2-step
-    private bool _pendingWall;
-    private Vector2Int _pendingWallCell;
-    private int _pendingWallDirIndex;
+    // Wall state
+    private int _pendingWallDirIndex = -1; // -1=auto, 0-3=locked direction
+    // Legacy preview for CancelPendingWall cleanup
     private GameObject _pendingWallPreview;
 
     // Belt 2-click
@@ -109,6 +105,29 @@ public class PlaytestToolController : MonoBehaviour
     // Port indicators on placed machines
     private readonly List<GameObject> _portIndicators = new();
 
+    // Auto-level detection
+    private int _levelOverrideFrames;
+
+    // Level indicator plane
+    private GameObject _levelIndicatorPlane;
+    private static readonly Color[] LevelColors =
+    {
+        new Color(0.2f, 0.4f, 0.8f, 0.15f), // level 0: blue
+        new Color(0.8f, 0.7f, 0.2f, 0.15f), // level 1: yellow
+        new Color(0.8f, 0.2f, 0.2f, 0.15f), // level 2: red
+    };
+
+    // Wall ghost + zoop
+    private GameObject _wallGhost;
+    private WallPlacementController _wallPlacementCtrl;
+    private WallZoopController _wallZoop;
+    private bool _wallZoopDragging;
+    private readonly List<GameObject> _wallZoopGhosts = new();
+
+    // Ramp ghost
+    private GameObject _rampGhost;
+    private RampPlacementController _rampPlacementCtrl;
+
     // Belt item visuals
     private readonly List<GameObject> _beltItemPool = new();
     private readonly List<float> _positionBuffer = new();
@@ -120,6 +139,9 @@ public class PlaytestToolController : MonoBehaviour
         _ctx = ctx;
         _buildPage = buildPage;
         _groundPlane = groundPlane;
+        _wallPlacementCtrl = new WallPlacementController(ctx.SnapRegistry);
+        _rampPlacementCtrl = new RampPlacementController(ctx.SnapRegistry, ctx.Grid);
+        _wallZoop = new WallZoopController();
         StartCoroutine(WireHUD());
     }
 
@@ -250,8 +272,10 @@ public class PlaytestToolController : MonoBehaviour
         HandleToolSelection(kb);
         HandleDigitKeys(kb);
         HandleLevelChange(kb);
+        HandleAutoLevel(mouse);
         HandleFillStorage(kb, mouse);
         HandleWaveTrigger(kb);
+        UpdateLevelIndicator(mouse);
 
         switch (_currentTool)
         {
@@ -293,8 +317,7 @@ public class PlaytestToolController : MonoBehaviour
         float h = 22;
 
         int lineCount = 16;
-        if (_currentTool == ToolMode.Wall && _pendingWall) lineCount++;
-        if (_currentTool == ToolMode.Wall && !_pendingWall) lineCount++;
+        if (_currentTool == ToolMode.Wall) lineCount++;
         if (_currentTool == ToolMode.Ramp) lineCount++;
         if (_currentTool == ToolMode.Belt) lineCount++;
         if (_isDragging) lineCount++;
@@ -302,7 +325,10 @@ public class PlaytestToolController : MonoBehaviour
         GUI.Box(new Rect(x - 4, y - 4, w + 8, h * lineCount + 8), "");
 
         DrawLine(ref y, x, w, h, "SLOPWORKS PLAYTEST", true);
-        DrawLine(ref y, x, w, h, $"Tool: {_currentTool}  |  Level: {_currentLevel}");
+        string levelMode = _levelOverrideFrames > 0
+            ? $"(manual {_levelOverrideFrames / 60f:F1}s)"
+            : "(auto)";
+        DrawLine(ref y, x, w, h, $"Tool: {_currentTool}  |  Level: {_currentLevel} {levelMode}  |  PgUp/Down to override");
         y += 4;
         DrawLine(ref y, x, w, h, $"Foundations: {_foundations.Count}  |  Walls: {_walls.Count}  |  Ramps: {_ramps.Count}");
         DrawLine(ref y, x, w, h, $"Snap points: {_ctx.SnapRegistry.Count}");
@@ -337,17 +363,14 @@ public class PlaytestToolController : MonoBehaviour
 
         if (_currentTool == ToolMode.Wall)
         {
-            if (_pendingWall)
-                DrawLine(ref y, x, w, h, $"Wall: {DirectionNames[_pendingWallDirIndex]}  [R] rotate  [Click] confirm  [Esc] cancel");
-            else
-                DrawLine(ref y, x, w, h, "Click any foundation cell to preview wall");
+            string zoopHint = _wallZoopDragging
+                ? $"Zoop: {_wallZoop.PlannedWalls.Count} walls  [Release] place  [RMB/Esc] cancel"
+                : "Hover to preview  [Click] place  [Drag] zoop  [R] rotate";
+            DrawLine(ref y, x, w, h, $"Wall: {zoopHint}");
         }
         if (_currentTool == ToolMode.Ramp)
         {
-            if (_pendingRamp)
-                DrawLine(ref y, x, w, h, $"Ramp: {DirectionNames[_pendingRampDirIndex]}  [R] rotate  [Click] confirm  [Esc] cancel");
-            else
-                DrawLine(ref y, x, w, h, "Click any foundation cell to preview ramp");
+            DrawLine(ref y, x, w, h, "Ramp: hover near foundation edge to preview  [Click] place");
         }
         if (_currentTool == ToolMode.Belt)
         {
@@ -375,6 +398,10 @@ public class PlaytestToolController : MonoBehaviour
             _ctx.PlayerHUD.OnBuildToolSelected -= OnHotbarBuildToolSelected;
             _ctx.PlayerHUD.OnPageChanged -= OnHotbarPageChanged;
         }
+        if (_levelIndicatorPlane != null) Destroy(_levelIndicatorPlane);
+        if (_wallGhost != null) Destroy(_wallGhost);
+        if (_rampGhost != null) Destroy(_rampGhost);
+        foreach (var g in _wallZoopGhosts) if (g != null) Destroy(g);
     }
 
     // -- Hotbar events --
@@ -453,17 +480,19 @@ public class PlaytestToolController : MonoBehaviour
         {
             int old = _currentLevel;
             _currentLevel = Mathf.Min(_currentLevel + 1, FactoryGrid.MaxLevels - 1);
+            _levelOverrideFrames = 90;
             UpdateGroundPlaneHeight();
             PlaytestLogger.Log($"input: level {old} -> {_currentLevel}");
-            Debug.Log($"Level: {_currentLevel}");
+            Debug.Log($"Level: {_currentLevel} (manual override)");
         }
         else if (kb.pageDownKey.wasPressedThisFrame)
         {
             int old = _currentLevel;
             _currentLevel = Mathf.Max(_currentLevel - 1, 0);
+            _levelOverrideFrames = 90;
             UpdateGroundPlaneHeight();
             PlaytestLogger.Log($"input: level {old} -> {_currentLevel}");
-            Debug.Log($"Level: {_currentLevel}");
+            Debug.Log($"Level: {_currentLevel} (manual override)");
         }
     }
 
@@ -516,7 +545,10 @@ public class PlaytestToolController : MonoBehaviour
         CancelPendingWall();
         CancelPendingRamp();
         CancelBeltPlacement();
+        CancelWallZoop();
         DestroyPlaceGhost();
+        HideWallGhost();
+        HideRampGhost();
         ClearGhostPortIndicators();
     }
 
@@ -528,6 +560,91 @@ public class PlaytestToolController : MonoBehaviour
             pos.y = _currentLevel * FactoryGrid.LevelHeight - 0.05f;
             _groundPlane.transform.position = pos;
         }
+    }
+
+    // -- Auto-level detection --
+
+    private bool IsStructuralTool(ToolMode mode)
+    {
+        return mode == ToolMode.Foundation || mode == ToolMode.Wall
+            || mode == ToolMode.Ramp || mode == ToolMode.Delete;
+    }
+
+    private (Vector3 point, int level)? GetStructuralHitUnderCursor(Mouse mouse)
+    {
+        var camera = Camera.main;
+        if (camera == null) return null;
+
+        var mousePos = mouse.position.ReadValue();
+        var ray = camera.ScreenPointToRay(new Vector3(mousePos.x, mousePos.y, 0f));
+        if (Physics.Raycast(ray, out RaycastHit hit, 500f, PhysicsLayers.StructuralPlacementMask))
+        {
+            int level = Mathf.Clamp(
+                Mathf.RoundToInt(hit.point.y / FactoryGrid.LevelHeight),
+                0, FactoryGrid.MaxLevels - 1);
+            return (hit.point, level);
+        }
+        return null;
+    }
+
+    private void HandleAutoLevel(Mouse mouse)
+    {
+        if (_levelOverrideFrames > 0)
+        {
+            _levelOverrideFrames--;
+            return;
+        }
+
+        if (!IsStructuralTool(_currentTool)) return;
+
+        var hit = GetStructuralHitUnderCursor(mouse);
+        if (hit == null) return;
+
+        if (hit.Value.level != _currentLevel)
+        {
+            int old = _currentLevel;
+            _currentLevel = hit.Value.level;
+            UpdateGroundPlaneHeight();
+            PlaytestLogger.Log($"auto-level: {old} -> {_currentLevel}");
+        }
+    }
+
+    private void UpdateLevelIndicator(Mouse mouse)
+    {
+        bool show = IsStructuralTool(_currentTool);
+
+        if (!show)
+        {
+            if (_levelIndicatorPlane != null)
+                _levelIndicatorPlane.SetActive(false);
+            return;
+        }
+
+        // Lazy-create
+        if (_levelIndicatorPlane == null)
+        {
+            _levelIndicatorPlane = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            _levelIndicatorPlane.name = "LevelIndicator";
+            var col = _levelIndicatorPlane.GetComponent<Collider>();
+            if (col != null) DestroyImmediate(col);
+            _levelIndicatorPlane.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            _levelIndicatorPlane.transform.localScale = new Vector3(10f, 10f, 1f);
+        }
+
+        _levelIndicatorPlane.SetActive(true);
+
+        // Follow cursor horizontally
+        var worldPos = GetWorldPosUnderCursor(mouse);
+        float planeY = _currentLevel * FactoryGrid.LevelHeight + 0.01f;
+        if (worldPos.HasValue)
+            _levelIndicatorPlane.transform.position = new Vector3(worldPos.Value.x, planeY, worldPos.Value.z);
+        else
+            _levelIndicatorPlane.transform.position = new Vector3(
+                _levelIndicatorPlane.transform.position.x, planeY,
+                _levelIndicatorPlane.transform.position.z);
+
+        int colorIndex = Mathf.Clamp(_currentLevel, 0, LevelColors.Length - 1);
+        SetColor(_levelIndicatorPlane, LevelColors[colorIndex]);
     }
 
     // -- Foundation batch placement --
@@ -640,186 +757,248 @@ public class PlaytestToolController : MonoBehaviour
         HideGhosts();
     }
 
-    // -- Wall 2-step placement --
+    // -- Wall hover ghost + zoop placement --
 
     private void HandleWallInput(Keyboard kb, Mouse mouse)
     {
-        if (!_pendingWall)
+        var worldPos = GetWorldPosUnderCursor(mouse);
+
+        // R cycles direction lock: -1=auto, 0=north, 1=east, 2=south, 3=west
+        if (kb.rKey.wasPressedThisFrame)
         {
-            if (mouse.leftButton.wasPressedThisFrame)
+            _pendingWallDirIndex = (_pendingWallDirIndex + 2) % 5 - 1;
+            Debug.Log(_pendingWallDirIndex < 0
+                ? "Wall direction: auto"
+                : $"Wall direction: {DirectionNames[_pendingWallDirIndex]}");
+        }
+
+        // Cancel zoop with right-click or Escape
+        if (_wallZoopDragging && (mouse.rightButton.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame))
+        {
+            CancelWallZoop();
+            return;
+        }
+
+        // Update hover ghost (hide during zoop -- zoop ghosts show instead)
+        if (!_wallZoopDragging && worldPos.HasValue)
+            UpdateWallGhost(worldPos.Value);
+        else if (!_wallZoopDragging)
+            HideWallGhost();
+
+        // Mouse down: start potential zoop
+        if (mouse.leftButton.wasPressedThisFrame && worldPos.HasValue)
+        {
+            _wallPlacementCtrl.UpdateFromCursor(worldPos.Value, _ctx.Grid, _currentLevel);
+            var snap = GetFilteredWallSnap();
+            if (snap != null && !snap.IsOccupied)
             {
-                var cell = GetCellUnderCursor(mouse);
-                if (!cell.HasValue)
-                {
-                    Debug.Log("wall: click ignored, no grid cell under cursor");
-                    return;
-                }
-
-                var building = _ctx.Grid.GetAt(cell.Value, _currentLevel);
-                if (building == null || !building.IsStructural)
-                {
-                    Debug.Log("Walls must be placed on a foundation cell");
-                    return;
-                }
-
-                PlaytestLogger.Log($"input: LMB | tool=Wall cell=({cell.Value.x},{cell.Value.y})");
-                _pendingWall = true;
-                _pendingWallCell = cell.Value;
-                _pendingWallDirIndex = 0;
-                UpdatePendingWallPreview();
-                Debug.Log($"Wall at ({cell.Value.x},{cell.Value.y}): {DirectionNames[_pendingWallDirIndex]} -- R to rotate, click to confirm, Esc to cancel");
+                PlaytestLogger.Log($"input: LMB | tool=Wall snap=({snap.Cell.x},{snap.Cell.y})");
+                _wallZoop.Begin(snap);
+                _wallZoopDragging = true;
+                HideWallGhost();
             }
         }
-        else
+
+        // Mouse held: update zoop
+        if (_wallZoopDragging && mouse.leftButton.isPressed && worldPos.HasValue)
         {
-            if (kb.rKey.wasPressedThisFrame)
-            {
-                _pendingWallDirIndex = (_pendingWallDirIndex + 1) % 4;
-                UpdatePendingWallPreview();
-                Debug.Log($"Wall direction: {DirectionNames[_pendingWallDirIndex]}");
-            }
+            _wallPlacementCtrl.UpdateFromCursor(worldPos.Value, _ctx.Grid, _currentLevel);
+            var currentSnap = GetFilteredWallSnap();
+            if (currentSnap != null)
+                _wallZoop.Update(currentSnap, _ctx.SnapRegistry, _currentLevel);
+            UpdateWallZoopGhosts();
+        }
 
-            if (kb.escapeKey.wasPressedThisFrame)
+        // Mouse up: place walls
+        if (mouse.leftButton.wasReleasedThisFrame && _wallZoopDragging)
+        {
+            var planned = _wallZoop.End();
+            int placed = 0;
+            foreach (var snap in planned)
             {
-                CancelPendingWall();
-                Debug.Log("Wall placement cancelled");
-                return;
-            }
-
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                var dir = CardinalDirections[_pendingWallDirIndex];
-                var wallData = _ctx.PlacementService.PlaceWall(_ctx.WallDef, _pendingWallCell, _currentLevel, dir);
+                var wallData = _ctx.PlacementService.PlaceWall(_ctx.WallDef, snap.Cell, _currentLevel, snap.EdgeDirection);
                 if (wallData != null)
                 {
                     _walls.Add(wallData);
                     SpawnWallVisual(wallData);
-                    Debug.Log($"Wall placed at ({_pendingWallCell.x},{_pendingWallCell.y}) edge {DirectionNames[_pendingWallDirIndex]}");
+                    placed++;
                 }
-                else
-                {
-                    Debug.Log($"Cannot place wall at ({_pendingWallCell.x},{_pendingWallCell.y}) edge {DirectionNames[_pendingWallDirIndex]}");
-                }
-                CancelPendingWall();
             }
+            if (placed > 0)
+                Debug.Log($"Placed {placed} wall(s) at level {_currentLevel}");
+            _wallZoopDragging = false;
+            HideWallZoopGhosts();
         }
     }
 
-    private void UpdatePendingWallPreview()
+    private SnapPoint GetFilteredWallSnap()
     {
-        if (_pendingWallPreview != null)
-            Destroy(_pendingWallPreview);
+        if (_pendingWallDirIndex < 0) // auto mode
+            return _wallPlacementCtrl.NearestSnapPoint;
 
-        if (!_pendingWall)
-            return;
+        // Locked direction: find snap matching the locked direction
+        var snap = _wallPlacementCtrl.NearestSnapPoint;
+        if (snap != null && snap.EdgeDirection == CardinalDirections[_pendingWallDirIndex])
+            return snap;
+        return null;
+    }
 
-        var dir = CardinalDirections[_pendingWallDirIndex];
-        var cellCenter = _ctx.Grid.CellToWorld(_pendingWallCell, _currentLevel);
-        var edgeOffset = new Vector3(
-            dir.x * 0.5f * FactoryGrid.CellSize, 0f,
-            dir.y * 0.5f * FactoryGrid.CellSize);
-        var wallPos = cellCenter + edgeOffset + Vector3.up * FactoryGrid.LevelHeight * 0.5f;
-        float yRotation = Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg;
+    private void UpdateWallGhost(Vector3 worldPos)
+    {
+        _wallPlacementCtrl.UpdateFromCursor(worldPos, _ctx.Grid, _currentLevel);
+        var snap = GetFilteredWallSnap();
 
-        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.name = "WallPreview";
-        var collider = wall.GetComponent<Collider>();
-        if (collider != null) Destroy(collider);
-        wall.transform.position = wallPos;
-        wall.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
-        wall.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
-        SetColor(wall, GhostValidColor);
+        if (snap != null && !snap.IsOccupied)
+        {
+            EnsureWallGhost();
+            var wallWorldPos = WallPlacementController.GetSnapWorldPosition(snap, _ctx.Grid);
+            wallWorldPos.y += FactoryGrid.LevelHeight * 0.5f;
+            float yRot = Mathf.Atan2(snap.EdgeDirection.x, snap.EdgeDirection.y) * Mathf.Rad2Deg;
+            _wallGhost.transform.position = wallWorldPos;
+            _wallGhost.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
+            SetColor(_wallGhost, GhostValidColor);
+        }
+        else if (snap != null && snap.IsOccupied)
+        {
+            EnsureWallGhost();
+            var wallWorldPos = WallPlacementController.GetSnapWorldPosition(snap, _ctx.Grid);
+            wallWorldPos.y += FactoryGrid.LevelHeight * 0.5f;
+            float yRot = Mathf.Atan2(snap.EdgeDirection.x, snap.EdgeDirection.y) * Mathf.Rad2Deg;
+            _wallGhost.transform.position = wallWorldPos;
+            _wallGhost.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
+            SetColor(_wallGhost, GhostInvalidColor);
+        }
+        else
+        {
+            HideWallGhost();
+        }
+    }
 
-        _pendingWallPreview = wall;
+    private void EnsureWallGhost()
+    {
+        if (_wallGhost == null)
+        {
+            _wallGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wallGhost.name = "WallGhost";
+            var col = _wallGhost.GetComponent<Collider>();
+            if (col != null) DestroyImmediate(col);
+            _wallGhost.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+        }
+        _wallGhost.SetActive(true);
+    }
+
+    private void HideWallGhost()
+    {
+        if (_wallGhost != null)
+            _wallGhost.SetActive(false);
+    }
+
+    private void UpdateWallZoopGhosts()
+    {
+        var planned = _wallZoop.PlannedWalls;
+        // Grow pool as needed
+        while (_wallZoopGhosts.Count < planned.Count)
+        {
+            var ghost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ghost.name = "WallZoopGhost";
+            var col = ghost.GetComponent<Collider>();
+            if (col != null) DestroyImmediate(col);
+            ghost.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+            ghost.SetActive(false);
+            _wallZoopGhosts.Add(ghost);
+        }
+
+        for (int i = 0; i < planned.Count; i++)
+        {
+            var snap = planned[i];
+            var ghost = _wallZoopGhosts[i];
+            ghost.SetActive(true);
+            var pos = WallPlacementController.GetSnapWorldPosition(snap, _ctx.Grid);
+            pos.y += FactoryGrid.LevelHeight * 0.5f;
+            float yRot = Mathf.Atan2(snap.EdgeDirection.x, snap.EdgeDirection.y) * Mathf.Rad2Deg;
+            ghost.transform.position = pos;
+            ghost.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
+            SetColor(ghost, GhostValidColor);
+        }
+
+        for (int i = planned.Count; i < _wallZoopGhosts.Count; i++)
+            _wallZoopGhosts[i].SetActive(false);
+    }
+
+    private void HideWallZoopGhosts()
+    {
+        for (int i = 0; i < _wallZoopGhosts.Count; i++)
+            _wallZoopGhosts[i].SetActive(false);
+    }
+
+    private void CancelWallZoop()
+    {
+        _wallZoop.Cancel();
+        _wallZoopDragging = false;
+        HideWallZoopGhosts();
     }
 
     private void CancelPendingWall()
     {
-        _pendingWall = false;
         if (_pendingWallPreview != null)
         {
             Destroy(_pendingWallPreview);
             _pendingWallPreview = null;
         }
+        CancelWallZoop();
+        HideWallGhost();
     }
 
-    // -- Ramp 2-step placement --
+    // -- Ramp hover ghost placement --
 
     private void HandleRampInput(Keyboard kb, Mouse mouse)
     {
-        if (!_pendingRamp)
-        {
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                var cell = GetCellUnderCursor(mouse);
-                if (!cell.HasValue)
-                {
-                    Debug.Log("ramp: click ignored, no grid cell under cursor");
-                    return;
-                }
+        var worldPos = GetWorldPosUnderCursor(mouse);
 
-                var building = _ctx.Grid.GetAt(cell.Value, _currentLevel);
-                if (building == null || !building.IsStructural)
-                {
-                    Debug.Log("Ramps must start from a foundation cell");
-                    return;
-                }
-
-                PlaytestLogger.Log($"input: LMB | tool=Ramp cell=({cell.Value.x},{cell.Value.y})");
-                _pendingRamp = true;
-                _pendingRampCell = cell.Value;
-                _pendingRampDirIndex = 0;
-                UpdatePendingRampPreview();
-                Debug.Log($"Ramp at ({cell.Value.x},{cell.Value.y}): {DirectionNames[_pendingRampDirIndex]} -- R to rotate, click to confirm, Esc to cancel");
-            }
-        }
+        if (worldPos.HasValue)
+            UpdateRampGhost(worldPos.Value);
         else
+            HideRampGhost();
+
+        if (mouse.leftButton.wasPressedThisFrame && worldPos.HasValue)
         {
-            if (kb.rKey.wasPressedThisFrame)
+            _rampPlacementCtrl.UpdateFromCursor(worldPos.Value, _currentLevel, _ctx.RampDef.footprintLength);
+            if (_rampPlacementCtrl.IsValid)
             {
-                _pendingRampDirIndex = (_pendingRampDirIndex + 1) % 4;
-                UpdatePendingRampPreview();
-                Debug.Log($"Ramp direction: {DirectionNames[_pendingRampDirIndex]}");
-            }
-
-            if (kb.escapeKey.wasPressedThisFrame)
-            {
-                CancelPendingRamp();
-                Debug.Log("Ramp placement cancelled");
-                return;
-            }
-
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                var dir = CardinalDirections[_pendingRampDirIndex];
-                var rampData = _ctx.PlacementService.PlaceRamp(_ctx.RampDef, _pendingRampCell, _currentLevel, dir);
+                var snap = _rampPlacementCtrl.SelectedBaseSnap;
+                var dir = _rampPlacementCtrl.RampDirection;
+                PlaytestLogger.Log($"input: LMB | tool=Ramp cell=({snap.Cell.x},{snap.Cell.y}) dir=({dir.x},{dir.y})");
+                var rampData = _ctx.PlacementService.PlaceRamp(_ctx.RampDef, snap.Cell, _currentLevel, dir);
                 if (rampData != null)
                 {
                     _ramps.Add(rampData);
                     SpawnRampVisual(rampData);
-                    Debug.Log($"Ramp placed: {DirectionNames[_pendingRampDirIndex]} at ({rampData.BaseCell.x},{rampData.BaseCell.y}) level {rampData.BaseLevel}");
+                    Debug.Log($"Ramp placed at ({rampData.BaseCell.x},{rampData.BaseCell.y}) level {rampData.BaseLevel}");
                 }
                 else
                 {
-                    Debug.Log($"Cannot place ramp {DirectionNames[_pendingRampDirIndex]}: cells blocked or out of bounds");
+                    Debug.Log("Cannot place ramp: cells blocked or out of bounds");
                 }
-                CancelPendingRamp();
             }
         }
     }
 
-    private void UpdatePendingRampPreview()
+    private void UpdateRampGhost(Vector3 worldPos)
     {
-        if (_pendingRampPreview != null)
-            Destroy(_pendingRampPreview);
+        _rampPlacementCtrl.UpdateFromCursor(worldPos, _currentLevel, _ctx.RampDef.footprintLength);
 
-        if (!_pendingRamp)
+        if (_rampPlacementCtrl.SelectedBaseSnap == null)
+        {
+            HideRampGhost();
             return;
+        }
 
-        var dir2D = CardinalDirections[_pendingRampDirIndex];
-        var rampStart = _pendingRampCell + dir2D;
+        EnsureRampGhost();
 
-        var startPos = SnapPointToWorld(new SnapPoint(_pendingRampCell, _currentLevel, dir2D, SnapPointType.FoundationEdge, null));
+        var snap = _rampPlacementCtrl.SelectedBaseSnap;
+        var dir2D = _rampPlacementCtrl.RampDirection;
+
+        var startPos = SnapPointToWorld(new SnapPoint(snap.Cell, _currentLevel, dir2D, SnapPointType.FoundationEdge, null));
         startPos.y = _currentLevel * FactoryGrid.LevelHeight;
 
         var endPos = startPos
@@ -830,48 +1009,39 @@ public class PlaytestToolController : MonoBehaviour
         var dir3D = (endPos - startPos).normalized;
         var length = Vector3.Distance(startPos, endPos);
 
-        var ramp = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        ramp.name = "RampPreview";
-        var collider = ramp.GetComponent<Collider>();
-        if (collider != null) Destroy(collider);
-        ramp.transform.position = midpoint;
-        ramp.transform.rotation = Quaternion.LookRotation(dir3D);
-        ramp.transform.localScale = new Vector3(0.95f, 0.1f, length);
+        _rampGhost.transform.position = midpoint;
+        _rampGhost.transform.rotation = Quaternion.LookRotation(dir3D);
+        _rampGhost.transform.localScale = new Vector3(0.95f, 0.1f, length);
 
-        bool valid = CanPlaceRampAt(_pendingRampCell, _currentLevel, dir2D);
-        SetColor(ramp, valid ? GhostValidColor : GhostInvalidColor);
-
-        _pendingRampPreview = ramp;
+        SetColor(_rampGhost, _rampPlacementCtrl.IsValid ? GhostValidColor : GhostInvalidColor);
     }
 
-    private bool CanPlaceRampAt(Vector2Int sourceCell, int level, Vector2Int dir)
+    private void EnsureRampGhost()
     {
-        var start = sourceCell + dir;
-        for (int i = 0; i < _ctx.RampDef.footprintLength; i++)
+        if (_rampGhost == null)
         {
-            var cell = start + dir * i;
-            if (!_ctx.Grid.IsInBounds(cell))
-                return false;
-            var existing = _ctx.Grid.GetAt(cell, level);
-            if (existing != null && !existing.IsStructural)
-                return false;
-            foreach (var r in _ramps)
-            {
-                if (r.BaseLevel == level && r.OccupiedCells.Contains(cell))
-                    return false;
-            }
+            _rampGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _rampGhost.name = "RampGhost";
+            var col = _rampGhost.GetComponent<Collider>();
+            if (col != null) DestroyImmediate(col);
         }
-        return true;
+        _rampGhost.SetActive(true);
+    }
+
+    private void HideRampGhost()
+    {
+        if (_rampGhost != null)
+            _rampGhost.SetActive(false);
     }
 
     private void CancelPendingRamp()
     {
-        _pendingRamp = false;
         if (_pendingRampPreview != null)
         {
             Destroy(_pendingRampPreview);
             _pendingRampPreview = null;
         }
+        HideRampGhost();
     }
 
     // -- Belt 2-click placement --
@@ -1385,6 +1555,7 @@ public class PlaytestToolController : MonoBehaviour
         tile.name = $"Foundation_{cell.x}_{cell.y}_L{level}";
         tile.transform.position = worldPos + Vector3.up * 0.05f;
         tile.transform.localScale = new Vector3(0.95f, 0.1f, 0.95f);
+        tile.layer = PhysicsLayers.Structures;
         SetColor(tile, Color.white);
         data.Instance = tile;
     }
@@ -1405,6 +1576,7 @@ public class PlaytestToolController : MonoBehaviour
         wall.transform.position = wallPos;
         wall.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
         wall.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+        wall.layer = PhysicsLayers.Structures;
         SetColor(wall, new Color(0.6f, 0.6f, 0.6f));
         wallData.Instance = wall;
     }
@@ -1429,6 +1601,7 @@ public class PlaytestToolController : MonoBehaviour
         ramp.transform.position = midpoint;
         ramp.transform.rotation = Quaternion.LookRotation(dir3D);
         ramp.transform.localScale = new Vector3(0.95f, 0.1f, length);
+        ramp.layer = PhysicsLayers.Structures;
         SetColor(ramp, new Color(0.76f, 0.6f, 0.42f));
         rampData.Instance = ramp;
     }
