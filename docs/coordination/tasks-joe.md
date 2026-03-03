@@ -566,7 +566,7 @@ Build the boss floor as the tier-gating mechanic.
 
 ### TASK J-024: Verify MasterPlaytest scene integration
 
-**Status:** Pending
+**Status:** Blocked (C-009: turret ghost cleanup, assigned to Kevin)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Debug/`
