@@ -2,7 +2,7 @@
 
 Last updated: 2026-03-02
 Branch: kevin/main
-Last commit: cda8610 Suppress player input when UI menus are open
+Last commit: dbe2c3d Merge pull request #19 (menu input suppression + belt visual fix)
 
 ## What was completed this session
 
@@ -26,7 +26,7 @@ None -- all committed.
 
 ## Next task to pick up
 
-- Merge to master (create PR, verify MasterPlaytest per D-014, merge)
+- Add turret ammo recipe: create a new recipe that converts iron ingots into turret ammo. Turrets currently use `ammoItemId = "iron_scrap"` (in both KevinPlaytestSetup.cs:275 and JoePlaytestSetup.cs:216). Needs: new ammo ItemDefinitionSO, new RecipeSO (iron_ingot -> turret_ammo), update turret definitions to use new ammo item ID. Part of Phase 9 setup.
 - Then: Phase 9 full-loop integration or vertical slice polish
 
 ## Blockers or decisions needed
