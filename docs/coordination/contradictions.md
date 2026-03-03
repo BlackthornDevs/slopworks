@@ -31,4 +31,12 @@ Format:
 
 ## Open
 
-(none)
+## C-009: Turret ghost not cleaned up on tool switch
+
+**Found by:** joe
+**Date:** 2026-03-02
+**Issue:** `CancelAllPending()` in PlaytestToolController cleans up shared ghosts (foundation, wall, ramp, belt, machine, storage) but has no way to notify custom tool handlers (like TurretPlace) to destroy their private ghosts. When switching away from turret tool or closing the build menu, the turret ghost cube stays at its last position.
+**Symptoms:** Turret appears to "move" when switching tools. Ghost stays visible after closing build menu.
+**Root cause:** `_turretGhost` and `_turretGhostPorts` are private to JoePlaytestSetup. CancelAllPending doesn't know about them.
+**Recommended fix:** Add `RegisterToolCleanup(Action)` to PlaytestToolController. Call all registered cleanups inside `CancelAllPending()`. JoePlaytestSetup registers `DestroyTurretGhost` during `RegisterToolHandlers`.
+**Assigned to:** Kevin (lead, owns PlaytestToolController as shared infrastructure)
