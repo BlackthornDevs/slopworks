@@ -13,8 +13,6 @@ public class WallZoopController
     public IReadOnlyList<SnapPoint> PlannedWalls => _planned;
 
     private readonly List<SnapPoint> _planned = new();
-    private bool _axisLocked;
-    private bool _lockedToX; // true = X axis, false = Y axis
 
     public void Begin(SnapPoint origin)
     {
@@ -22,64 +20,28 @@ public class WallZoopController
         Origin = origin;
         _planned.Clear();
         _planned.Add(origin);
-        _axisLocked = false;
     }
 
     public void Update(SnapPoint current, SnapPointRegistry registry, int level)
     {
         if (!IsActive || Origin == null) return;
 
-        // Determine axis from origin-to-current cell comparison
-        var diff = current.Cell - Origin.Cell;
-
-        if (!_axisLocked)
-        {
-            if (diff.x != 0 && diff.y == 0)
-            {
-                _axisLocked = true;
-                _lockedToX = true;
-            }
-            else if (diff.y != 0 && diff.x == 0)
-            {
-                _axisLocked = true;
-                _lockedToX = false;
-            }
-            else if (diff.x == 0 && diff.y == 0)
-            {
-                // No movement yet -- keep only origin
-                _planned.Clear();
-                _planned.Add(Origin);
-                return;
-            }
-            else
-            {
-                // Diagonal movement -- lock to dominant axis
-                _axisLocked = true;
-                _lockedToX = Mathf.Abs(diff.x) >= Mathf.Abs(diff.y);
-            }
-        }
-
         _planned.Clear();
 
-        // Walk along locked axis from origin to current
         var edgeDir = Origin.EdgeDirection;
-        int start, end;
 
-        if (_lockedToX)
-        {
-            start = Origin.Cell.x;
-            end = current.Cell.x;
-        }
-        else
-        {
-            start = Origin.Cell.y;
-            end = current.Cell.y;
-        }
+        // Zoop runs perpendicular to the edge direction.
+        // North/south edges (edgeDir.y != 0) run along X, so walk X.
+        // East/west edges (edgeDir.x != 0) run along Y, so walk Y.
+        bool walkX = edgeDir.y != 0;
+
+        int start = walkX ? Origin.Cell.x : Origin.Cell.y;
+        int end = walkX ? current.Cell.x : current.Cell.y;
 
         int step = end >= start ? 1 : -1;
         for (int i = start; ; i += step)
         {
-            var cell = _lockedToX
+            var cell = walkX
                 ? new Vector2Int(i, Origin.Cell.y)
                 : new Vector2Int(Origin.Cell.x, i);
 
@@ -103,6 +65,5 @@ public class WallZoopController
         IsActive = false;
         Origin = null;
         _planned.Clear();
-        _axisLocked = false;
     }
 }

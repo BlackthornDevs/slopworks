@@ -109,6 +109,11 @@ public class PlaytestToolController : MonoBehaviour
     // Port indicators on placed machines
     private readonly List<GameObject> _portIndicators = new();
 
+    // Delete hover highlight
+    private static readonly Color DeleteHighlightColor = new Color(1f, 0.2f, 0.2f, 0.8f);
+    private GameObject _deleteHighlightTarget;
+    private Color _deleteHighlightOriginalColor;
+
     // Auto-level detection
     private int _levelOverrideFrames;
 
@@ -551,6 +556,7 @@ public class PlaytestToolController : MonoBehaviour
         HideWallGhost();
         HideRampGhost();
         ClearGhostPortIndicators();
+        ClearDeleteHighlight();
         for (int i = 0; i < _toolCleanupCallbacks.Count; i++)
             _toolCleanupCallbacks[i]();
     }
@@ -590,6 +596,9 @@ public class PlaytestToolController : MonoBehaviour
         }
 
         if (!IsStructuralTool(_currentTool)) return;
+
+        // Lock level while dragging foundations
+        if (_isDragging) return;
 
         var hit = GetStructuralHitUnderCursor(mouse);
         if (hit == null) return;
@@ -1338,10 +1347,15 @@ public class PlaytestToolController : MonoBehaviour
 
     private void HandleDeleteInput(Mouse mouse)
     {
+        var cell = GetCellUnderCursor(mouse);
+
+        // Hover highlight: show what would be deleted
+        var target = cell.HasValue ? FindDeleteTargetVisual(cell.Value) : null;
+        UpdateDeleteHighlight(target);
+
         if (!mouse.leftButton.wasPressedThisFrame)
             return;
 
-        var cell = GetCellUnderCursor(mouse);
         if (!cell.HasValue)
         {
             Debug.Log("delete: click ignored, no grid cell under cursor");
@@ -1349,52 +1363,66 @@ public class PlaytestToolController : MonoBehaviour
         }
 
         PlaytestLogger.Log($"input: LMB | tool=Delete cell=({cell.Value.x},{cell.Value.y})");
+        PerformDelete(cell.Value);
+    }
+
+    private GameObject FindDeleteTargetVisual(Vector2Int cell)
+    {
+        // Same priority order as PerformDelete
 
         // Priority 1: automation buildings
         for (int i = _automationBuildings.Count - 1; i >= 0; i--)
         {
             var ab = _automationBuildings[i];
             var bd = ab.BuildingData;
-            if (bd.Level != _currentLevel)
-                continue;
+            if (bd.Level != _currentLevel) continue;
+            if (CoversBuildingCell(bd, ab, cell) && bd.Instance != null)
+                return bd.Instance;
+        }
 
-            bool covers = false;
-            if (bd.BuildingId == "belt")
-            {
-                if (ab.Ports.Count == 2)
-                {
-                    var startCell = ab.Ports[0].Cell;
-                    var endCell = ab.Ports[1].Cell;
-                    var diff = endCell - startCell;
-                    var dir = new Vector2Int(
-                        diff.x != 0 ? (diff.x > 0 ? 1 : -1) : 0,
-                        diff.y != 0 ? (diff.y > 0 ? 1 : -1) : 0);
-                    int len = Mathf.Abs(diff.x) + Mathf.Abs(diff.y);
-                    for (int j = 0; j <= len; j++)
-                    {
-                        if (startCell + dir * j == cell.Value)
-                        {
-                            covers = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                covers = cell.Value.x >= bd.Origin.x
-                    && cell.Value.x < bd.Origin.x + bd.Size.x
-                    && cell.Value.y >= bd.Origin.y
-                    && cell.Value.y < bd.Origin.y + bd.Size.y;
-            }
+        // Priority 2: walls
+        for (int i = _walls.Count - 1; i >= 0; i--)
+        {
+            var wall = _walls[i];
+            if (wall.Cell == cell && wall.Level == _currentLevel && wall.Instance != null)
+                return wall.Instance;
+        }
 
-            if (!covers)
-                continue;
+        // Priority 3: ramps
+        for (int i = _ramps.Count - 1; i >= 0; i--)
+        {
+            var ramp = _ramps[i];
+            if (ramp.OccupiedCells.Contains(cell) && ramp.BaseLevel == _currentLevel && ramp.Instance != null)
+                return ramp.Instance;
+        }
 
+        // Priority 4: foundations
+        for (int i = _foundations.Count - 1; i >= 0; i--)
+        {
+            var foundation = _foundations[i];
+            if (foundation.Level != _currentLevel) continue;
+            if (CoversFoundationCell(foundation, cell) && foundation.Instance != null)
+                return foundation.Instance;
+        }
+
+        return null;
+    }
+
+    private void PerformDelete(Vector2Int cell)
+    {
+        // Priority 1: automation buildings
+        for (int i = _automationBuildings.Count - 1; i >= 0; i--)
+        {
+            var ab = _automationBuildings[i];
+            var bd = ab.BuildingData;
+            if (bd.Level != _currentLevel) continue;
+            if (!CoversBuildingCell(bd, ab, cell)) continue;
+
+            ClearDeleteHighlight();
             _ctx.AutomationService.Remove(bd);
             if (bd.Instance != null) Destroy(bd.Instance);
             _automationBuildings.RemoveAt(i);
-            Debug.Log($"Automation building removed at ({cell.Value.x},{cell.Value.y})");
+            Debug.Log($"Automation building removed at ({cell.x},{cell.y})");
             return;
         }
 
@@ -1402,8 +1430,9 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _walls.Count - 1; i >= 0; i--)
         {
             var wall = _walls[i];
-            if (wall.Cell == cell.Value && wall.Level == _currentLevel)
+            if (wall.Cell == cell && wall.Level == _currentLevel)
             {
+                ClearDeleteHighlight();
                 _ctx.PlacementService.RemoveWall(wall);
                 if (wall.Instance != null) Destroy(wall.Instance);
                 _walls.RemoveAt(i);
@@ -1416,8 +1445,9 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _ramps.Count - 1; i >= 0; i--)
         {
             var ramp = _ramps[i];
-            if (ramp.OccupiedCells.Contains(cell.Value) && ramp.BaseLevel == _currentLevel)
+            if (ramp.OccupiedCells.Contains(cell) && ramp.BaseLevel == _currentLevel)
             {
+                ClearDeleteHighlight();
                 _ctx.PlacementService.RemoveRamp(ramp);
                 if (ramp.Instance != null) Destroy(ramp.Instance);
                 _ramps.RemoveAt(i);
@@ -1430,19 +1460,12 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _foundations.Count - 1; i >= 0; i--)
         {
             var foundation = _foundations[i];
-            if (foundation.Level != _currentLevel)
-                continue;
-
-            bool inFootprint = cell.Value.x >= foundation.Origin.x
-                && cell.Value.x < foundation.Origin.x + foundation.Size.x
-                && cell.Value.y >= foundation.Origin.y
-                && cell.Value.y < foundation.Origin.y + foundation.Size.y;
-
-            if (!inFootprint)
-                continue;
+            if (foundation.Level != _currentLevel) continue;
+            if (!CoversFoundationCell(foundation, cell)) continue;
 
             if (_ctx.PlacementService.RemoveFoundation(foundation))
             {
+                ClearDeleteHighlight();
                 if (foundation.Instance != null) Destroy(foundation.Instance);
                 _foundations.RemoveAt(i);
                 Debug.Log("Foundation removed");
@@ -1452,6 +1475,69 @@ public class PlaytestToolController : MonoBehaviour
                 Debug.Log("Cannot remove foundation: walls still attached");
             }
             return;
+        }
+    }
+
+    private bool CoversBuildingCell(BuildingData bd, PlacementResult ab, Vector2Int cell)
+    {
+        if (bd.BuildingId == "belt" && ab.Ports.Count == 2)
+        {
+            var startCell = ab.Ports[0].Cell;
+            var endCell = ab.Ports[1].Cell;
+            var diff = endCell - startCell;
+            var dir = new Vector2Int(
+                diff.x != 0 ? (diff.x > 0 ? 1 : -1) : 0,
+                diff.y != 0 ? (diff.y > 0 ? 1 : -1) : 0);
+            int len = Mathf.Abs(diff.x) + Mathf.Abs(diff.y);
+            for (int j = 0; j <= len; j++)
+            {
+                if (startCell + dir * j == cell)
+                    return true;
+            }
+            return false;
+        }
+
+        return cell.x >= bd.Origin.x
+            && cell.x < bd.Origin.x + bd.Size.x
+            && cell.y >= bd.Origin.y
+            && cell.y < bd.Origin.y + bd.Size.y;
+    }
+
+    private bool CoversFoundationCell(BuildingData foundation, Vector2Int cell)
+    {
+        return cell.x >= foundation.Origin.x
+            && cell.x < foundation.Origin.x + foundation.Size.x
+            && cell.y >= foundation.Origin.y
+            && cell.y < foundation.Origin.y + foundation.Size.y;
+    }
+
+    private void UpdateDeleteHighlight(GameObject target)
+    {
+        if (target == _deleteHighlightTarget)
+            return;
+
+        ClearDeleteHighlight();
+
+        if (target != null)
+        {
+            var renderer = target.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                _deleteHighlightOriginalColor = renderer.material.color;
+                _deleteHighlightTarget = target;
+                renderer.material.color = DeleteHighlightColor;
+            }
+        }
+    }
+
+    private void ClearDeleteHighlight()
+    {
+        if (_deleteHighlightTarget != null)
+        {
+            var renderer = _deleteHighlightTarget.GetComponent<Renderer>();
+            if (renderer != null)
+                renderer.material.color = _deleteHighlightOriginalColor;
+            _deleteHighlightTarget = null;
         }
     }
 
@@ -1843,8 +1929,20 @@ public class PlaytestToolController : MonoBehaviour
         return _ctx.Grid.WorldToCell(worldPos.Value);
     }
 
+    private static readonly int DeleteMask =
+        PhysicsLayers.StructuralPlacementMask | (1 << PhysicsLayers.Interactable);
+
     private Vector3? GetWorldPosUnderCursor(Mouse mouse)
     {
+        // Delete tool hits structures AND interactable objects (machines, storage, belts)
+        if (_currentTool == ToolMode.Delete)
+            return GetRaycastWorldPos(mouse, DeleteMask);
+
+        // Other structural tools raycast against structures so the cursor
+        // matches what the crosshair is actually on (foundation tops, walls)
+        if (IsStructuralTool(_currentTool))
+            return GetStructuralWorldPos(mouse);
+
         var camera = Camera.main;
         if (camera == null)
         {
@@ -1855,6 +1953,45 @@ public class PlaytestToolController : MonoBehaviour
         var mousePos = mouse.position.ReadValue();
         var ray = camera.ScreenPointToRay(new Vector3(mousePos.x, mousePos.y, 0f));
         if (Physics.Raycast(ray, out RaycastHit hit, 500f, PhysicsLayers.PlacementMask))
+            return hit.point;
+
+        return null;
+    }
+
+    private Vector3? GetStructuralWorldPos(Mouse mouse)
+    {
+        // Always project onto the current level plane. Auto-level
+        // (HandleAutoLevel) sets _currentLevel from structural raycasts,
+        // but the actual placement position comes from ray-plane
+        // intersection so you can build in empty space at any level.
+        return RaycastToLevelPlane(mouse, _currentLevel);
+    }
+
+    private Vector3? RaycastToLevelPlane(Mouse mouse, int level)
+    {
+        var camera = Camera.main;
+        if (camera == null) return null;
+
+        var mousePos = mouse.position.ReadValue();
+        var ray = camera.ScreenPointToRay(new Vector3(mousePos.x, mousePos.y, 0f));
+
+        float planeY = level * FactoryGrid.LevelHeight;
+        // Ray-plane intersection: solve ray.origin.y + t * ray.direction.y = planeY
+        if (Mathf.Approximately(ray.direction.y, 0f)) return null;
+        float t = (planeY - ray.origin.y) / ray.direction.y;
+        if (t < 0f) return null; // plane is behind the camera
+
+        return ray.GetPoint(t);
+    }
+
+    private Vector3? GetRaycastWorldPos(Mouse mouse, int layerMask)
+    {
+        var camera = Camera.main;
+        if (camera == null) return null;
+
+        var mousePos = mouse.position.ReadValue();
+        var ray = camera.ScreenPointToRay(new Vector3(mousePos.x, mousePos.y, 0f));
+        if (Physics.Raycast(ray, out RaycastHit hit, 500f, layerMask))
             return hit.point;
 
         return null;

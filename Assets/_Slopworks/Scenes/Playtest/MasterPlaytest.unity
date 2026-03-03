@@ -244,7 +244,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dcddd3cee728de419d6e95186c97bd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::PlaytestValidator
-  _runOnPlay: 0
+  _runOnPlay: 1
   _delayFrames: 5
   _autoQuit: 0
 --- !u!114 &1179496362
@@ -259,8 +259,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07b57c19bef47534fa0b2ee352a0f892, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::PlaytestLogger
-  _enabled: 0
-  _logMovement: 0
+  _enabled: 1
+  _logMovement: 1
   _logBreadcrumbs: 1
   _breadcrumbInterval: 5
 --- !u!114 &1179496363
@@ -275,7 +275,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 882207905748ee24fa360e7b4d0b86f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::JoePlaytestSetup
-  _preSeedFactory: 0
+  _preSeedFactory: 1
   _beltSpeed: 4
 --- !u!114 &1179496364
 MonoBehaviour:
@@ -289,7 +289,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 131f413b97a9cf4438233836e07973a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::KevinPlaytestSetup
-  _preSeedFactory: 0
+  _preSeedFactory: 1
   _beltSpeed: 4
   _worldItemCount: 5
 --- !u!114 &1179496365
@@ -304,7 +304,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18ef35b7c3594484f8a08c33900a0b61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::MasterPlaytestSetup
-  _preSeedFactory: 0
+  _preSeedFactory: 1
   _beltSpeed: 4
 --- !u!4 &1179496366
 Transform:
