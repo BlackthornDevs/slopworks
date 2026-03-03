@@ -25,6 +25,7 @@ Format:
 - C-005: FaunaController violates D-004. Fixed in J-008 — FaunaAI extracted as plain C#, 23 EditMode tests.
 - C-006: GameObject.Find in combat code. Fixed in J-009 — all references wired via SerializeField, zero Find calls remain.
 - C-007: GetComponent per melee attack. Fixed in J-010 — cached on target acquisition.
+- C-008: Dev_Test bootstrapper question. Moot — StructuralPlaytestSetup no longer exists. JoePlaytestSetup replaces it per D-012 bootstrapper refactoring.
 
 ---
 

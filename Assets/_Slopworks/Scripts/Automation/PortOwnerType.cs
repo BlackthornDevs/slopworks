@@ -5,5 +5,6 @@ public enum PortOwnerType
 {
     Machine,
     Storage,
-    Belt
+    Belt,
+    Turret
 }

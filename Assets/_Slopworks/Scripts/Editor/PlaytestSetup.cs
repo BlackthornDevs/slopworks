@@ -13,10 +13,12 @@ public static class PlaytestSetup
         var enemyDiedEvent = CreateEnemyDiedEvent();
         WirePlayerWeapon(weaponDef);
         WirePlayerHealth();
+        SetupPlayerInventory();
         WireEnemyDefinition(faunaDef, enemyDiedEvent);
         var enemyPrefab = SaveEnemyPrefab();
         SetupWaveSystem(enemyDiedEvent, enemyPrefab);
         SetupHUD();
+        SetupItemRegistry();
         BakeNavMesh();
 
         Debug.Log("playtest setup complete");
@@ -389,7 +391,77 @@ public static class PlaytestSetup
             }
         }
 
+        // wire inventory and camera for hotbar + interaction prompt
+        if (player != null)
+        {
+            var inventory = player.GetComponent<PlayerInventory>();
+            var fpsCam = player.transform.Find("FPSCamera");
+            if (inventory != null || fpsCam != null)
+            {
+                var hudSo = new SerializedObject(hud);
+                if (inventory != null)
+                    hudSo.FindProperty("_playerInventory").objectReferenceValue = inventory;
+                if (fpsCam != null)
+                    hudSo.FindProperty("_playerCamera").objectReferenceValue = fpsCam.GetComponent<Camera>();
+                hudSo.ApplyModifiedProperties();
+                Debug.Log("wired inventory and camera on PlayerHUD");
+            }
+        }
+
+        // add InventoryUI for Tab-toggle inventory grid
+        var inventoryUI = canvas.GetComponent<InventoryUI>();
+        if (inventoryUI == null)
+        {
+            inventoryUI = canvas.AddComponent<InventoryUI>();
+            Debug.Log("added InventoryUI to HUD_Canvas");
+        }
+
+        // add RecipeSelectionUI for machine interaction
+        var recipeUI = canvas.GetComponent<RecipeSelectionUI>();
+        if (recipeUI == null)
+        {
+            recipeUI = canvas.AddComponent<RecipeSelectionUI>();
+            Debug.Log("added RecipeSelectionUI to HUD_Canvas");
+        }
+
         EditorUtility.SetDirty(canvas);
+    }
+
+    private static void SetupPlayerInventory()
+    {
+        var player = GameObject.Find("PlayerCharacter");
+        if (player == null) return;
+
+        var inventory = player.GetComponent<PlayerInventory>();
+        if (inventory == null)
+        {
+            inventory = player.AddComponent<PlayerInventory>();
+            Debug.Log("added PlayerInventory to player");
+        }
+
+        var pickup = player.GetComponent<ItemPickupTrigger>();
+        if (pickup == null)
+        {
+            pickup = player.AddComponent<ItemPickupTrigger>();
+            Debug.Log("added ItemPickupTrigger to player");
+        }
+
+        EditorUtility.SetDirty(player);
+    }
+
+    private static void SetupItemRegistry()
+    {
+        var existing = Object.FindAnyObjectByType<ItemRegistry>();
+        if (existing != null)
+        {
+            Debug.Log("item registry already exists");
+            return;
+        }
+
+        var registryObj = new GameObject("ItemRegistry");
+        registryObj.AddComponent<ItemRegistry>();
+        EditorUtility.SetDirty(registryObj);
+        Debug.Log("created ItemRegistry (empty, add items via inspector)");
     }
 
     private static void FixGround()

@@ -131,6 +131,7 @@ public class ConnectionResolver
             case PortOwnerType.Machine:
                 return new MachineOutputAdapter((Machine)outputPort.Owner, outputPort.SlotIndex);
             case PortOwnerType.Storage:
+            case PortOwnerType.Turret:
                 return (IItemSource)(StorageContainer)outputPort.Owner;
             default:
                 throw new System.ArgumentException(
@@ -147,6 +148,7 @@ public class ConnectionResolver
             case PortOwnerType.Machine:
                 return new MachineInputAdapter((Machine)inputPort.Owner, inputPort.SlotIndex);
             case PortOwnerType.Storage:
+            case PortOwnerType.Turret:
                 return (IItemDestination)(StorageContainer)inputPort.Owner;
             default:
                 throw new System.ArgumentException(

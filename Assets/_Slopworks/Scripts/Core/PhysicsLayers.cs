@@ -24,6 +24,9 @@ public static class PhysicsLayers
     public static readonly int InteractMask =
         (1 << Interactable);
 
+    public static readonly int FaunaMask =
+        (1 << Fauna);
+
     public static readonly int FaunaLOSMask =
         (1 << BIM_Static) | (1 << Structures);
 }
