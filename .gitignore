@@ -85,3 +85,4 @@ Assets/StreamingAssets/FMOD/
 **/LightmapData-*
 **/Lightmap-*
 **/ReflectionProbe-*
+.mcp.json

@@ -227,8 +227,8 @@ Phase 4 is now assigned to Joe. Use these existing systems:
 
 ### TASK J-013: Auto-turret simulation layer
 
-**Status:** Complete (2026-03-01)
-**Commits:** `6312a91`
+**Status:** Complete (2026-03-01, recovered 2026-03-02)
+**Commits:** `6312a91` (original), `4f7d813` (merge recovery)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -259,8 +259,8 @@ Build the turret as a plain C# simulation object (D-004 pattern). The turret det
 
 ### TASK J-014: Turret MonoBehaviour wrapper and placement
 
-**Status:** Complete (2026-03-01)
-**Commits:** `2e4cc15`
+**Status:** Complete (2026-03-01, recovered 2026-03-02)
+**Commits:** `2e4cc15` (original), `4f7d813` (merge recovery)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`
@@ -295,8 +295,8 @@ Build the thin MonoBehaviour wrapper and integrate turret placement into the pla
 
 ### TASK J-015: Turret playtest scene
 
-**Status:** Complete (2026-03-01)
-**Commits:** `0a99c34`
+**Status:** Complete (2026-03-01, recovered 2026-03-02)
+**Commits:** `0a99c34` (original), `4f7d813` (merge recovery)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Combat/`, `Scenes/`
@@ -322,11 +322,12 @@ Create a combined turret defense playtest that verifies the full loop: place tur
 
 ### TASK J-023: Merge master into joe/main and port turret code to JoePlaytestSetup
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
+**Commits:** `2b19ef3` (merge), `a404e5b` (turret port)
 **Priority:** Critical
 **Branch:** `joe/main`
 
-`StructuralPlaytestSetup.cs` no longer exists. It was split into shared infrastructure + per-developer bootstrappers to eliminate merge conflicts. Your turret code needs to be ported into `JoePlaytestSetup.cs`, which is exclusively yours.
+`StructuralPlaytestSetup.cs` no longer exists. It was split into shared infrastructure + per-developer bootstrappers to eliminate merge conflicts. Turret code ported into `JoePlaytestSetup.cs`. Stale files deleted (DevTestPlaytestSetup, DevTestHUDBootstrap, StructuralPlaytestSetup).
 
 **FIRST: Close PR #9 without merging.** It modifies files that don't exist on master and will not merge. Run: `gh pr close 9`
 
@@ -339,6 +340,8 @@ Create a combined turret defense playtest that verifies the full loop: place tur
 | `PlaytestToolController.cs` | `Scripts/Debug/` | MonoBehaviour: all shared tool handling (foundation, wall, ramp, belt, machine, storage, delete), visuals, OnGUI, simulation tick |
 | `KevinPlaytestSetup.cs` | `Scripts/Debug/` | Kevin's exclusive bootstrapper (building exploration, supply chain, overworld map). **Do not touch.** |
 | `JoePlaytestSetup.cs` | `Scripts/Debug/` | Joe's exclusive bootstrapper -- YOUR file, skeleton ready for turret code |
+
+**Result:** Clean merge, no conflicts. Git ort strategy auto-merged all 122 files. Zero compilation errors, 789/789 EditMode tests passing.
 
 **Steps:**
 1. `gh pr close 9` -- close the stale PR
@@ -394,13 +397,15 @@ Full design: `docs/plans/2026-02-28-tower-design.md`
 
 ### TASK J-016: Tower data model and simulation layer
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`
 **Depends on:** J-015
 
 Build the tower simulation as plain C# classes following D-004 pattern. This task can start before Phase 5 (Inventory) is done since it's pure C# simulation.
+
+**Result:** Created TowerController (plain C#), FloorChunkDefinition (data class), TowerBuildingDefinitionSO (read-only SO). 41 EditMode tests covering run init, chunk clearing, fragment collection/randomization, extraction banking, death losing carried but keeping banked, boss unlock, boss completion, tier progression. 852/852 tests passing.
 
 **Files to create:**
 - `Scripts/World/TowerController.cs` -- plain C# run state manager
@@ -432,13 +437,15 @@ Build the tower simulation as plain C# classes following D-004 pattern. This tas
 
 ### TASK J-017: Tower loot system (data-driven)
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`
 **Depends on:** J-016
 
 Build a data-driven loot system where all tuning happens in data, not code.
+
+**Result:** Created TowerLootTable (plain C#), LootDropDefinition (data class), LootRarity enum, LootDrop result struct. 23 EditMode tests covering weighted selection, floor elevation filtering, tier filtering, combined filters, amount randomization, multiple drops, edge cases. All tuning is data-driven.
 
 **Files to create:**
 - `Scripts/World/TowerLootTable.cs` -- plain C# loot resolver
@@ -590,7 +597,7 @@ After porting turret code in J-023, verify the MasterPlaytest scene works with b
 
 ### TASK J-022: Verify consolidated PlayerHUD works in JoePlaytestSetup
 
-**Status:** Pending
+**Status:** Complete (2026-03-02)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/UI/`, `Scripts/Combat/`
@@ -613,6 +620,28 @@ After completing J-023 (merge master + port turret code), verify that the consol
 **Acceptance criteria:**
 - All HUD features work in JoePlaytestSetup scene
 - No separate bootstrapper or HUD wiring code needed -- shared bootstrap handles it
+
+### TASK J-025: Fix SO mutation in TowerController.RandomizeFragments
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scripts/World/`
+**Depends on:** J-016
+
+Code review on PR #13 found that `RandomizeFragments()` writes `_building.chunks[i].hasFragment` directly on the ScriptableObject's child objects. This violates the hard rule: "Never mutate ScriptableObjects at runtime." Even though `hasFragment` is `[NonSerialized]`, the in-memory instances are shared. If `StartRun` is called twice on the same SO, the second run inherits stale state.
+
+**Fix:** Remove `hasFragment` from `FloorChunkDefinition`. Track fragment placement in a `HashSet<int> _fragmentChunks` on `TowerController` instead. Update `RandomizeFragments` to populate the HashSet. Add a `HasFragment(int chunkIndex)` method on TowerController. Update any code that reads `chunks[i].hasFragment` to use the new method.
+
+**Update tests:** Add a test that calls `StartRun` twice on the same SO and verifies fragment state is independent between runs.
+
+**Acceptance criteria:**
+- `FloorChunkDefinition.hasFragment` field is removed
+- Fragment state tracked entirely on `TowerController`
+- New test proves two runs on same SO don't share fragment state
+- All existing TowerController tests still pass
+
+---
 
 ### TASK J-021: Tower playtest scene
 

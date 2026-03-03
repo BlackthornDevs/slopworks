@@ -1,5 +1,14 @@
 # Slopworks — Claude rules
 
+## GitHub Actions suspended (account-wide)
+
+GitHub Actions are disabled on the entire `jamditis` GitHub account until further notice. This means:
+- **No CI/CD pipelines will run** — builds, tests, deploys all fail silently
+- **GitHub Pages deploys won't work** — even "legacy" static deploys that used Actions under the hood
+- **No automated workflows** — PR checks, scheduled jobs, release automation are all dead
+
+**For any project that previously deployed via GitHub Actions or GitHub Pages, you must use an alternative** (manual deploy, Cloudflare Pages, Firebase Hosting, direct FTP, etc.). Do not create or rely on `.github/workflows/` files.
+
 Post-apocalyptic co-op factory/survival game built in Unity + FishNet. Two-person team: Joe (jamditis) + Kevin (kamditis) at BlackthornDevs. Both developers run parallel builds from the same design doc and merge the best parts — so both Claude instances working in this repo must follow identical rules.
 
 ## Agent hierarchy
@@ -66,6 +75,8 @@ These are non-negotiable. Violating any of them creates bugs that are hard to fi
 
 **Never cache GetComponent, FindObjectOfType, or FindObjectsOfType results inside Update or FixedUpdate.** Cache in Awake or Start. One allocation per frame across thousands of objects adds up.
 
+**When adding a new PortOwnerType, update ConnectionResolver.** `CreateSource` and `CreateDestination` in `ConnectionResolver.cs` have switch statements over `PortOwnerType`. Adding a new enum value without adding corresponding cases causes exceptions at runtime when ports try to wire up. This is an integration seam that unit tests don't catch — it only fails when you place buildings adjacent to each other.
+
 ---
 
 ## Before writing C# code
@@ -123,7 +134,10 @@ Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoB
 
 Existing playtest scenes to reference:
 - `PortNodePlaytestSetup.cs` — factory automation chain (belts, machines, inserters)
-- `StructuralPlaytestSetup.cs` — structural building (foundations, walls, ramps, multi-level)
+- `StructuralPlaytestSetup.cs` — structural building, automation, combat, turrets (the main playtest bootstrapper)
+- `PlaytestEnvironment.cs` — reusable post-apocalyptic arena generator (procedural ground, ruins, props, lighting, fog). Call `Generate()` from any bootstrapper.
+
+**Pre-seed factory** (`P` key or `_preSeedFactory` checkbox): lays a foundation slab, places a storage->belt->smelter->belt->storage chain and an ammo storage->belt->turret defense chain. Use this to skip manual placement when testing.
 
 ---
 
@@ -159,7 +173,8 @@ Short, factual log messages. `Debug.Log("belt tick: {0} items", count)` not `Deb
 Assets/_Slopworks/
   Scripts/
     Automation/    — belt, machine, grid, power
-    Combat/        — weapons, damage, health, fauna AI, pack coordination, wave defense
+    Combat/        — weapons, damage, health, fauna AI, pack coordination, wave defense, turrets
+    Building/      — structural placement, playtest bootstrappers, PlaytestEnvironment
     Network/       — FishNet setup, Supabase client, save system
     Player/        — character controller, camera rig, input
     World/         — terrain gen, BIM import, chunk loading
@@ -221,6 +236,7 @@ Scene loading is host-initiated: `NetworkManager.SceneManager.LoadScene` loads t
 | Belt items | Server | SyncList on segment entity |
 | Inventory | Server | SyncList for slots, ServerRpc for operations |
 | Building placement | Server | Client requests, server validates + spawns |
+| Turrets | Server | Local playtest only for now, no NetworkBehaviour yet |
 | World chunks | Server | Generated server-side, sent to clients on demand |
 
 ---
@@ -276,3 +292,30 @@ All major architectural decisions are documented in `docs/reference/`. Check her
 | `supabase-unity-sdk.md` | supabase-csharp, UniTask, JSONB upsert, authentication, thread safety |
 
 Additional reference docs are added as architectural decisions are made. Check for new files before assuming a decision hasn't been made yet.
+
+---
+
+## Adding a new automation building type
+
+Follow this checklist every time. Missing any step causes silent runtime failures.
+
+1. **DefinitionSO** — create `[BuildingName]DefinitionSO : ScriptableObject` implementing `IPlaceableDefinition` (size, ports, ID)
+2. **Simulation class** — pure C# following D-004 pattern (e.g. `TurretController`). EditMode tests.
+3. **PortOwnerType** — add new value to `PortOwnerType` enum
+4. **ConnectionResolver** — add cases for the new type in both `CreateSource` and `CreateDestination`. If the port owner is a `StorageContainer`, fall through to the Storage case.
+5. **BuildingPlacementService** — add `Place[BuildingName]` method following `PlaceMachine`/`PlaceStorage`/`PlaceTurret` pattern
+6. **MonoBehaviour wrapper** — thin wrapper (e.g. `TurretBehaviour`) using inactive-then-activate pattern
+7. **StructuralPlaytestSetup** — add tool mode, build page slot, input handler, visual spawner, OnGUI stats
+8. **PreSeedFactory** (optional) — add a pre-built chain to verify the full automation loop
+
+Reference implementation: turret system (J-013 through J-015). Files: `TurretController.cs`, `TurretDefinitionSO.cs`, `TurretBehaviour.cs`, plus modifications to `PortOwnerType.cs`, `ConnectionResolver.cs`, `BuildingPlacementService.cs`, `StructuralPlaytestSetup.cs`.
+
+---
+
+## Current phase status
+
+- **Phase 3** (Combat): Complete — weapons, enemies, AI, waves
+- **Phase 4** (Turret Defenses): Complete — J-013, J-014, J-015
+- **Phase 5** (Core UI + Inventory): Complete (Kevin)
+- **Phase 7** (The Tower): Next for Joe — starts at J-016
+- **Phase 6** (Building Exploration): Next for Kevin

@@ -19,11 +19,12 @@ public class PlayerController : MonoBehaviour
     private float _pitch;
     private bool _isGrounded;
 
-    // ground check casts against terrain, static geometry, and structures
+    // ground check casts against terrain, static geometry, structures, and grid plane
     private static readonly int GroundMask =
         (1 << PhysicsLayers.Terrain) |
         (1 << PhysicsLayers.BIM_Static) |
-        (1 << PhysicsLayers.Structures);
+        (1 << PhysicsLayers.Structures) |
+        (1 << PhysicsLayers.GridPlane);
 
     private void Awake()
     {

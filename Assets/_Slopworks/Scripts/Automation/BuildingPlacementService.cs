@@ -87,6 +87,33 @@ public class BuildingPlacementService
     }
 
     /// <summary>
+    /// Place a turret on the grid. Creates the TurretController simulation object,
+    /// registers port nodes for ammo input, and auto-wires compatible neighbors.
+    /// </summary>
+    public PlacementResult PlaceTurret(TurretDefinitionSO def, Vector2Int cell, int rotation, int level = 0, bool skipFoundationCheck = false)
+    {
+        var effectiveSize = GetEffectiveSize(def.size, rotation);
+
+        if (!skipFoundationCheck && !HasFoundationsAndNoOverlap(cell, effectiveSize, level))
+            return null;
+
+        var buildingData = new BuildingData(def.turretId, cell, effectiveSize, rotation, level);
+        OccupyAutomationCells(cell, effectiveSize, level);
+
+        var turret = new TurretController(def);
+        _simulationObjects[buildingData] = turret;
+
+        // Turret ammo storage is the port owner so inserters can deliver ammo
+        var ports = def.ports != null
+            ? CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Turret, turret.AmmoStorage, level)
+            : new List<PortNode>();
+
+        RegisterAndResolve(ports);
+
+        return new PlacementResult(buildingData, turret, ports);
+    }
+
+    /// <summary>
     /// Place a belt on the grid from startCell to endCell. Must be a straight line
     /// (same X or same Z). Creates a BeltSegment with port nodes at both endpoints.
     /// </summary>
