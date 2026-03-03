@@ -271,7 +271,9 @@ public class PlaytestToolController : MonoBehaviour
 
     private void Update()
     {
-        if (SuppressInput) return;
+        UpdateBeltItemVisuals();
+
+        if (Cursor.lockState != CursorLockMode.Locked) return;
 
         var kb = Keyboard.current;
         var mouse = Mouse.current;
@@ -313,8 +315,6 @@ public class PlaytestToolController : MonoBehaviour
                     handler(kb, mouse);
                 break;
         }
-
-        UpdateBeltItemVisuals();
     }
 
     private void OnGUI()

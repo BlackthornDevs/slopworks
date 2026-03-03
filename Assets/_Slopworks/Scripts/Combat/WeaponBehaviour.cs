@@ -1,5 +1,6 @@
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public class WeaponBehaviour : NetworkBehaviour
@@ -56,6 +57,8 @@ public class WeaponBehaviour : NetworkBehaviour
 
     private void OnFire(InputAction.CallbackContext ctx)
     {
+        if (Cursor.lockState != CursorLockMode.Locked) return;
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
         if (_camera == null || _weapon == null) return;
         if (NetworkObject != null && !IsOwner) return;
         PlaytestLogger.Log($"input: Fire | ammo={_weapon.CurrentAmmo}/{(_weaponDefinition != null ? _weaponDefinition.magazineSize : 0)} weapon={enabled}");

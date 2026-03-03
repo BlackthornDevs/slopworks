@@ -164,9 +164,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             Cursor.visible = false;
         }
 
-        // Suppress tool input while map is open
-        if (_toolCtrl != null)
-            _toolCtrl.SuppressInput = _overworldMapUI != null && _overworldMapUI.IsOpen;
+        // Tool input suppressed automatically via cursor lock check in PlaytestToolController.Update()
     }
 
     public void DrawGUI(PlaytestToolController toolCtrl, ref float y, float x, float w, float h)

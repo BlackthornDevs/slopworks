@@ -54,6 +54,8 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (Cursor.lockState != CursorLockMode.Locked) return;
+
         Look();
         CheckJump();
         HandleHotbarInput();
@@ -63,6 +65,11 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         CheckGround();
+        if (Cursor.lockState != CursorLockMode.Locked)
+        {
+            _rb.linearVelocity = new Vector3(0f, _rb.linearVelocity.y, 0f);
+            return;
+        }
         Move();
     }
 
