@@ -478,7 +478,7 @@ Build a data-driven loot system where all tuning happens in data, not code.
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`, `Scenes/`
-**Depends on:** J-016, Phase 5 complete (scene management + inventory from Kevin)
+**Depends on:** J-016
 
 Build the thin MonoBehaviour wrapper and the tower scene with elevator navigation.
 
@@ -566,7 +566,7 @@ Build the boss floor as the tier-gating mechanic.
 
 ### TASK J-024: Verify MasterPlaytest scene integration
 
-**Status:** Blocked (C-009: turret ghost cleanup, assigned to Kevin)
+**Status:** Pending
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Debug/`
@@ -670,3 +670,66 @@ End-to-end playtest of the full tower loop per phase completion standard.
 - Boss floor locks/unlocks correctly based on banked fragment count
 - Tier progression works end-to-end
 - Console logs make every state transition visible
+
+---
+
+### TASK J-026: Stop adding Co-Authored-By tags to commits
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** All files
+
+The CLAUDE.md says "NEVER add 'Co-Authored-By' lines to git commits. No co-author tags, ever." PR #16 had Co-Authored-By tags on both code commits (2b117c2, 0460ea9). This was flagged in code review.
+
+**Fix:** Stop appending Co-Authored-By lines to commit messages. This applies to every future commit. No retroactive rewriting needed -- just stop doing it going forward.
+
+**Acceptance criteria:**
+- No future commits contain Co-Authored-By lines
+- Verify by checking `git log --format=%b` on new commits
+
+### TASK J-027: Turret ammo consumption and reload
+
+**Status:** Pending
+**Priority:** Medium
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`, `Scripts/Automation/`
+**Depends on:** J-024
+
+Turrets currently fire indefinitely. They should consume ammo from a connected storage container and stop firing when empty.
+
+**Implementation:**
+1. `AutoTurret` simulation class gets an ammo slot (single `ItemSlot`) and `ConsumeAmmo()` called per shot
+2. `TurretBehaviour` pulls ammo from its input port node each tick (same pattern as machine input)
+3. When ammo slot is empty and no input available, turret stops firing (stays aimed but no shots)
+4. Turret resumes firing when ammo is resupplied via belt
+5. OnGUI shows ammo count per turret (or at least for selected turret)
+
+**Acceptance criteria:**
+- Turret stops firing when ammo runs out
+- Turret pulls ammo from connected belt/storage
+- Turret resumes firing when resupplied
+- Ammo consumption rate matches fire rate
+- Tests verify ammo depletion and resupply behavior
+
+### TASK J-028: Turret range and targeting priority
+
+**Status:** Pending
+**Priority:** Low
+**Branch:** `joe/main`
+**Ownership:** `Scripts/Combat/`
+**Depends on:** J-024
+
+Turrets should have configurable range and targeting priority (closest, lowest health, highest threat).
+
+**Implementation:**
+1. Add `range` and `targetingMode` fields to `TurretDefinitionSO`
+2. `AutoTurret.FindTarget()` respects range limit and sorts candidates by targeting mode
+3. Turret stops tracking targets that leave range
+4. Visual range indicator in playtest (optional debug circle on ground)
+
+**Acceptance criteria:**
+- Turret only fires at targets within range
+- Targeting mode affects which enemy is prioritized
+- Range is configurable per turret definition
+- Tests verify range filtering and priority sorting
