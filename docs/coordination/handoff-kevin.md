@@ -1,33 +1,36 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 Branch: kevin/main
-Last commit: dbe2c3d Merge pull request #19 (menu input suppression + belt visual fix)
+Last commit: (pending -- uncommitted changes from this session)
 
 ## What was completed this session
 
-### Menu input suppression
-- `PlayerController.cs`: skip Look/Move/Jump/Hotbar/Interaction when `Cursor.lockState != Locked` (any menu open)
-- `WeaponBehaviour.cs`: block firing when cursor unlocked or `EventSystem.IsPointerOverGameObject()` (prevents close-button firing)
-- `PlaytestToolController.cs`: replaced `SuppressInput` with cursor lock check for tool input gating
-- `PlaytestToolController.cs`: moved `UpdateBeltItemVisuals()` before cursor lock guard so belt visuals keep updating while menus are open
-- `KevinPlaytestSetup.cs`: removed manual SuppressInput toggle for overworld map
+### Turret ammo recipe
+- `PlaytestContext.cs`: added `TurretAmmo` constant, `TurretAmmoRecipeId`, and SO fields (`TurretAmmoDef`, `TurretAmmoRecipe`)
+- `PlaytestBootstrap.cs`: created turret ammo ItemDefinitionSO (category: Ammo, stackable, max 64) and RecipeSO (1 iron_ingot -> 4 turret_ammo, 3s, smelter). Registered in item/recipe registries. Updated recipe lookup lambda to handle both recipes.
+- `KevinPlaytestSetup.cs` + `JoePlaytestSetup.cs`: changed turret `ammoItemId` from `"iron_scrap"` to `PlaytestContext.TurretAmmo`. Changed all `TryInsertStack` calls and `PreSeedTurretChain` to use `PlaytestContext.TurretAmmo`.
 
-### Prior commits this session (already merged to master via PR #18)
-- Structural building UX: auto-level, ghosts, zoop, delete highlight
-- C-009 turret ghost cleanup fix
-- D-014 decision (MasterPlaytest required before merge)
-- CameraModeController NRE fix
-- Joe's PR #16 reviewed and merged, new tasks J-026/J-027/J-028
+### Bug fixes from playtest
+- **300% progress display**: `RecipeSelectionUI.cs` -- CraftProgress is raw time (0 to craftDuration), not 0-1. Fixed by dividing by `recipe.craftDuration` before formatting with `P0`.
+- **Active recipe highlighting**: `RecipeSelectionUI.cs` -- added `isActive` check comparing `ActiveRecipeId` to recipe. Active recipe shows teal background + `[active]` label. Non-active shows green.
+- **Belt item colors**: `PlaytestToolController.cs` -- added `GetItemColor()` mapping item IDs to distinct colors (iron_scrap=brown, iron_ore=dark red, iron_ingot=silver, turret_ammo=yellow). Belt visuals now use item type for coloring.
+- **Recipe selection model**: `RecipeSelectionUI.cs` -- removed CanCraftRecipe gating entirely. Machines are for automation; recipe selection sets what the machine will process from belt inputs, not what the player has in inventory. All recipes always selectable.
+
+### Zoop distance limits
+- `PlaytestToolController.cs`: clamped `_dragEnd` to 20 cells from `_dragStart` during foundation batch drag
+- `BatchPlacer.cs`: added `MaxZoopDistance = 20` constant and clamp in `UpdateDrag()`
+- `WallZoopController.cs`: added 20-cell max clamp to wall zoop distance
 
 ## What's in progress (not yet committed)
 
-None -- all committed.
+None -- all changes ready to commit.
 
 ## Next task to pick up
 
-- Add turret ammo recipe: create a new recipe that converts iron ingots into turret ammo. Turrets currently use `ammoItemId = "iron_scrap"` (in both KevinPlaytestSetup.cs:275 and JoePlaytestSetup.cs:216). Needs: new ammo ItemDefinitionSO, new RecipeSO (iron_ingot -> turret_ammo), update turret definitions to use new ammo item ID. Part of Phase 9 setup.
-- Then: Phase 9 full-loop integration or vertical slice polish
+- Verify full vertical slice loop works end-to-end: iron_scrap -> smelter -> iron_ingot -> smelter (ammo recipe) -> turret_ammo -> turret
+- Phase 6 (Building Exploration) or vertical slice polish
+- Consider running MasterPlaytest verification before any PR to master
 
 ## Blockers or decisions needed
 
@@ -39,7 +42,8 @@ None.
 
 ## Key context the next session needs
 
-- **Belt visual update pattern:** `UpdateBeltItemVisuals()` in `PlaytestToolController.Update()` MUST run before any early return guards. Belt items are positioned by PlaytestToolController, not BeltSegmentBehaviour. Returning early from Update() freezes belt visuals.
-- **Menu input suppression uses cursor lock state:** All menus already set `Cursor.lockState = None` on open and `Locked` on close. PlayerController, WeaponBehaviour, and PlaytestToolController all check this to suppress input. No separate `SuppressInput` flag needed.
-- **Close button weapon fire prevention:** `EventSystem.IsPointerOverGameObject()` in WeaponBehaviour.OnFire() blocks firing when clicking UI elements.
-- **SuppressInput property still exists** on PlaytestToolController but is no longer used. Can be removed in a future cleanup.
+- **Turret ammo is now `turret_ammo`**, not `iron_scrap`. Both bootstrappers updated. The full chain: iron_scrap -> smelter (smelt iron) -> iron_ingot -> smelter (craft turret ammo) -> turret_ammo -> belt -> turret.
+- **Recipe UI is automation-only**: recipes are always selectable. The UI sets which recipe a machine processes from belt inputs, not a crafting-from-inventory system.
+- **Belt item colors**: `GetItemColor()` in PlaytestToolController maps item IDs to colors. Add new entries when adding new item types.
+- **Zoop max distance**: 20 cells in all directions. Prevents game freeze from spawning too many visual objects.
+- **Joe's blockers are cleared**: C-009 was fixed last session. Phase 5 is complete. Joe can proceed with J-024 and J-018.
