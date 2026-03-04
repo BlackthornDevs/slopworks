@@ -35,8 +35,11 @@ public class WallZoopController
         // East/west edges (edgeDir.x != 0) run along Y, so walk Y.
         bool walkX = edgeDir.y != 0;
 
+        const int maxZoopDistance = 20;
+
         int start = walkX ? Origin.Cell.x : Origin.Cell.y;
         int end = walkX ? current.Cell.x : current.Cell.y;
+        end = Mathf.Clamp(end, start - maxZoopDistance, start + maxZoopDistance);
 
         int step = end >= start ? 1 : -1;
         for (int i = start; ; i += step)

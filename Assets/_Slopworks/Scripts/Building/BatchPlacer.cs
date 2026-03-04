@@ -84,10 +84,14 @@ public class BatchPlacer
     /// <summary>
     /// Update the drag endpoint to the current cursor cell.
     /// </summary>
+    public const int MaxZoopDistance = 20;
+
     public void UpdateDrag(Vector2Int currentCell)
     {
         if (!_isPlacing) return;
-        _endCell = currentCell;
+        _endCell = new Vector2Int(
+            Mathf.Clamp(currentCell.x, _startCell.x - MaxZoopDistance, _startCell.x + MaxZoopDistance),
+            Mathf.Clamp(currentCell.y, _startCell.y - MaxZoopDistance, _startCell.y + MaxZoopDistance));
     }
 
     /// <summary>

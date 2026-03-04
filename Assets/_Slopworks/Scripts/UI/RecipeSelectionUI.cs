@@ -58,7 +58,13 @@ public class RecipeSelectionUI : MonoBehaviour
         var sb = new System.Text.StringBuilder();
         sb.Append($"Status: <b>{m.Status}</b>");
         if (m.ActiveRecipeId != null)
-            sb.Append($"  |  Progress: {m.CraftProgress:P0}");
+        {
+            var activeRecipe = _recipeRegistry?.Get(m.ActiveRecipeId);
+            float pct = activeRecipe != null && activeRecipe.craftDuration > 0
+                ? m.CraftProgress / activeRecipe.craftDuration
+                : 0f;
+            sb.Append($"  |  Progress: {pct:P0}");
+        }
 
         int inputSlots = _currentMachine.Definition.inputBufferSize;
         int outputSlots = _currentMachine.Definition.outputBufferSize;
@@ -129,7 +135,7 @@ public class RecipeSelectionUI : MonoBehaviour
 
         foreach (var recipe in recipes)
         {
-            Debug.Log($"recipe ui: adding entry '{recipe.displayName}' canCraft={CanCraftRecipe(recipe)}");
+            Debug.Log($"recipe ui: adding entry '{recipe.displayName}'");
             CreateRecipeEntry(recipe);
         }
 
@@ -146,8 +152,9 @@ public class RecipeSelectionUI : MonoBehaviour
         _recipeEntries.Add(entryObj);
 
         var bg = entryObj.AddComponent<Image>();
-        bool canCraft = CanCraftRecipe(recipe);
-        bg.color = canCraft ? new Color(0.2f, 0.3f, 0.2f, 0.9f) : new Color(0.3f, 0.2f, 0.2f, 0.5f);
+        bool isActive = _currentMachine.Machine.ActiveRecipeId == recipe.recipeId;
+        bg.color = isActive ? new Color(0.2f, 0.4f, 0.5f, 0.9f)
+            : new Color(0.2f, 0.3f, 0.2f, 0.9f);
 
         var entryRect = bg.rectTransform;
         entryRect.sizeDelta = new Vector2(0, 60);
@@ -159,10 +166,10 @@ public class RecipeSelectionUI : MonoBehaviour
         var textObj = new GameObject("Text");
         textObj.transform.SetParent(entryObj.transform, false);
         var text = textObj.AddComponent<TextMeshProUGUI>();
-        text.text = FormatRecipeText(recipe);
+        text.text = FormatRecipeText(recipe, isActive);
         text.fontSize = 13;
         text.richText = true;
-        text.color = canCraft ? Color.white : new Color(0.6f, 0.6f, 0.6f);
+        text.color = Color.white;
         text.alignment = TextAlignmentOptions.MidlineLeft;
         text.raycastTarget = false;
         var textRect = text.rectTransform;
@@ -172,65 +179,25 @@ public class RecipeSelectionUI : MonoBehaviour
         textRect.offsetMax = new Vector2(-8, 0);
 
         var button = entryObj.AddComponent<Button>();
-        button.interactable = canCraft;
         var capturedRecipe = recipe;
         button.onClick.AddListener(() => OnRecipeSelected(capturedRecipe));
     }
 
     private void OnRecipeSelected(RecipeSO recipe)
     {
-        Debug.Log($"recipe ui: selected '{recipe.displayName}'");
-
-        if (_currentMachine == null || _playerInventory == null)
-        {
-            Debug.LogWarning($"recipe ui: select aborted (machine={_currentMachine != null}, inventory={_playerInventory != null})");
-            return;
-        }
-
-        foreach (var input in recipe.inputs)
-        {
-            int have = _playerInventory.Inventory.GetCount(input.itemId);
-            if (!_playerInventory.TryRemove(input.itemId, input.count))
-            {
-                Debug.LogWarning($"recipe ui: failed to remove {input.count}x {input.itemId} (have {have})");
-                return;
-            }
-            Debug.Log($"recipe ui: consumed {input.count}x {input.itemId} (had {have})");
-        }
-
-        for (int i = 0; i < recipe.inputs.Length; i++)
-        {
-            var input = recipe.inputs[i];
-            int slot = i % _currentMachine.Definition.inputBufferSize;
-            bool inserted = _currentMachine.Machine.TryInsertInput(
-                slot,
-                ItemInstance.Create(input.itemId),
-                input.count);
-            Debug.Log($"recipe ui: insert {input.count}x {input.itemId} into slot {slot} = {inserted}");
-        }
+        if (_currentMachine == null) return;
 
         _currentMachine.Machine.SetRecipe(recipe.recipeId);
-
         Debug.Log($"recipe ui: set recipe '{recipe.displayName}' on '{_currentMachine.Definition.displayName}'");
         Close();
     }
 
-    private bool CanCraftRecipe(RecipeSO recipe)
-    {
-        if (_playerInventory == null || recipe.inputs == null) return false;
-
-        foreach (var input in recipe.inputs)
-        {
-            if (_playerInventory.Inventory.GetCount(input.itemId) < input.count)
-                return false;
-        }
-        return true;
-    }
-
-    private string FormatRecipeText(RecipeSO recipe)
+    private string FormatRecipeText(RecipeSO recipe, bool isActive = false)
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append("<b>").Append(recipe.displayName).Append("</b>\n");
+        sb.Append("<b>").Append(recipe.displayName).Append("</b>");
+        if (isActive) sb.Append(" <color=#6cf>[active]</color>");
+        sb.Append('\n');
 
         if (recipe.inputs != null)
         {
@@ -240,8 +207,7 @@ public class RecipeSelectionUI : MonoBehaviour
                 if (i > 0) sb.Append(" + ");
                 var def = _itemRegistry?.Get(recipe.inputs[i].itemId);
                 string name = def != null ? def.displayName : recipe.inputs[i].itemId;
-                int have = _playerInventory != null ? _playerInventory.Inventory.GetCount(recipe.inputs[i].itemId) : 0;
-                sb.Append($"{recipe.inputs[i].count}x {name} <color=#888>(have {have})</color>");
+                sb.Append($"{recipe.inputs[i].count}x {name}");
             }
         }
 

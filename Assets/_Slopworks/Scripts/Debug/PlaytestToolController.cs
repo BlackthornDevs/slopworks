@@ -636,7 +636,9 @@ public class PlaytestToolController : MonoBehaviour
 
         if (_isDragging)
         {
-            _dragEnd = cell.Value;
+            _dragEnd = new Vector2Int(
+                Mathf.Clamp(cell.Value.x, _dragStart.x - 20, _dragStart.x + 20),
+                Mathf.Clamp(cell.Value.y, _dragStart.y - 20, _dragStart.y + 20));
             UpdateFoundationGhosts();
         }
         else
@@ -1879,6 +1881,7 @@ public class PlaytestToolController : MonoBehaviour
             Vector3 startPos = center - dir3D * halfLen;
             Vector3 endPos = center + dir3D * halfLen;
 
+            var beltItems = belt.GetItems();
             for (int i = 0; i < _positionBuffer.Count; i++)
             {
                 if (poolIdx >= _beltItemPool.Count) break;
@@ -1887,16 +1890,26 @@ public class PlaytestToolController : MonoBehaviour
                 cube.transform.position = Vector3.Lerp(startPos, endPos, _positionBuffer[i])
                                           + Vector3.up * 0.2f;
 
-                bool isBeforeMachine = IsBeforeMachine(belt);
-                SetColor(cube, isBeforeMachine
-                    ? new Color(0.6f, 0.3f, 0.1f)
-                    : new Color(0.7f, 0.7f, 0.8f));
+                string itemId = i < beltItems.Count ? beltItems[i].itemId : null;
+                SetColor(cube, GetItemColor(itemId));
                 poolIdx++;
             }
         }
 
         for (int i = poolIdx; i < _beltItemPool.Count; i++)
             _beltItemPool[i].SetActive(false);
+    }
+
+    private static Color GetItemColor(string itemId)
+    {
+        return itemId switch
+        {
+            PlaytestContext.IronScrap => new Color(0.6f, 0.4f, 0.2f),
+            PlaytestContext.IronOre => new Color(0.5f, 0.3f, 0.3f),
+            PlaytestContext.IronIngot => new Color(0.7f, 0.7f, 0.8f),
+            PlaytestContext.TurretAmmo => new Color(0.9f, 0.8f, 0.2f),
+            _ => new Color(0.5f, 0.5f, 0.5f)
+        };
     }
 
     private bool IsBeforeMachine(BeltSegment belt)

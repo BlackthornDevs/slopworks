@@ -123,6 +123,14 @@ public class PlaytestBootstrap
         ctx.IronScrapDef.maxStackSize = 64;
         ctx.RuntimeSOs.Add(ctx.IronScrapDef);
 
+        ctx.TurretAmmoDef = ScriptableObject.CreateInstance<ItemDefinitionSO>();
+        ctx.TurretAmmoDef.itemId = PlaytestContext.TurretAmmo;
+        ctx.TurretAmmoDef.displayName = "Turret Ammo";
+        ctx.TurretAmmoDef.category = ItemCategory.Ammo;
+        ctx.TurretAmmoDef.isStackable = true;
+        ctx.TurretAmmoDef.maxStackSize = 64;
+        ctx.RuntimeSOs.Add(ctx.TurretAmmoDef);
+
         ctx.SmeltRecipe = ScriptableObject.CreateInstance<RecipeSO>();
         ctx.SmeltRecipe.recipeId = PlaytestContext.SmeltIronRecipeId;
         ctx.SmeltRecipe.displayName = "Smelt Iron";
@@ -131,6 +139,15 @@ public class PlaytestBootstrap
         ctx.SmeltRecipe.craftDuration = 2f;
         ctx.SmeltRecipe.requiredMachineType = PlaytestContext.SmelterType;
         ctx.RuntimeSOs.Add(ctx.SmeltRecipe);
+
+        ctx.TurretAmmoRecipe = ScriptableObject.CreateInstance<RecipeSO>();
+        ctx.TurretAmmoRecipe.recipeId = PlaytestContext.TurretAmmoRecipeId;
+        ctx.TurretAmmoRecipe.displayName = "Craft Turret Ammo";
+        ctx.TurretAmmoRecipe.inputs = new[] { new RecipeIngredient { itemId = PlaytestContext.IronIngot, count = 1 } };
+        ctx.TurretAmmoRecipe.outputs = new[] { new RecipeIngredient { itemId = PlaytestContext.TurretAmmo, count = 4 } };
+        ctx.TurretAmmoRecipe.craftDuration = 3f;
+        ctx.TurretAmmoRecipe.requiredMachineType = PlaytestContext.SmelterType;
+        ctx.RuntimeSOs.Add(ctx.TurretAmmoRecipe);
 
         // Combat
         ctx.WeaponDef = ScriptableObject.CreateInstance<WeaponDefinitionSO>();
@@ -172,12 +189,12 @@ public class PlaytestBootstrap
         var itemRegistry = registryObj.AddComponent<ItemRegistry>();
         var itemsField = typeof(ItemRegistry).GetField("_items",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        itemsField?.SetValue(itemRegistry, new[] { ctx.IronOreDef, ctx.IronIngotDef, ctx.IronScrapDef });
+        itemsField?.SetValue(itemRegistry, new[] { ctx.IronOreDef, ctx.IronIngotDef, ctx.IronScrapDef, ctx.TurretAmmoDef });
 
         var recipeRegistry = registryObj.AddComponent<RecipeRegistry>();
         var recipesField = typeof(RecipeRegistry).GetField("_recipes",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        recipesField?.SetValue(recipeRegistry, new[] { ctx.SmeltRecipe });
+        recipesField?.SetValue(recipeRegistry, new[] { ctx.SmeltRecipe, ctx.TurretAmmoRecipe });
 
         registryObj.SetActive(true);
         Debug.Log("playtest: registries created");
@@ -189,7 +206,9 @@ public class PlaytestBootstrap
         ctx.SnapRegistry = new SnapPointRegistry();
         ctx.PlacementService = new StructuralPlacementService(ctx.Grid, ctx.SnapRegistry);
 
-        RecipeSO LookupRecipe(string id) => id == PlaytestContext.SmeltIronRecipeId ? ctx.SmeltRecipe : null;
+        RecipeSO LookupRecipe(string id) =>
+            id == PlaytestContext.SmeltIronRecipeId ? ctx.SmeltRecipe :
+            id == PlaytestContext.TurretAmmoRecipeId ? ctx.TurretAmmoRecipe : null;
         ctx.Simulation = new FactorySimulation(LookupRecipe);
         ctx.Simulation.BeltSpeed = _beltSpeed;
         ctx.PortRegistry = new PortNodeRegistry();

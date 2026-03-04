@@ -272,7 +272,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         _turretDef.fireInterval = 0.5f;
         _turretDef.damagePerShot = 10f;
         _turretDef.damageType = DamageType.Kinetic;
-        _turretDef.ammoItemId = "iron_scrap";
+        _turretDef.ammoItemId = PlaytestContext.TurretAmmo;
         _turretDef.size = Vector2Int.one;
         _turretDef.ammoSlotCount = 1;
         _turretDef.ammoMaxStackSize = 64;
@@ -366,7 +366,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         _turrets.Add(behaviour);
         result.BuildingData.Instance = baseObj;
 
-        turretController.AmmoStorage.TryInsertStack("iron_scrap", 32);
+        turretController.AmmoStorage.TryInsertStack(PlaytestContext.TurretAmmo, 32);
         Debug.Log("turret visual spawned, pre-loaded 32 ammo");
     }
 

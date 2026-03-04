@@ -213,7 +213,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         _turretDef.fireInterval = 0.5f;
         _turretDef.damagePerShot = 10f;
         _turretDef.damageType = DamageType.Kinetic;
-        _turretDef.ammoItemId = "iron_scrap";
+        _turretDef.ammoItemId = PlaytestContext.TurretAmmo;
         _turretDef.size = Vector2Int.one;
         _turretDef.ammoSlotCount = 1;
         _turretDef.ammoMaxStackSize = 64;
@@ -321,7 +321,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         result.BuildingData.Instance = baseObj;
 
         // Pre-load 32 ammo so turret fires immediately
-        turretController.AmmoStorage.TryInsertStack("iron_scrap", 32);
+        turretController.AmmoStorage.TryInsertStack(PlaytestContext.TurretAmmo, 32);
         Debug.Log("turret visual spawned, pre-loaded 32 ammo");
     }
 
@@ -413,8 +413,8 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             _toolCtrl.SpawnStorageVisual(ammoResult, new Vector2Int(5, 5));
             var ammoStorage = (StorageContainer)ammoResult.SimulationObject;
             for (int i = 0; i < 200; i++)
-                ammoStorage.TryInsert("iron_scrap");
-            Debug.Log("pre-seed: ammo storage at (5,5) with 200 iron scrap");
+                ammoStorage.TryInsert(PlaytestContext.TurretAmmo);
+            Debug.Log("pre-seed: ammo storage at (5,5) with 200 turret ammo");
         }
         else
         {

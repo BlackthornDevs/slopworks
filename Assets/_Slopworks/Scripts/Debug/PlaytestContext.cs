@@ -27,7 +27,9 @@ public class PlaytestContext
     public ItemDefinitionSO IronOreDef;
     public ItemDefinitionSO IronIngotDef;
     public ItemDefinitionSO IronScrapDef;
+    public ItemDefinitionSO TurretAmmoDef;
     public RecipeSO SmeltRecipe;
+    public RecipeSO TurretAmmoRecipe;
 
     // Player
     public GameObject PlayerObject;
@@ -48,6 +50,8 @@ public class PlaytestContext
     public const string IronOre = "iron_ore";
     public const string IronIngot = "iron_ingot";
     public const string IronScrap = "iron_scrap";
+    public const string TurretAmmo = "turret_ammo";
     public const string SmeltIronRecipeId = "smelt_iron";
+    public const string TurretAmmoRecipeId = "craft_turret_ammo";
     public const string SmelterType = "smelter";
 }
