@@ -347,11 +347,77 @@ public class PlaytestBootstrap
         if (camObj.GetComponent<CameraShake>() == null)
             camObj.AddComponent<CameraShake>();
 
-        // Muzzle flash as child of camera
-        var muzzleObj = new GameObject("MuzzleFlashPoint");
-        muzzleObj.transform.SetParent(camObj.transform);
-        muzzleObj.transform.localPosition = new Vector3(0f, -0.1f, 0.5f);
-        muzzleObj.AddComponent<MuzzleFlash>();
+        // Weapon viewmodel
+        var pistolPrefab = Resources.Load<GameObject>("Models/Pistol/Pistol_01");
+        Transform muzzlePoint = camObj.transform; // fallback
+        if (pistolPrefab != null)
+        {
+            var pistol = Object.Instantiate(pistolPrefab, camObj.transform);
+            pistol.name = "WeaponModel";
+            pistol.transform.localPosition = new Vector3(0.15f, -0.12f, 0.394f);
+            pistol.transform.localRotation = Quaternion.identity;
+            pistol.transform.localScale = Vector3.one;
+            foreach (var col in pistol.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(col);
+            SetLayerRecursive(pistol, PhysicsLayers.Player);
+
+            // Replace Built-in Standard materials with URP Lit
+            var urpShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpShader != null)
+            {
+                foreach (var r in pistol.GetComponentsInChildren<Renderer>())
+                {
+                    var oldMats = r.sharedMaterials;
+                    var newMats = new Material[oldMats.Length];
+                    for (int i = 0; i < oldMats.Length; i++)
+                    {
+                        var src = oldMats[i];
+                        var mat = new Material(urpShader);
+                        if (src != null)
+                        {
+                            mat.SetColor("_BaseColor", src.HasProperty("_Color") ? src.color : Color.gray);
+                            if (src.HasProperty("_MainTex") && src.mainTexture != null)
+                                mat.SetTexture("_BaseMap", src.mainTexture);
+                            if (src.HasProperty("_BumpMap") && src.GetTexture("_BumpMap") != null)
+                                mat.SetTexture("_BumpMap", src.GetTexture("_BumpMap"));
+                            if (src.HasProperty("_MetallicGlossMap") && src.GetTexture("_MetallicGlossMap") != null)
+                            {
+                                mat.SetTexture("_MetallicGlossMap", src.GetTexture("_MetallicGlossMap"));
+                                mat.SetFloat("_Metallic", 1f);
+                                mat.SetFloat("_Smoothness", src.HasProperty("_Glossiness") ? src.GetFloat("_Glossiness") : 0.5f);
+                            }
+                            if (src.HasProperty("_OcclusionMap") && src.GetTexture("_OcclusionMap") != null)
+                                mat.SetTexture("_OcclusionMap", src.GetTexture("_OcclusionMap"));
+                            if (src.HasProperty("_EmissionMap") && src.GetTexture("_EmissionMap") != null)
+                            {
+                                mat.SetTexture("_EmissionMap", src.GetTexture("_EmissionMap"));
+                                mat.EnableKeyword("_EMISSION");
+                                mat.SetColor("_EmissionColor", src.HasProperty("_EmissionColor") ? src.GetColor("_EmissionColor") : Color.black);
+                            }
+                        }
+                        newMats[i] = mat;
+                    }
+                    r.sharedMaterials = newMats;
+                }
+            }
+
+            // Place muzzle flash at barrel tip
+            var muzzleObj = new GameObject("MuzzleFlashPoint");
+            muzzleObj.transform.SetParent(pistol.transform);
+            muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.14f);
+            muzzleObj.AddComponent<MuzzleFlash>();
+            muzzlePoint = muzzleObj.transform;
+            Debug.Log("playtest: pistol viewmodel attached to camera");
+        }
+        else
+        {
+            // Fallback: muzzle flash on camera
+            var muzzleObj = new GameObject("MuzzleFlashPoint");
+            muzzleObj.transform.SetParent(camObj.transform);
+            muzzleObj.transform.localPosition = new Vector3(0f, -0.1f, 0.5f);
+            muzzleObj.AddComponent<MuzzleFlash>();
+            Debug.LogWarning("playtest: pistol prefab not found, using invisible weapon");
+        }
 
         // WeaponBehaviour -- must set _weaponDefinition before Awake creates WeaponController
         ctx.PlayerObject.SetActive(false);
@@ -458,5 +524,12 @@ public class PlaytestBootstrap
         ctx.PlayerInventory.TryAdd(ItemInstance.Create(PlaytestContext.IronScrap), 10);
         ctx.PlayerInventory.TryAdd(ItemInstance.Create(PlaytestContext.IronOre), 5);
         Debug.Log("playtest: preloaded items into inventory");
+    }
+
+    private static void SetLayerRecursive(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+        foreach (Transform child in obj.transform)
+            SetLayerRecursive(child.gameObject, layer);
     }
 }

@@ -384,33 +384,64 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
         var turretController = (TurretController)result.SimulationObject;
 
-        var baseObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        baseObj.name = $"Turret_{cell.x}_{cell.y}";
-        var defaultCollider = baseObj.GetComponent<Collider>();
-        if (defaultCollider != null) Destroy(defaultCollider);
-        baseObj.layer = PhysicsLayers.Interactable;
-        baseObj.AddComponent<BoxCollider>();
+        var turretPrefab = Resources.Load<GameObject>("Models/Turrets/Turret");
+        GameObject baseObj;
+        Transform pivotTransform;
 
-        baseObj.transform.position = worldPos + Vector3.up * 0.4f;
-        baseObj.transform.localScale = new Vector3(0.8f, 0.4f, 0.8f);
-        PlaytestToolController.SetColor(baseObj, new Color(0.5f, 0.15f, 0.15f));
+        if (turretPrefab != null)
+        {
+            baseObj = Instantiate(turretPrefab);
+            baseObj.name = $"Turret_{cell.x}_{cell.y}";
+            baseObj.transform.position = worldPos;
+            baseObj.transform.rotation = Quaternion.Euler(0f, _turretRotation, 0f);
 
-        var pivot = new GameObject("BarrelPivot");
-        pivot.transform.SetParent(baseObj.transform);
-        pivot.transform.localPosition = Vector3.up * 0.4f;
+            foreach (var col in baseObj.GetComponentsInChildren<Collider>())
+                DestroyImmediate(col);
+            baseObj.layer = PhysicsLayers.Interactable;
+            baseObj.AddComponent<BoxCollider>();
 
-        var barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        barrel.name = "Barrel";
-        var barrelCollider = barrel.GetComponent<Collider>();
-        if (barrelCollider != null) Destroy(barrelCollider);
-        barrel.transform.SetParent(pivot.transform);
-        barrel.transform.localPosition = new Vector3(0f, 0f, 0.3f);
-        barrel.transform.localScale = new Vector3(0.15f, 0.15f, 0.6f);
-        PlaytestToolController.SetColor(barrel, new Color(0.3f, 0.1f, 0.1f));
+            // "Turret" child is the gun head, "Turret.001" is the base
+            // Head mesh has barrels along -Z; wrap in pivot so LookRotation +Z = barrels forward
+            var head = baseObj.transform.Find("Turret");
+            var pivot = new GameObject("BarrelPivot");
+            pivot.transform.SetParent(baseObj.transform);
+            pivot.transform.localPosition = new Vector3(0f, 0.4f, 0f);
+            if (head != null)
+                head.SetParent(pivot.transform, true);
+            pivotTransform = pivot.transform;
+        }
+        else
+        {
+            // Fallback to primitives if FBX not found
+            baseObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            baseObj.name = $"Turret_{cell.x}_{cell.y}";
+            var defaultCollider = baseObj.GetComponent<Collider>();
+            if (defaultCollider != null) Destroy(defaultCollider);
+            baseObj.layer = PhysicsLayers.Interactable;
+            baseObj.AddComponent<BoxCollider>();
+            baseObj.transform.position = worldPos + Vector3.up * 0.4f;
+            baseObj.transform.localScale = new Vector3(0.8f, 0.4f, 0.8f);
+            PlaytestToolController.SetColor(baseObj, new Color(0.5f, 0.15f, 0.15f));
+
+            var pivot = new GameObject("BarrelPivot");
+            pivot.transform.SetParent(baseObj.transform);
+            pivot.transform.localPosition = Vector3.up * 0.4f;
+
+            var barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            barrel.name = "Barrel";
+            var barrelCollider = barrel.GetComponent<Collider>();
+            if (barrelCollider != null) Destroy(barrelCollider);
+            barrel.transform.SetParent(pivot.transform);
+            barrel.transform.localPosition = new Vector3(0f, 0f, 0.3f);
+            barrel.transform.localScale = new Vector3(0.15f, 0.15f, 0.6f);
+            PlaytestToolController.SetColor(barrel, new Color(0.3f, 0.1f, 0.1f));
+            pivotTransform = pivot.transform;
+            Debug.LogWarning("turret FBX not found, using primitive fallback");
+        }
 
         baseObj.SetActive(false);
         var behaviour = baseObj.AddComponent<TurretBehaviour>();
-        behaviour.Initialize(_turretDef, turretController, pivot.transform);
+        behaviour.Initialize(_turretDef, turretController, pivotTransform);
         baseObj.SetActive(true);
 
         _turrets.Add(behaviour);
@@ -424,18 +455,50 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
     {
         if (_turretGhost == null)
         {
-            _turretGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _turretGhost.name = "TurretGhost";
-            var col = _turretGhost.GetComponent<Collider>();
-            if (col != null) Destroy(col);
+            var turretPrefab = Resources.Load<GameObject>("Models/Turrets/Turret");
+            if (turretPrefab != null)
+            {
+                _turretGhost = Instantiate(turretPrefab);
+                _turretGhost.name = "TurretGhost";
+                foreach (var col in _turretGhost.GetComponentsInChildren<Collider>())
+                    DestroyImmediate(col);
+                // Apply transparent ghost material to all renderers
+                foreach (var r in _turretGhost.GetComponentsInChildren<Renderer>())
+                {
+                    var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    mat.SetFloat("_Surface", 1f); // Transparent
+                    mat.SetFloat("_Blend", 0f);   // Alpha
+                    mat.SetFloat("_AlphaClip", 0f);
+                    mat.SetOverrideTag("RenderType", "Transparent");
+                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    mat.color = new Color(0.8f, 0.3f, 0.3f, 0.4f);
+                    r.sharedMaterial = mat;
+                }
+            }
+            else
+            {
+                _turretGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                _turretGhost.name = "TurretGhost";
+                var col = _turretGhost.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+            }
         }
 
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel) + Vector3.up * 0.5f;
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
         _turretGhost.transform.position = worldPos;
-        _turretGhost.transform.localScale = new Vector3(
-            _turretDef.size.x * 0.9f * FactoryGrid.CellSize, 1f,
-            _turretDef.size.y * 0.9f * FactoryGrid.CellSize);
-        PlaytestToolController.SetColor(_turretGhost, new Color(0.8f, 0.3f, 0.3f, 0.4f));
+        _turretGhost.transform.rotation = Quaternion.Euler(0f, _turretRotation, 0f);
+        if (_turretGhost.GetComponent<Renderer>() != null)
+        {
+            // Primitive fallback -- scale to match grid
+            _turretGhost.transform.localScale = new Vector3(
+                _turretDef.size.x * 0.9f * FactoryGrid.CellSize, 1f,
+                _turretDef.size.y * 0.9f * FactoryGrid.CellSize);
+            PlaytestToolController.SetColor(_turretGhost, new Color(0.8f, 0.3f, 0.3f, 0.4f));
+        }
     }
 
     private void UpdateTurretGhostPorts(Vector2Int cell)
