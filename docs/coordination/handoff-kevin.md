@@ -1,45 +1,36 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-04 22:45
+Last updated: 2026-03-04 23:30
 Branch: kevin/main
-Last commit: 99a88d5 Add tower enemy population, interior fauna, fire rate buff
+Last commit: 624e704 Replace primitive visuals with Brackeys FBX models
 
 ## What was completed this session
 
-### J-019: Tower enemy population + interior fauna
-- `Scripts/World/TowerSpawnEntry.cs` (new): serializable data class with templateIndex and count
-- `Scripts/World/FloorChunkDefinition.cs`: added `spawnEntries` list field
-- `Scripts/Combat/EnemySpawner.cs`: renamed `_enemyPrefab` to `_enemyTemplates` (GameObject array), added `SpawnOne(int templateIndex)` method, kept `SpawnWave(count)` backward compatible (spawns from template 0)
-- `Scripts/Combat/WaveControllerBehaviour.cs`: added `_spawnEntries` field, SpawnWaveCoroutine iterates entries when set, falls back to existing behavior when null
-- `Scripts/Debug/PlaytestContext.cs`: added `InteriorFaunaDef` (FaunaDefinitionSO) and `InteriorEnemyTemplate` (GameObject) fields
-- `Scripts/Debug/PlaytestBootstrap.cs`: creates interior fauna SO ("tower_stalker": moveSpeed=5, maxHealth=30, attackDamage=15, attackRange=1.5, attackCooldown=0.8, sightRange=12, baseBravery=0.3), creates green capsule template, changed weapon fireRate from 2f to 4f
-- `Scripts/World/TowerController.cs`: added `ConsumeFragments()` (resets banked to 0, returns count consumed), `CompleteBoss()` no longer resets fragments
-- `Scripts/Debug/KevinPlaytestSetup.cs`: data-driven spawn entries per floor (F0-2: 3 grunts; F3-4: 3 grunts + 2 stalkers; F5: 2 grunts + 3 stalkers; F6: 4+4), fragment consumption on boss floor entry, both templates passed to spawners, cleanup for interior template
-- `Tests/Editor/EditMode/TowerControllerTests.cs`: 3 new tests (ConsumeFragments, zero-banked consume, consume-then-complete-boss), updated CompleteBoss test (no longer resets fragments), updated FragmentsResetEachCycle to use ConsumeFragments
-- `Scripts/Debug/JoePlaytestSetup.cs`: updated `_enemyPrefab` -> `_enemyTemplates` reflection
-- `Scripts/Editor/PlaytestSetup.cs`: updated serialized property for templates array
-
-### PR merged to master
-- PR #21 merged: includes tower wrappers, elevator UI, unified pickup, coordination docs, and J-019 enemy population
+### Replace primitive visuals with Brackeys FBX models
+- **Pistol viewmodel** (`PlaytestBootstrap.cs:350-393`): Loads `Pistol_01.prefab` from `Resources/Models/Pistol/`, parents to FPS camera, runtime-converts Built-in Standard materials to URP Lit (albedo, normal, metallic, occlusion, emission), strips colliders, sets Player layer recursively. Position: (0.15, -0.12, 0.394) relative to camera.
+- **Turret FBX** (`KevinPlaytestSetup.cs:382-450`): Loads `Turret.fbx` from `Resources/Models/Turrets/`, replaces cylinder+cube primitives. Gun head ("Turret" child) reparented under BarrelPivot for targeting rotation. Primitive fallback if FBX not found.
+- **Turret ghost** (`KevinPlaytestSetup.cs:455-500`): Ghost preview uses turret FBX model with transparent URP Lit materials instead of cube primitive.
+- **Placement rotation**: Both ghost and placed turret apply `_turretRotation` via `Quaternion.Euler(0, _turretRotation, 0)`.
+- **New assets**: `Assets/_Slopworks/Resources/Models/Pistol/Pistol_01.prefab`, `Assets/_Slopworks/Resources/Models/Turrets/Turret.fbx`
+- **Imported package**: `Assets/Sci-Fi Weapons/` (Brackeys sci-fi weapons pack with materials and textures)
+- **SetLayerRecursive helper** added to PlaytestBootstrap (line 494)
 
 ## What's in progress (not yet committed)
-None -- all committed and merged to master.
+None -- all committed.
 
 ## Next task to pick up
-- J-020 (Boss encounter): boss floor is already wired in KevinPlaytestSetup (fragment consumption, wave spawning, CompleteBoss on wave end). May just need tuning and verification.
-- J-021 (Tower playtest): end-to-end tower loop verification
-- J-024 (MasterPlaytest verification): must pass before any future master merge
-- J-027/J-028 (Turret ammo/targeting): lower priority polish
+- **Turret barrel orientation**: The FBX turret barrels face -X in local space. When the barrel pivot tracks enemies via LookRotation (+Z toward target), the barrels point sideways/backward. Need to apply a rotation offset -- likely 180 degrees from the pivot, not from center. The user indicated this is "a little more complicated than rotating just by 180 degrees" and needs the rotation to happen from the pivot point, not the model center.
+- After turret rotation is fixed: J-020 (Boss encounter), J-021 (Tower playtest), J-024 (MasterPlaytest verification)
 
 ## Blockers or decisions needed
-None.
+- Turret FBX barrel orientation needs manual testing to find the correct rotation offset. The FBX children have localEulerAngles ~(0, 270, 90) with forward = (-1, 0, 0).
 
 ## Test status
-- 891/891 EditMode tests passing (verified this session after all changes)
+- Tests not re-run this session (visual-only changes, no simulation logic modified). Previous count: 891/891 passing.
 
 ## Key context the next session needs
-- **EnemySpawner field renamed:** `_enemyPrefab` is now `_enemyTemplates` (GameObject[]). All reflection-based setup updated. Any new code creating EnemySpawners must use the array field.
-- **Fragment consumption moved to boss floor entry:** `TowerController.ConsumeFragments()` resets banked to 0 and is called in NavigateToFloor when entering boss floor. `CompleteBoss()` only increments tier now.
-- **Weapon fire rate doubled:** 4 rps (was 2). This is in PlaytestBootstrap.CreateDefinitions.
-- **Interior enemy template:** Green capsule, tower_stalker fauna def, created in PlaytestBootstrap.CreateInteriorEnemyTemplate(). Both templates cleaned up in KevinPlaytestSetup.OnDestroy.
-- **Spawn entries per floor:** Set on FloorChunkDefinition in CreateTowerEnemies(), passed to WaveControllerBehaviour via `_spawnEntries` reflection field.
+- **Brackeys assets location**: Raw files in `Brackeys Assets/` (not in Unity Assets), imported package at `Assets/Sci-Fi Weapons/`. Only the needed models are copied to `Assets/_Slopworks/Resources/Models/`.
+- **Pistol material conversion**: The Sci-Fi Weapons package uses Built-in Standard shader. PlaytestBootstrap converts to URP Lit at runtime, transferring all PBR textures. If the package materials are ever upgraded to URP (via Edit > Rendering > Materials converter), the runtime conversion can be removed.
+- **Turret FBX hierarchy**: Root has two children: "Turret" (gun head, higher Y bounds) and "Turret.001" (base, lower Y). Head is reparented under BarrelPivot with `worldPositionStays: true`. Both children share localScale ~0.044 and complex rotation from Blender FBX export.
+- **Turret barrel rotation is UNFINISHED**: The head tracks targets but barrels don't face the right direction during tracking. The placement rotation (R key) works correctly for ghost and placed model. The targeting rotation in TurretBehaviour.Update() needs an offset to account for the FBX model's barrel direction.
+- **Pre-existing NREs**: PlaytestToolController.UpdateBeltItemVisuals (line 1831) and OnGUI (line 342) have NREs that were present before this session's changes. They don't affect gameplay but spam the console.
