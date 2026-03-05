@@ -280,7 +280,9 @@ public static class PlaytestSetup
             // add EnemySpawner
             var spawner = waveObj.AddComponent<EnemySpawner>();
             var spawnerSo = new SerializedObject(spawner);
-            spawnerSo.FindProperty("_enemyPrefab").objectReferenceValue = enemyPrefab;
+            var templatesProp = spawnerSo.FindProperty("_enemyTemplates");
+            templatesProp.arraySize = 1;
+            templatesProp.GetArrayElementAtIndex(0).objectReferenceValue = enemyPrefab;
 
             var spawnPointsProp = spawnerSo.FindProperty("_spawnPoints");
             var points = spawnParent.GetComponentsInChildren<Transform>();

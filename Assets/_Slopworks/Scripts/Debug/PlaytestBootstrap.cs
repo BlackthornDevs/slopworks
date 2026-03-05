@@ -28,6 +28,7 @@ public class PlaytestBootstrap
         CreatePlayer(ctx);
         WirePlayerCombat(ctx);
         CreateEnemyTemplate(ctx);
+        CreateInteriorEnemyTemplate(ctx);
         CreateHUD(ctx);
         _host.StartCoroutine(PreloadInventory(ctx));
         return ctx;
@@ -185,7 +186,7 @@ public class PlaytestBootstrap
         ctx.WeaponDef = ScriptableObject.CreateInstance<WeaponDefinitionSO>();
         ctx.WeaponDef.weaponId = "test_rifle";
         ctx.WeaponDef.damage = 25f;
-        ctx.WeaponDef.fireRate = 2f;
+        ctx.WeaponDef.fireRate = 4f;
         ctx.WeaponDef.range = 50f;
         ctx.WeaponDef.damageType = DamageType.Kinetic;
         ctx.WeaponDef.magazineSize = 12;
@@ -208,6 +209,23 @@ public class PlaytestBootstrap
         ctx.FaunaDef.strafeRadius = 3f;
         ctx.FaunaDef.baseBravery = 0.5f;
         ctx.RuntimeSOs.Add(ctx.FaunaDef);
+
+        ctx.InteriorFaunaDef = ScriptableObject.CreateInstance<FaunaDefinitionSO>();
+        ctx.InteriorFaunaDef.faunaId = "tower_stalker";
+        ctx.InteriorFaunaDef.maxHealth = 30f;
+        ctx.InteriorFaunaDef.moveSpeed = 5f;
+        ctx.InteriorFaunaDef.attackDamage = 15f;
+        ctx.InteriorFaunaDef.attackRange = 1.5f;
+        ctx.InteriorFaunaDef.attackCooldown = 0.8f;
+        ctx.InteriorFaunaDef.sightRange = 12f;
+        ctx.InteriorFaunaDef.sightAngle = 120f;
+        ctx.InteriorFaunaDef.hearingRange = 8f;
+        ctx.InteriorFaunaDef.attackDamageType = DamageType.Kinetic;
+        ctx.InteriorFaunaDef.alertRange = 20f;
+        ctx.InteriorFaunaDef.strafeSpeed = 2.5f;
+        ctx.InteriorFaunaDef.strafeRadius = 3f;
+        ctx.InteriorFaunaDef.baseBravery = 0.3f;
+        ctx.RuntimeSOs.Add(ctx.InteriorFaunaDef);
 
         ctx.EnemyDiedEvent = ScriptableObject.CreateInstance<GameEventSO>();
         ctx.RuntimeSOs.Add(ctx.EnemyDiedEvent);
@@ -379,6 +397,37 @@ public class PlaytestBootstrap
         ctx.EnemyTemplate.AddComponent<EnemyKnockback>();
 
         Debug.Log("playtest: enemy template created (inactive)");
+    }
+
+    private void CreateInteriorEnemyTemplate(PlaytestContext ctx)
+    {
+        var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+        ctx.InteriorEnemyTemplate = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        ctx.InteriorEnemyTemplate.name = "InteriorEnemyTemplate";
+        ctx.InteriorEnemyTemplate.layer = PhysicsLayers.Fauna;
+        PlaytestToolController.SetColor(ctx.InteriorEnemyTemplate, new Color(0.2f, 0.8f, 0.3f));
+
+        ctx.InteriorEnemyTemplate.SetActive(false);
+
+        var rb = ctx.InteriorEnemyTemplate.AddComponent<Rigidbody>();
+        rb.freezeRotation = true;
+
+        var agent = ctx.InteriorEnemyTemplate.AddComponent<UnityEngine.AI.NavMeshAgent>();
+        agent.speed = ctx.InteriorFaunaDef.moveSpeed;
+        agent.stoppingDistance = ctx.InteriorFaunaDef.attackRange * 0.8f;
+
+        var health = ctx.InteriorEnemyTemplate.AddComponent<HealthBehaviour>();
+        typeof(HealthBehaviour).GetField("_maxHealth", flags)?.SetValue(health, ctx.InteriorFaunaDef.maxHealth);
+
+        var controller = ctx.InteriorEnemyTemplate.AddComponent<FaunaController>();
+        typeof(FaunaController).GetField("_def", flags)?.SetValue(controller, ctx.InteriorFaunaDef);
+        typeof(FaunaController).GetField("_onDeathEvent", flags)?.SetValue(controller, ctx.EnemyDiedEvent);
+
+        ctx.InteriorEnemyTemplate.AddComponent<EnemyHitFlash>();
+        ctx.InteriorEnemyTemplate.AddComponent<EnemyKnockback>();
+
+        Debug.Log("playtest: interior enemy template created (inactive, green stalker)");
     }
 
     private void CreateHUD(PlaytestContext ctx)

@@ -484,7 +484,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         waveObj.SetActive(false);
 
         _enemySpawner = waveObj.AddComponent<EnemySpawner>();
-        typeof(EnemySpawner).GetField("_enemyPrefab", flags)?.SetValue(_enemySpawner, _ctx.EnemyTemplate);
+        typeof(EnemySpawner).GetField("_enemyTemplates", flags)?.SetValue(_enemySpawner, new[] { _ctx.EnemyTemplate });
         typeof(EnemySpawner).GetField("_spawnPoints", flags)?.SetValue(_enemySpawner, spawnTransforms);
 
         var waves = new List<WaveDefinition>

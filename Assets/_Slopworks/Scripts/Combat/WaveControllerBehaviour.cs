@@ -11,6 +11,7 @@ public class WaveControllerBehaviour : NetworkBehaviour
     [SerializeField] private GameEventSO _waveEndedEvent;
     [SerializeField] private GameEventSO _enemyDiedEvent;
     [SerializeField] private float _autoStartDelay = -1f;
+    [SerializeField] private List<TowerSpawnEntry> _spawnEntries;
 
     private WaveController _controller;
     private ThreatMeter _threat;
@@ -89,13 +90,32 @@ public class WaveControllerBehaviour : NetworkBehaviour
         _spawnInProgress = true;
         int spawnCount = _controller.EnemiesRemaining;
 
-        for (int i = 0; i < spawnCount; i++)
+        if (_spawnEntries != null && _spawnEntries.Count > 0)
         {
-            if (_spawner != null)
-                _spawner.SpawnWave(1);
+            int spawned = 0;
+            foreach (var entry in _spawnEntries)
+            {
+                for (int i = 0; i < entry.count; i++)
+                {
+                    if (_spawner != null)
+                        _spawner.SpawnOne(entry.templateIndex);
 
-            if (def.spawnDelay > 0f && i < spawnCount - 1)
-                yield return new WaitForSeconds(def.spawnDelay);
+                    spawned++;
+                    if (def.spawnDelay > 0f && spawned < spawnCount)
+                        yield return new WaitForSeconds(def.spawnDelay);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < spawnCount; i++)
+            {
+                if (_spawner != null)
+                    _spawner.SpawnWave(1);
+
+                if (def.spawnDelay > 0f && i < spawnCount - 1)
+                    yield return new WaitForSeconds(def.spawnDelay);
+            }
         }
 
         _spawnInProgress = false;

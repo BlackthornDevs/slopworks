@@ -252,12 +252,12 @@ public class TowerControllerTests
     }
 
     [Test]
-    public void CompleteBossResetsBankedFragments()
+    public void CompleteBossDoesNotResetBankedFragments()
     {
         BankFragments(4);
         _tower.CompleteBoss();
 
-        Assert.AreEqual(0, _tower.BankedFragments);
+        Assert.AreEqual(4, _tower.BankedFragments);
     }
 
     [Test]
@@ -293,16 +293,52 @@ public class TowerControllerTests
     }
 
     [Test]
-    public void FragmentsResetEachCycle()
+    public void FragmentsResetEachCycleViaConsume()
     {
         BankFragments(4);
         Assert.IsTrue(_tower.UnlockBoss(0));
 
+        _tower.ConsumeFragments();
         _tower.CompleteBoss();
         Assert.IsFalse(_tower.UnlockBoss(0));
 
         BankFragments(4);
         Assert.IsTrue(_tower.UnlockBoss(0));
+    }
+
+    // -- fragment consumption --
+
+    [Test]
+    public void ConsumeFragmentsResetsBankedToZero()
+    {
+        BankFragments(3);
+        int consumed = _tower.ConsumeFragments();
+
+        Assert.AreEqual(3, consumed);
+        Assert.AreEqual(0, _tower.BankedFragments);
+    }
+
+    [Test]
+    public void ConsumeFragmentsWithZeroBanked()
+    {
+        _tower.StartRun(_building);
+        int consumed = _tower.ConsumeFragments();
+
+        Assert.AreEqual(0, consumed);
+        Assert.AreEqual(0, _tower.BankedFragments);
+    }
+
+    [Test]
+    public void ConsumeThenCompleteBossTiersUpWithZeroFragments()
+    {
+        BankFragments(4);
+        _tower.ConsumeFragments();
+        _tower.StartRun(_building);
+        _tower.CompleteBoss();
+
+        Assert.AreEqual(2, _tower.CurrentTier);
+        Assert.AreEqual(0, _tower.BankedFragments);
+        Assert.IsFalse(_tower.IsRunActive);
     }
 
     // -- edge cases --

@@ -12,4 +12,5 @@ public class FloorChunkDefinition
     public List<Vector3> spawnPoints = new List<Vector3>();
     public List<Vector3> lootNodes = new List<Vector3>();
     public List<int> stairConnections = new List<int>();
+    public List<TowerSpawnEntry> spawnEntries = new List<TowerSpawnEntry>();
 }

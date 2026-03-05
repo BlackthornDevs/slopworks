@@ -660,7 +660,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         waveObj.SetActive(false);
 
         _enemySpawner = waveObj.AddComponent<EnemySpawner>();
-        typeof(EnemySpawner).GetField("_enemyPrefab", flags)?.SetValue(_enemySpawner, _ctx.EnemyTemplate);
+        typeof(EnemySpawner).GetField("_enemyTemplates", flags)?.SetValue(_enemySpawner, new[] { _ctx.EnemyTemplate });
         typeof(EnemySpawner).GetField("_spawnPoints", flags)?.SetValue(_enemySpawner, spawnTransforms);
 
         var waves = new List<WaveDefinition>
@@ -690,7 +690,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         waveObj.SetActive(false);
 
         _buildingEnemySpawner = waveObj.AddComponent<EnemySpawner>();
-        typeof(EnemySpawner).GetField("_enemyPrefab", flags)?.SetValue(_buildingEnemySpawner, _ctx.EnemyTemplate);
+        typeof(EnemySpawner).GetField("_enemyTemplates", flags)?.SetValue(_buildingEnemySpawner, new[] { _ctx.EnemyTemplate });
         typeof(EnemySpawner).GetField("_spawnPoints", flags)?.SetValue(_buildingEnemySpawner, spawnTransforms);
 
         var waves = new List<WaveDefinition>
@@ -915,19 +915,65 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
     private void CreateTowerEnemies()
     {
         var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+        var templates = new[] { _ctx.EnemyTemplate, _ctx.InteriorEnemyTemplate };
+
+        // Set spawn entries per floor on FloorChunkDefinition
+        for (int i = 0; i < _towerBuildingDef.chunks.Count; i++)
+        {
+            var chunk = _towerBuildingDef.chunks[i];
+            if (i <= 2)
+            {
+                // F0-F2: 3 grunts
+                chunk.spawnEntries = new List<TowerSpawnEntry>
+                {
+                    new TowerSpawnEntry { templateIndex = 0, count = 3 }
+                };
+            }
+            else if (i <= 4)
+            {
+                // F3-F4: 3 grunts + 2 stalkers
+                chunk.spawnEntries = new List<TowerSpawnEntry>
+                {
+                    new TowerSpawnEntry { templateIndex = 0, count = 3 },
+                    new TowerSpawnEntry { templateIndex = 1, count = 2 }
+                };
+            }
+            else if (i == 5)
+            {
+                // F5: 2 grunts + 3 stalkers
+                chunk.spawnEntries = new List<TowerSpawnEntry>
+                {
+                    new TowerSpawnEntry { templateIndex = 0, count = 2 },
+                    new TowerSpawnEntry { templateIndex = 1, count = 3 }
+                };
+            }
+            else
+            {
+                // F6 (boss): 4 grunts + 4 stalkers
+                chunk.spawnEntries = new List<TowerSpawnEntry>
+                {
+                    new TowerSpawnEntry { templateIndex = 0, count = 4 },
+                    new TowerSpawnEntry { templateIndex = 1, count = 4 }
+                };
+            }
+        }
 
         for (int i = 0; i < _towerChunkLayouts.Count; i++)
         {
             var layout = _towerChunkLayouts[i];
+            var chunk = _towerBuildingDef.chunks[i];
             bool isBoss = i == _towerBuildingDef.bossChunkIndex;
 
-            int enemyCount = i < 3 ? 3 : (i < 6 ? 5 : 8);
+            // Total enemy count = sum of all entry counts
+            int enemyCount = 0;
+            foreach (var entry in chunk.spawnEntries)
+                enemyCount += entry.count;
 
             var waveObj = new GameObject($"TowerWaveController_F{i}");
             waveObj.SetActive(false);
 
             var spawner = waveObj.AddComponent<EnemySpawner>();
-            typeof(EnemySpawner).GetField("_enemyPrefab", flags)?.SetValue(spawner, _ctx.EnemyTemplate);
+            typeof(EnemySpawner).GetField("_enemyTemplates", flags)?.SetValue(spawner, templates);
             typeof(EnemySpawner).GetField("_spawnPoints", flags)?.SetValue(spawner, layout.EnemySpawnPoints);
 
             var waves = new List<WaveDefinition>
@@ -940,6 +986,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             typeof(WaveControllerBehaviour).GetField("_spawner", flags)?.SetValue(wc, spawner);
             typeof(WaveControllerBehaviour).GetField("_enemyDiedEvent", flags)?.SetValue(wc, _ctx.EnemyDiedEvent);
             typeof(WaveControllerBehaviour).GetField("_autoStartDelay", flags)?.SetValue(wc, -1f);
+            typeof(WaveControllerBehaviour).GetField("_spawnEntries", flags)?.SetValue(wc, chunk.spawnEntries);
 
             waveObj.SetActive(true);
 
@@ -947,7 +994,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             _towerEnemySpawners.Add(spawner);
         }
 
-        Debug.Log("playtest: tower enemies created (7 floors with wave controllers)");
+        Debug.Log("playtest: tower enemies created (7 floors with data-driven spawn entries)");
     }
 
     private void StartTowerRun()
@@ -1014,6 +1061,15 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             {
                 Debug.Log($"tower: floor {floorIndex} is boss floor, locked");
                 return;
+            }
+
+            // Consume fragments on boss floor entry
+            if (isBoss)
+            {
+                _towerController.ConsumeFragments();
+                if (carriedFrags > 0)
+                    _ctx.PlayerInventory.TryRemove(PlaytestContext.KeyFragment, carriedFrags);
+                Debug.Log($"tower: consumed {carriedFrags} carried + banked fragments on boss floor entry");
             }
 
             if (floorIndex < _towerWaveControllers.Count)
@@ -1338,8 +1394,10 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             }
         }
 
-        // Destroy enemy template (only in standalone mode)
+        // Destroy enemy templates (only in standalone mode)
         if (_isStandalone && _ctx != null && _ctx.EnemyTemplate != null)
             DestroyImmediate(_ctx.EnemyTemplate);
+        if (_isStandalone && _ctx != null && _ctx.InteriorEnemyTemplate != null)
+            DestroyImmediate(_ctx.InteriorEnemyTemplate);
     }
 }

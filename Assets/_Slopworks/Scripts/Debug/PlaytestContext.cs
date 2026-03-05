@@ -46,8 +46,10 @@ public class PlaytestContext
     // Combat
     public WeaponDefinitionSO WeaponDef;
     public FaunaDefinitionSO FaunaDef;
+    public FaunaDefinitionSO InteriorFaunaDef;
     public GameEventSO EnemyDiedEvent;
     public GameObject EnemyTemplate;
+    public GameObject InteriorEnemyTemplate;
 
     // Cleanup list -- all runtime SOs, caller destroys in OnDestroy
     public List<ScriptableObject> RuntimeSOs;

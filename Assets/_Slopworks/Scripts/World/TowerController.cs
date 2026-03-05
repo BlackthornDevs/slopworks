@@ -90,12 +90,23 @@ public class TowerController
     }
 
     /// <summary>
-    /// Boss defeated. Increment tier, reset banked fragments, start new cycle.
+    /// Consume all banked fragments. Called when entering the boss floor.
+    /// Returns the number of fragments consumed.
+    /// </summary>
+    public int ConsumeFragments()
+    {
+        int consumed = _bankedFragments;
+        _bankedFragments = 0;
+        return consumed;
+    }
+
+    /// <summary>
+    /// Boss defeated. Increment tier, end run.
+    /// Fragment reset happens via ConsumeFragments on boss floor entry, not here.
     /// </summary>
     public void CompleteBoss()
     {
         _currentTier++;
-        _bankedFragments = 0;
         _isRunActive = false;
     }
 
