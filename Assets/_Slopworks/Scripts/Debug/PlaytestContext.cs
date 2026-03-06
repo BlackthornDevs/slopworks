@@ -36,6 +36,7 @@ public class PlaytestContext
     public ItemDefinitionSO SignalDecoderDef;
     public ItemDefinitionSO ReinforcedPlatingDef;
     public ItemDefinitionSO KeyFragmentDef;
+    public ItemDefinitionSO BossBlueprintDef;
 
     // Player
     public GameObject PlayerObject;
@@ -50,6 +51,8 @@ public class PlaytestContext
     public GameEventSO EnemyDiedEvent;
     public GameObject EnemyTemplate;
     public GameObject InteriorEnemyTemplate;
+    public FaunaDefinitionSO BossFaunaDef;
+    public GameObject BossEnemyTemplate;
 
     // Cleanup list -- all runtime SOs, caller destroys in OnDestroy
     public List<ScriptableObject> RuntimeSOs;
@@ -63,6 +66,7 @@ public class PlaytestContext
     public const string SignalDecoder = "signal_decoder";
     public const string ReinforcedPlating = "reinforced_plating";
     public const string KeyFragment = "key_fragment";
+    public const string BossBlueprint = "boss_blueprint";
     public const string SmeltIronRecipeId = "smelt_iron";
     public const string TurretAmmoRecipeId = "craft_turret_ammo";
     public const string SmelterType = "smelter";

@@ -29,6 +29,7 @@ public class PlaytestBootstrap
         WirePlayerCombat(ctx);
         CreateEnemyTemplate(ctx);
         CreateInteriorEnemyTemplate(ctx);
+        CreateBossEnemyTemplate(ctx);
         CreateHUD(ctx);
         _host.StartCoroutine(PreloadInventory(ctx));
         return ctx;
@@ -164,6 +165,14 @@ public class PlaytestBootstrap
         ctx.KeyFragmentDef.maxStackSize = 16;
         ctx.RuntimeSOs.Add(ctx.KeyFragmentDef);
 
+        ctx.BossBlueprintDef = ScriptableObject.CreateInstance<ItemDefinitionSO>();
+        ctx.BossBlueprintDef.itemId = PlaytestContext.BossBlueprint;
+        ctx.BossBlueprintDef.displayName = "Boss Blueprint";
+        ctx.BossBlueprintDef.category = ItemCategory.Component;
+        ctx.BossBlueprintDef.isStackable = true;
+        ctx.BossBlueprintDef.maxStackSize = 16;
+        ctx.RuntimeSOs.Add(ctx.BossBlueprintDef);
+
         ctx.SmeltRecipe = ScriptableObject.CreateInstance<RecipeSO>();
         ctx.SmeltRecipe.recipeId = PlaytestContext.SmeltIronRecipeId;
         ctx.SmeltRecipe.displayName = "Smelt Iron";
@@ -227,6 +236,23 @@ public class PlaytestBootstrap
         ctx.InteriorFaunaDef.baseBravery = 0.3f;
         ctx.RuntimeSOs.Add(ctx.InteriorFaunaDef);
 
+        ctx.BossFaunaDef = ScriptableObject.CreateInstance<FaunaDefinitionSO>();
+        ctx.BossFaunaDef.faunaId = "tower_boss";
+        ctx.BossFaunaDef.maxHealth = 300f;
+        ctx.BossFaunaDef.moveSpeed = 2.5f;
+        ctx.BossFaunaDef.attackDamage = 25f;
+        ctx.BossFaunaDef.attackRange = 3f;
+        ctx.BossFaunaDef.attackCooldown = 0.8f;
+        ctx.BossFaunaDef.sightRange = 30f;
+        ctx.BossFaunaDef.sightAngle = 120f;
+        ctx.BossFaunaDef.hearingRange = 15f;
+        ctx.BossFaunaDef.attackDamageType = DamageType.Kinetic;
+        ctx.BossFaunaDef.alertRange = 30f;
+        ctx.BossFaunaDef.strafeSpeed = 2f;
+        ctx.BossFaunaDef.strafeRadius = 4f;
+        ctx.BossFaunaDef.baseBravery = 1.0f;
+        ctx.RuntimeSOs.Add(ctx.BossFaunaDef);
+
         ctx.EnemyDiedEvent = ScriptableObject.CreateInstance<GameEventSO>();
         ctx.RuntimeSOs.Add(ctx.EnemyDiedEvent);
     }
@@ -242,7 +268,7 @@ public class PlaytestBootstrap
         itemsField?.SetValue(itemRegistry, new[] {
             ctx.IronOreDef, ctx.IronIngotDef, ctx.IronScrapDef, ctx.TurretAmmoDef,
             ctx.PowerCellDef, ctx.SignalDecoderDef, ctx.ReinforcedPlatingDef,
-            ctx.KeyFragmentDef
+            ctx.KeyFragmentDef, ctx.BossBlueprintDef
         });
 
         var recipeRegistry = registryObj.AddComponent<RecipeRegistry>();
@@ -288,6 +314,7 @@ public class PlaytestBootstrap
         var rb = player.AddComponent<Rigidbody>();
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
 
         // Repurpose existing Main Camera as isometric camera
         var isoCam = Camera.main;
@@ -347,11 +374,77 @@ public class PlaytestBootstrap
         if (camObj.GetComponent<CameraShake>() == null)
             camObj.AddComponent<CameraShake>();
 
-        // Muzzle flash as child of camera
-        var muzzleObj = new GameObject("MuzzleFlashPoint");
-        muzzleObj.transform.SetParent(camObj.transform);
-        muzzleObj.transform.localPosition = new Vector3(0f, -0.1f, 0.5f);
-        muzzleObj.AddComponent<MuzzleFlash>();
+        // Weapon viewmodel
+        var pistolPrefab = Resources.Load<GameObject>("Models/Pistol/Pistol_01");
+        Transform muzzlePoint = camObj.transform; // fallback
+        if (pistolPrefab != null)
+        {
+            var pistol = Object.Instantiate(pistolPrefab, camObj.transform);
+            pistol.name = "WeaponModel";
+            pistol.transform.localPosition = new Vector3(0.15f, -0.12f, 0.394f);
+            pistol.transform.localRotation = Quaternion.identity;
+            pistol.transform.localScale = Vector3.one;
+            foreach (var col in pistol.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(col);
+            SetLayerRecursive(pistol, PhysicsLayers.Player);
+
+            // Replace Built-in Standard materials with URP Lit
+            var urpShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (urpShader != null)
+            {
+                foreach (var r in pistol.GetComponentsInChildren<Renderer>())
+                {
+                    var oldMats = r.sharedMaterials;
+                    var newMats = new Material[oldMats.Length];
+                    for (int i = 0; i < oldMats.Length; i++)
+                    {
+                        var src = oldMats[i];
+                        var mat = new Material(urpShader);
+                        if (src != null)
+                        {
+                            mat.SetColor("_BaseColor", src.HasProperty("_Color") ? src.color : Color.gray);
+                            if (src.HasProperty("_MainTex") && src.mainTexture != null)
+                                mat.SetTexture("_BaseMap", src.mainTexture);
+                            if (src.HasProperty("_BumpMap") && src.GetTexture("_BumpMap") != null)
+                                mat.SetTexture("_BumpMap", src.GetTexture("_BumpMap"));
+                            if (src.HasProperty("_MetallicGlossMap") && src.GetTexture("_MetallicGlossMap") != null)
+                            {
+                                mat.SetTexture("_MetallicGlossMap", src.GetTexture("_MetallicGlossMap"));
+                                mat.SetFloat("_Metallic", 1f);
+                                mat.SetFloat("_Smoothness", src.HasProperty("_Glossiness") ? src.GetFloat("_Glossiness") : 0.5f);
+                            }
+                            if (src.HasProperty("_OcclusionMap") && src.GetTexture("_OcclusionMap") != null)
+                                mat.SetTexture("_OcclusionMap", src.GetTexture("_OcclusionMap"));
+                            if (src.HasProperty("_EmissionMap") && src.GetTexture("_EmissionMap") != null)
+                            {
+                                mat.SetTexture("_EmissionMap", src.GetTexture("_EmissionMap"));
+                                mat.EnableKeyword("_EMISSION");
+                                mat.SetColor("_EmissionColor", src.HasProperty("_EmissionColor") ? src.GetColor("_EmissionColor") : Color.black);
+                            }
+                        }
+                        newMats[i] = mat;
+                    }
+                    r.sharedMaterials = newMats;
+                }
+            }
+
+            // Place muzzle flash at barrel tip
+            var muzzleObj = new GameObject("MuzzleFlashPoint");
+            muzzleObj.transform.SetParent(pistol.transform);
+            muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.14f);
+            muzzleObj.AddComponent<MuzzleFlash>();
+            muzzlePoint = muzzleObj.transform;
+            Debug.Log("playtest: pistol viewmodel attached to camera");
+        }
+        else
+        {
+            // Fallback: muzzle flash on camera
+            var muzzleObj = new GameObject("MuzzleFlashPoint");
+            muzzleObj.transform.SetParent(camObj.transform);
+            muzzleObj.transform.localPosition = new Vector3(0f, -0.1f, 0.5f);
+            muzzleObj.AddComponent<MuzzleFlash>();
+            Debug.LogWarning("playtest: pistol prefab not found, using invisible weapon");
+        }
 
         // WeaponBehaviour -- must set _weaponDefinition before Awake creates WeaponController
         ctx.PlayerObject.SetActive(false);
@@ -430,6 +523,40 @@ public class PlaytestBootstrap
         Debug.Log("playtest: interior enemy template created (inactive, green stalker)");
     }
 
+    private void CreateBossEnemyTemplate(PlaytestContext ctx)
+    {
+        var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+        ctx.BossEnemyTemplate = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        ctx.BossEnemyTemplate.name = "BossEnemyTemplate";
+        ctx.BossEnemyTemplate.layer = PhysicsLayers.Fauna;
+        ctx.BossEnemyTemplate.transform.localScale = new Vector3(2.5f, 2.5f, 2.5f);
+        PlaytestToolController.SetColor(ctx.BossEnemyTemplate, new Color(0.5f, 0.1f, 0.6f));
+
+        ctx.BossEnemyTemplate.SetActive(false);
+
+        var rb = ctx.BossEnemyTemplate.AddComponent<Rigidbody>();
+        rb.freezeRotation = true;
+
+        var agent = ctx.BossEnemyTemplate.AddComponent<UnityEngine.AI.NavMeshAgent>();
+        agent.speed = ctx.BossFaunaDef.moveSpeed;
+        agent.stoppingDistance = ctx.BossFaunaDef.attackRange * 0.8f;
+        agent.radius = 1.0f;
+        agent.height = 4.0f;
+
+        var health = ctx.BossEnemyTemplate.AddComponent<HealthBehaviour>();
+        typeof(HealthBehaviour).GetField("_maxHealth", flags)?.SetValue(health, ctx.BossFaunaDef.maxHealth);
+
+        var controller = ctx.BossEnemyTemplate.AddComponent<FaunaController>();
+        typeof(FaunaController).GetField("_def", flags)?.SetValue(controller, ctx.BossFaunaDef);
+        typeof(FaunaController).GetField("_onDeathEvent", flags)?.SetValue(controller, ctx.EnemyDiedEvent);
+
+        ctx.BossEnemyTemplate.AddComponent<EnemyHitFlash>();
+        ctx.BossEnemyTemplate.AddComponent<EnemyKnockback>();
+
+        Debug.Log("playtest: boss enemy template created (inactive, purple, 2.5x scale)");
+    }
+
     private void CreateHUD(PlaytestContext ctx)
     {
         var canvasObj = new GameObject("HUDCanvas");
@@ -458,5 +585,12 @@ public class PlaytestBootstrap
         ctx.PlayerInventory.TryAdd(ItemInstance.Create(PlaytestContext.IronScrap), 10);
         ctx.PlayerInventory.TryAdd(ItemInstance.Create(PlaytestContext.IronOre), 5);
         Debug.Log("playtest: preloaded items into inventory");
+    }
+
+    private static void SetLayerRecursive(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+        foreach (Transform child in obj.transform)
+            SetLayerRecursive(child.gameObject, layer);
     }
 }

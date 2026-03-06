@@ -23,18 +23,22 @@ public class BuildingExitTrigger : MonoBehaviour
         if (_exitDestination == null)
             return;
 
-        // Teleport player
-        var cc = other.GetComponent<CharacterController>();
-        if (cc != null)
+        // Teleport player -- use Rigidbody (player has no CharacterController)
+        var rb = other.GetComponentInParent<Rigidbody>();
+        Transform playerRoot = rb != null ? rb.transform : other.transform.root;
+
+        if (rb != null)
         {
-            cc.enabled = false;
-            other.transform.position = _exitDestination.position;
-            cc.enabled = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.position = _exitDestination.position;
         }
-        else
-        {
-            other.transform.position = _exitDestination.position;
-        }
+        playerRoot.position = _exitDestination.position;
+        Physics.SyncTransforms();
+
+        // Reset child local positions (teleport displaces compound collider children)
+        foreach (Transform child in playerRoot)
+            child.localPosition = Vector3.zero;
 
         PlaytestLogger.Log("event: exited building portal");
         Debug.Log("building: player exited warehouse");

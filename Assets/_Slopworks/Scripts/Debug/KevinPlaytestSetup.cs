@@ -384,33 +384,64 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
         var turretController = (TurretController)result.SimulationObject;
 
-        var baseObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        baseObj.name = $"Turret_{cell.x}_{cell.y}";
-        var defaultCollider = baseObj.GetComponent<Collider>();
-        if (defaultCollider != null) Destroy(defaultCollider);
-        baseObj.layer = PhysicsLayers.Interactable;
-        baseObj.AddComponent<BoxCollider>();
+        var turretPrefab = Resources.Load<GameObject>("Models/Turrets/Turret");
+        GameObject baseObj;
+        Transform pivotTransform;
 
-        baseObj.transform.position = worldPos + Vector3.up * 0.4f;
-        baseObj.transform.localScale = new Vector3(0.8f, 0.4f, 0.8f);
-        PlaytestToolController.SetColor(baseObj, new Color(0.5f, 0.15f, 0.15f));
+        if (turretPrefab != null)
+        {
+            baseObj = Instantiate(turretPrefab);
+            baseObj.name = $"Turret_{cell.x}_{cell.y}";
+            baseObj.transform.position = worldPos;
+            baseObj.transform.rotation = Quaternion.Euler(0f, _turretRotation, 0f);
 
-        var pivot = new GameObject("BarrelPivot");
-        pivot.transform.SetParent(baseObj.transform);
-        pivot.transform.localPosition = Vector3.up * 0.4f;
+            foreach (var col in baseObj.GetComponentsInChildren<Collider>())
+                DestroyImmediate(col);
+            baseObj.layer = PhysicsLayers.Interactable;
+            baseObj.AddComponent<BoxCollider>();
 
-        var barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        barrel.name = "Barrel";
-        var barrelCollider = barrel.GetComponent<Collider>();
-        if (barrelCollider != null) Destroy(barrelCollider);
-        barrel.transform.SetParent(pivot.transform);
-        barrel.transform.localPosition = new Vector3(0f, 0f, 0.3f);
-        barrel.transform.localScale = new Vector3(0.15f, 0.15f, 0.6f);
-        PlaytestToolController.SetColor(barrel, new Color(0.3f, 0.1f, 0.1f));
+            // "Turret" child is the gun head, "Turret.001" is the base
+            // Head mesh has barrels along -Z; wrap in pivot so LookRotation +Z = barrels forward
+            var head = baseObj.transform.Find("Turret");
+            var pivot = new GameObject("BarrelPivot");
+            pivot.transform.SetParent(baseObj.transform);
+            pivot.transform.localPosition = new Vector3(0f, 0.4f, 0f);
+            if (head != null)
+                head.SetParent(pivot.transform, true);
+            pivotTransform = pivot.transform;
+        }
+        else
+        {
+            // Fallback to primitives if FBX not found
+            baseObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            baseObj.name = $"Turret_{cell.x}_{cell.y}";
+            var defaultCollider = baseObj.GetComponent<Collider>();
+            if (defaultCollider != null) Destroy(defaultCollider);
+            baseObj.layer = PhysicsLayers.Interactable;
+            baseObj.AddComponent<BoxCollider>();
+            baseObj.transform.position = worldPos + Vector3.up * 0.4f;
+            baseObj.transform.localScale = new Vector3(0.8f, 0.4f, 0.8f);
+            PlaytestToolController.SetColor(baseObj, new Color(0.5f, 0.15f, 0.15f));
+
+            var pivot = new GameObject("BarrelPivot");
+            pivot.transform.SetParent(baseObj.transform);
+            pivot.transform.localPosition = Vector3.up * 0.4f;
+
+            var barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            barrel.name = "Barrel";
+            var barrelCollider = barrel.GetComponent<Collider>();
+            if (barrelCollider != null) Destroy(barrelCollider);
+            barrel.transform.SetParent(pivot.transform);
+            barrel.transform.localPosition = new Vector3(0f, 0f, 0.3f);
+            barrel.transform.localScale = new Vector3(0.15f, 0.15f, 0.6f);
+            PlaytestToolController.SetColor(barrel, new Color(0.3f, 0.1f, 0.1f));
+            pivotTransform = pivot.transform;
+            Debug.LogWarning("turret FBX not found, using primitive fallback");
+        }
 
         baseObj.SetActive(false);
         var behaviour = baseObj.AddComponent<TurretBehaviour>();
-        behaviour.Initialize(_turretDef, turretController, pivot.transform);
+        behaviour.Initialize(_turretDef, turretController, pivotTransform);
         baseObj.SetActive(true);
 
         _turrets.Add(behaviour);
@@ -424,18 +455,50 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
     {
         if (_turretGhost == null)
         {
-            _turretGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _turretGhost.name = "TurretGhost";
-            var col = _turretGhost.GetComponent<Collider>();
-            if (col != null) Destroy(col);
+            var turretPrefab = Resources.Load<GameObject>("Models/Turrets/Turret");
+            if (turretPrefab != null)
+            {
+                _turretGhost = Instantiate(turretPrefab);
+                _turretGhost.name = "TurretGhost";
+                foreach (var col in _turretGhost.GetComponentsInChildren<Collider>())
+                    DestroyImmediate(col);
+                // Apply transparent ghost material to all renderers
+                foreach (var r in _turretGhost.GetComponentsInChildren<Renderer>())
+                {
+                    var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    mat.SetFloat("_Surface", 1f); // Transparent
+                    mat.SetFloat("_Blend", 0f);   // Alpha
+                    mat.SetFloat("_AlphaClip", 0f);
+                    mat.SetOverrideTag("RenderType", "Transparent");
+                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    mat.color = new Color(0.8f, 0.3f, 0.3f, 0.4f);
+                    r.sharedMaterial = mat;
+                }
+            }
+            else
+            {
+                _turretGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                _turretGhost.name = "TurretGhost";
+                var col = _turretGhost.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+            }
         }
 
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel) + Vector3.up * 0.5f;
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
         _turretGhost.transform.position = worldPos;
-        _turretGhost.transform.localScale = new Vector3(
-            _turretDef.size.x * 0.9f * FactoryGrid.CellSize, 1f,
-            _turretDef.size.y * 0.9f * FactoryGrid.CellSize);
-        PlaytestToolController.SetColor(_turretGhost, new Color(0.8f, 0.3f, 0.3f, 0.4f));
+        _turretGhost.transform.rotation = Quaternion.Euler(0f, _turretRotation, 0f);
+        if (_turretGhost.GetComponent<Renderer>() != null)
+        {
+            // Primitive fallback -- scale to match grid
+            _turretGhost.transform.localScale = new Vector3(
+                _turretDef.size.x * 0.9f * FactoryGrid.CellSize, 1f,
+                _turretDef.size.y * 0.9f * FactoryGrid.CellSize);
+            PlaytestToolController.SetColor(_turretGhost, new Color(0.8f, 0.3f, 0.3f, 0.4f));
+        }
     }
 
     private void UpdateTurretGhostPorts(Vector2Int cell)
@@ -833,6 +896,8 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             new LootDropDefinition { itemId = PlaytestContext.PowerCell, rarity = LootRarity.Uncommon, dropWeight = 1.5f, minAmount = 1, maxAmount = 2, minFloorElevation = 2 },
             new LootDropDefinition { itemId = PlaytestContext.SignalDecoder, rarity = LootRarity.Rare, dropWeight = 1f, minAmount = 1, maxAmount = 1, minFloorElevation = 3 },
             new LootDropDefinition { itemId = PlaytestContext.ReinforcedPlating, rarity = LootRarity.Rare, dropWeight = 0.8f, minAmount = 1, maxAmount = 1, minFloorElevation = 4, tierRequirement = 2 },
+            new LootDropDefinition { itemId = PlaytestContext.BossBlueprint, rarity = LootRarity.Legendary, dropWeight = 10f, minAmount = 1, maxAmount = 1, minFloorElevation = 6, maxFloorElevation = 7 },
+            new LootDropDefinition { itemId = PlaytestContext.SignalDecoder, rarity = LootRarity.Rare, dropWeight = 8f, minAmount = 1, maxAmount = 2, minFloorElevation = 6, maxFloorElevation = 7 },
         };
         _towerLootTable = new TowerLootTable(lootEntries);
         _towerController = new TowerController();
@@ -915,7 +980,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
     private void CreateTowerEnemies()
     {
         var flags = BindingFlags.NonPublic | BindingFlags.Instance;
-        var templates = new[] { _ctx.EnemyTemplate, _ctx.InteriorEnemyTemplate };
+        var templates = new[] { _ctx.EnemyTemplate, _ctx.InteriorEnemyTemplate, _ctx.BossEnemyTemplate };
 
         // Set spawn entries per floor on FloorChunkDefinition
         for (int i = 0; i < _towerBuildingDef.chunks.Count; i++)
@@ -949,11 +1014,11 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             }
             else
             {
-                // F6 (boss): 4 grunts + 4 stalkers
+                // F6 (boss): 1 boss + 2 grunt adds
                 chunk.spawnEntries = new List<TowerSpawnEntry>
                 {
-                    new TowerSpawnEntry { templateIndex = 0, count = 4 },
-                    new TowerSpawnEntry { templateIndex = 1, count = 4 }
+                    new TowerSpawnEntry { templateIndex = 2, count = 1 },
+                    new TowerSpawnEntry { templateIndex = 0, count = 2 }
                 };
             }
         }
@@ -1032,20 +1097,35 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
 
     private void NavigateToFloor(int floorIndex)
     {
+        Debug.Log($"tower: NavigateToFloor called with index {floorIndex} (display: Floor {floorIndex + 1}), current chunk: {_currentTowerChunk}");
+
         if (floorIndex < 0 || floorIndex >= _towerChunkLayouts.Count)
+        {
+            Debug.Log($"tower: floor index {floorIndex} out of range (0-{_towerChunkLayouts.Count - 1}), aborting");
             return;
+        }
 
         _currentTowerChunk = floorIndex;
 
         // Teleport player
         var elevPos = _towerChunkLayouts[floorIndex].ElevatorPosition.position;
+        // Offset into the room (north) to avoid CC overlap with elevator cube
+        var spawnPos = elevPos + Vector3.up * 1.0f + Vector3.forward * 3f;
+        Debug.Log($"tower: teleporting to {spawnPos} (elevator at {elevPos})");
         var player = _ctx.PlayerObject;
         if (player != null)
         {
-            var cc = player.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
-            player.transform.position = elevPos + Vector3.up * 0.5f;
-            if (cc != null) cc.enabled = true;
+            var rb = player.GetComponent<Rigidbody>();
+            Debug.Log($"tower: pre-teleport player pos={player.transform.position} rb.pos={rb?.position}");
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.position = spawnPos;
+            }
+            player.transform.position = spawnPos;
+            Physics.SyncTransforms();
+            Debug.Log($"tower: post-teleport player pos={player.transform.position} rb.pos={rb?.position}");
 
             // Reset all child local positions (teleport displaces compound collider children)
             foreach (Transform child in player.transform)
@@ -1090,6 +1170,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
                     {
                         _towerController.CompleteBoss();
                         Debug.Log($"tower: BOSS DEFEATED -- tier now {_towerController.CurrentTier}");
+                        SpawnBossRewards(capturedFloor);
                     }
                 };
                 wc.Controller.OnWaveEnded += onEnded;
@@ -1121,7 +1202,8 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
     private static readonly string[] TowerItemIds =
     {
         PlaytestContext.PowerCell, PlaytestContext.SignalDecoder,
-        PlaytestContext.ReinforcedPlating, PlaytestContext.KeyFragment
+        PlaytestContext.ReinforcedPlating, PlaytestContext.KeyFragment,
+        PlaytestContext.BossBlueprint
     };
 
     private void OnPlayerDiedInTower()
@@ -1158,10 +1240,15 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         var player = _ctx.PlayerObject;
         if (player == null) return;
 
-        var cc = player.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
+        var rb = player.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.position = homePos;
+        }
         player.transform.position = homePos;
-        if (cc != null) cc.enabled = true;
+        Physics.SyncTransforms();
 
         // Reset all child local positions (teleport displaces compound collider children)
         foreach (Transform child in player.transform)
@@ -1180,6 +1267,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             PlaytestContext.SignalDecoder => _ctx.SignalDecoderDef,
             PlaytestContext.ReinforcedPlating => _ctx.ReinforcedPlatingDef,
             PlaytestContext.KeyFragment => _ctx.KeyFragmentDef,
+            PlaytestContext.BossBlueprint => _ctx.BossBlueprintDef,
             _ => null
         };
     }
@@ -1243,6 +1331,49 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         }
 
         Debug.Log($"tower: spawned {_towerInteractables.Count} interactables");
+    }
+
+    private void SpawnBossRewards(int bossFloorIndex)
+    {
+        var origin = TowerChunkLayoutGenerator.GetChunkOrigin(TowerBasePosition, bossFloorIndex);
+        float size = TowerChunkLayoutGenerator.BossSize;
+        var center = origin + new Vector3(size * 0.5f, 0.5f, size * 0.5f);
+
+        var rng = new System.Random();
+
+        // Guaranteed blueprint
+        var blueprintObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        blueprintObj.name = "BossReward_blueprint";
+        blueprintObj.transform.position = center + new Vector3(-1f, 0f, 0f);
+        blueprintObj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        DestroyImmediate(blueprintObj.GetComponent<BoxCollider>());
+        PlaytestToolController.SetColor(blueprintObj, PlaytestToolController.GetItemColor(PlaytestContext.BossBlueprint));
+        var bpWorldItem = blueprintObj.AddComponent<WorldItem>();
+        bpWorldItem.Initialize(_ctx.BossBlueprintDef, 1);
+        _towerInteractables.Add(blueprintObj);
+
+        // 1-2 bonus rare material drops from loot table
+        int bonusCount = rng.Next(1, 3);
+        for (int i = 0; i < bonusCount; i++)
+        {
+            var drop = _towerLootTable.ResolveDrop(bossFloorIndex, _towerController.CurrentTier, rng);
+            if (!drop.HasValue) continue;
+
+            var def = GetItemDefinition(drop.Value.itemId);
+            if (def == null) continue;
+
+            var obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obj.name = $"BossReward_{drop.Value.itemId}_{i}";
+            obj.transform.position = center + new Vector3(1f + i * 0.8f, 0f, 0f);
+            obj.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
+            DestroyImmediate(obj.GetComponent<BoxCollider>());
+            PlaytestToolController.SetColor(obj, PlaytestToolController.GetItemColor(drop.Value.itemId));
+            var worldItem = obj.AddComponent<WorldItem>();
+            worldItem.Initialize(def, drop.Value.amount);
+            _towerInteractables.Add(obj);
+        }
+
+        Debug.Log($"tower: boss rewards spawned at arena center ({1 + bonusCount} items)");
     }
 
     private void CleanupTowerInteractables()

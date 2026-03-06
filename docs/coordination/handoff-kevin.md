@@ -1,45 +1,46 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-04 22:45
+Last updated: 2026-03-05 21:30
 Branch: kevin/main
-Last commit: 99a88d5 Add tower enemy population, interior fauna, fire rate buff
+Last commit: 2f72cb6 Fix Rigidbody teleport in tower elevator and building triggers
 
 ## What was completed this session
 
-### J-019: Tower enemy population + interior fauna
-- `Scripts/World/TowerSpawnEntry.cs` (new): serializable data class with templateIndex and count
-- `Scripts/World/FloorChunkDefinition.cs`: added `spawnEntries` list field
-- `Scripts/Combat/EnemySpawner.cs`: renamed `_enemyPrefab` to `_enemyTemplates` (GameObject array), added `SpawnOne(int templateIndex)` method, kept `SpawnWave(count)` backward compatible (spawns from template 0)
-- `Scripts/Combat/WaveControllerBehaviour.cs`: added `_spawnEntries` field, SpawnWaveCoroutine iterates entries when set, falls back to existing behavior when null
-- `Scripts/Debug/PlaytestContext.cs`: added `InteriorFaunaDef` (FaunaDefinitionSO) and `InteriorEnemyTemplate` (GameObject) fields
-- `Scripts/Debug/PlaytestBootstrap.cs`: creates interior fauna SO ("tower_stalker": moveSpeed=5, maxHealth=30, attackDamage=15, attackRange=1.5, attackCooldown=0.8, sightRange=12, baseBravery=0.3), creates green capsule template, changed weapon fireRate from 2f to 4f
-- `Scripts/World/TowerController.cs`: added `ConsumeFragments()` (resets banked to 0, returns count consumed), `CompleteBoss()` no longer resets fragments
-- `Scripts/Debug/KevinPlaytestSetup.cs`: data-driven spawn entries per floor (F0-2: 3 grunts; F3-4: 3 grunts + 2 stalkers; F5: 2 grunts + 3 stalkers; F6: 4+4), fragment consumption on boss floor entry, both templates passed to spawners, cleanup for interior template
-- `Tests/Editor/EditMode/TowerControllerTests.cs`: 3 new tests (ConsumeFragments, zero-banked consume, consume-then-complete-boss), updated CompleteBoss test (no longer resets fragments), updated FragmentsResetEachCycle to use ConsumeFragments
-- `Scripts/Debug/JoePlaytestSetup.cs`: updated `_enemyPrefab` -> `_enemyTemplates` reflection
-- `Scripts/Editor/PlaytestSetup.cs`: updated serialized property for templates array
+### J-020: Boss encounter implementation
+- **PlaytestContext.cs**: Added `BossBlueprint` constant, `BossBlueprintDef`, `BossFaunaDef`, `BossEnemyTemplate` fields
+- **PlaytestBootstrap.cs**: Boss blueprint item def, boss fauna def (tower_boss, 300HP, 25dmg, bravery 1.0, purple 2.5x capsule), boss enemy template with NavMeshAgent, Continuous collision detection on player Rigidbody
+- **PlaytestToolController.cs**: Gold color for boss_blueprint in GetItemColor
+- **KevinPlaytestSetup.cs**: Boss loot entries in tower loot table (Legendary blueprint, Rare signal_decoder, floor 6-7 only), boss floor spawns (1 boss + 2 grunts via templateIndex 2), SpawnBossRewards method (guaranteed blueprint + 1-2 bonus drops), boss_blueprint in TowerItemIds and GetItemDefinition
+- **Design doc**: `docs/plans/2026-03-05-boss-encounter-design.md`
 
-### PR merged to master
-- PR #21 merged: includes tower wrappers, elevator UI, unified pickup, coordination docs, and J-019 enemy population
+### Rigidbody teleport bug fix (CRITICAL)
+- **Root cause**: Player uses Rigidbody, not CharacterController. All teleport code was using `transform.position` which gets silently overridden by the physics engine on the next physics step. Player appeared to teleport (position read back correctly) but snapped back to old position within one frame.
+- **Fix**: All teleports now use `rb.position = targetPos` + `Physics.SyncTransforms()` instead of `transform.position`. No kinematic toggle needed.
+- **Files fixed**: KevinPlaytestSetup (NavigateToFloor, TeleportPlayerToHomeBase), BuildingEntryTrigger, BuildingExitTrigger
+- **Also fixed**: BuildingEntryTrigger double-trigger with `_triggered` flag pattern
+
+### TowerElevatorUI debug logging
+- Added click debug log showing floor index and display name
 
 ## What's in progress (not yet committed)
-None -- all committed and merged to master.
+None -- all committed.
 
 ## Next task to pick up
-- J-020 (Boss encounter): boss floor is already wired in KevinPlaytestSetup (fragment consumption, wave spawning, CompleteBoss on wave end). May just need tuning and verification.
-- J-021 (Tower playtest): end-to-end tower loop verification
-- J-024 (MasterPlaytest verification): must pass before any future master merge
-- J-027/J-028 (Turret ammo/targeting): lower priority polish
+- **J-021 (Tower end-to-end playtest)**: Full tower run verification -- enter tower, clear floors, collect fragments, boss fight, extract, verify loot banking. Remove debug logs from NavigateToFloor after confirming everything works.
+- **J-024 (MasterPlaytest verification)**: Verify MasterPlaytest scene passes
+- **Turret barrel orientation**: Still unfinished from previous session. FBX barrels face -X, need rotation offset in targeting.
 
 ## Blockers or decisions needed
 None.
 
 ## Test status
-- 891/891 EditMode tests passing (verified this session after all changes)
+- 891/891 passing (boss changes used existing patterns, no new simulation classes). Should re-verify after all commits.
 
 ## Key context the next session needs
-- **EnemySpawner field renamed:** `_enemyPrefab` is now `_enemyTemplates` (GameObject[]). All reflection-based setup updated. Any new code creating EnemySpawners must use the array field.
-- **Fragment consumption moved to boss floor entry:** `TowerController.ConsumeFragments()` resets banked to 0 and is called in NavigateToFloor when entering boss floor. `CompleteBoss()` only increments tier now.
-- **Weapon fire rate doubled:** 4 rps (was 2). This is in PlaytestBootstrap.CreateDefinitions.
-- **Interior enemy template:** Green capsule, tower_stalker fauna def, created in PlaytestBootstrap.CreateInteriorEnemyTemplate(). Both templates cleaned up in KevinPlaytestSetup.OnDestroy.
-- **Spawn entries per floor:** Set on FloorChunkDefinition in CreateTowerEnemies(), passed to WaveControllerBehaviour via `_spawnEntries` reflection field.
+- **NEVER use transform.position to teleport a Rigidbody.** Use `rb.position = pos; Physics.SyncTransforms();` -- this is saved in auto-memory.
+- **Player has NO CharacterController.** It's a Rigidbody + CapsuleCollider. All old CC references were wrong.
+- **C# `?.` operator doesn't respect Unity fake-null.** Use `if (x != null)` for Unity objects, not `x?.property`.
+- **Boss enemy**: templateIndex 2 in enemy templates array. Purple 2.5x capsule, 300 HP, bravery 1.0 (never flees).
+- **Boss rewards**: SpawnBossRewards creates WorldItem cubes at arena center -- 1 guaranteed blueprint + 1-2 random loot table drops.
+- **NavigateToFloor has debug logs**: Pre-teleport and post-teleport position logging still active. Remove once tower is fully verified.
+- **Turret barrel rotation is UNFINISHED** from previous session.

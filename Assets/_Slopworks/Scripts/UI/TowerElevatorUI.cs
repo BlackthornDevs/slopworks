@@ -166,6 +166,7 @@ public class TowerElevatorUI : MonoBehaviour
             int capturedIndex = floorIndex;
             button.onClick.AddListener(() =>
             {
+                Debug.Log($"tower elevator ui: clicked floor {capturedIndex} (display: Floor {capturedIndex + 1})");
                 Close();
                 _onFloorSelected?.Invoke(capturedIndex);
             });
