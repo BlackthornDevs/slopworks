@@ -1912,6 +1912,7 @@ public class PlaytestToolController : MonoBehaviour
             PlaytestContext.SignalDecoder => new Color(0.6f, 0.2f, 0.8f),
             PlaytestContext.ReinforcedPlating => new Color(0.9f, 0.5f, 0.1f),
             PlaytestContext.KeyFragment => new Color(0.0f, 0.9f, 0.9f),
+            PlaytestContext.BossBlueprint => new Color(1.0f, 0.85f, 0.0f),
             _ => new Color(0.5f, 0.5f, 0.5f)
         };
     }
