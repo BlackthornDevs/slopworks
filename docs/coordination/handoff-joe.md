@@ -8,49 +8,52 @@ Updated by Joe's Claude at the end of each session.
 
 ### What was completed
 
-- **J-027 (Medium):** Already implemented in J-013/J-014. Verified ammo pipeline: TurretController.TryConsumeAmmo -> StorageContainer.TryExtract, PlaceTurret wires AmmoStorage as port owner, ConnectionResolver creates inserters. Marked complete.
-- **J-028 (Low): Turret targeting modes** -- added TargetingMode enum (Closest, LowestHealth, HighestThreat), TurretCandidate struct, new Tick overload on TurretController with SelectTargetFromCandidates, updated TurretBehaviour to populate candidate data with health/threat. 7 new tests, 28/28 turret tests passing.
-- **J-029 (High): HomeBase terrain** -- completed previous session. Editor script generates 200x200 terrain with flat center, perlin hills, three terrain layers, post-apocalyptic lighting.
-- **Lore design doc** -- brainstormed and wrote `docs/plans/2026-03-06-lore-design.md`. Covers: SLOP (the unreliable AI), industrial collapse backstory, fauna biomes per building type, endgame twist (SLOP caused the collapse), dark humor tone.
-- **C-010 filed** -- proposed redefining Joe's task scope to art/world-building focus. Awaiting Kevin's resolution.
-- **Asset pack research** -- compiled list of free CC0/open-license asset packs organized by category (terrain textures, environment props, factory assets, enemies, weapons, skyboxes). Sources: Kenney, Quaternius, Poly Haven, ambientCG, Unity Asset Store, OpenGameArt. Priority recommendations: Kenney Conveyor+Survival+Blaster+TowerDefense kits, Quaternius Zombie Apocalypse Kit, Poly Haven/ambientCG PBR textures.
-- **PR #25** submitted to master with all completed work.
+- **Asset pack import**: Downloaded and imported 4 Kenney CC0 asset packs (conveyor-kit, survival-kit, blaster-kit, tower-defense-kit) — 341 FBX models total. Also downloaded 5 PBR terrain texture sets from ambientCG (Concrete034, Ground037, Gravel022, Rust004, Ground054) and 4 HDR skybox files from Poly Haven.
+- **Tower floor prefabs**: Created `TowerFloorPrefabBuilder.cs` editor script that generates 6 tower floor prefabs from Kenney models (Lobby, Industrial, Storage, Processing, Mechanical, Boss). Prefabs saved to `Assets/_Slopworks/Prefabs/Tower/`.
+- **HomeBase terrain scenery**: Created `HomeBaseSceneryDresser.cs` that upgrades the terrain with PBR textures (5 layers: concrete, dirt, grass/soil, gravel, rust with normal maps), adds terrain features (4 impact craters, dry riverbed, 3 ridges), scatters 475 nature props (rocks, trees, grass), 200 industrial debris items, and 5 ruin clusters (52 pieces). Set industrial sunset HDR skybox with matching fog.
+- **Kenney materials**: Created `KenneyMaterialSetup.cs` that builds URP Lit materials for each Kenney kit using their color palette textures, with per-kit metallic/smoothness tuning. Applied to 765 renderers in the scene. GPU instancing enabled for batching.
+- **Terrain explorer**: Created `TerrainExplorer.cs` — self-contained FPS controller (CharacterController, gravity, jump, sprint) for walking around terrain scenes. Menu item `Slopworks > Spawn Terrain Explorer` adds it to the active scene.
+- **Lore design doc**: Brainstormed and wrote `docs/plans/2026-03-06-lore-design.md`. Status: Approved.
+- **J-026**: Process fix (no Co-Authored-By tags) — applied this session and going forward.
 
 ### Shared file changes (CRITICAL)
 
 - No changes to asmdef, ProjectSettings, Core/, or packages.
-- New C# files: `TargetingMode.cs`, `TurretCandidate.cs` (both in Scripts/Combat/)
-- Modified: `TurretDefinitionSO.cs` (added targetingMode field), `TurretController.cs` (new Tick overload + SelectTargetFromCandidates), `TurretBehaviour.cs` (candidate data gathering)
+- New files are all in Joe-owned directories (Scripts/Editor/, Scripts/Debug/, Art/, Materials/, Prefabs/Tower/, Scenes/Multiplayer/).
+- `.gitattributes` updated to track `.fbx`, `.png`, `.hdr` via Git LFS.
+- New C# files from previous session: `TargetingMode.cs`, `TurretCandidate.cs` (Scripts/Combat/), `TurretDefinitionSO.cs` modified, `TurretController.cs` modified, `TurretBehaviour.cs` modified.
 
 ### What needs attention
 
-- J-026 is a process fix (stop adding Co-Authored-By to commits) -- noted for this session and going forward.
-- C-010 proposes redefining Joe's scope to art/world-building. Kevin should resolve this in decisions.md.
-- Asset pack research results saved in task agent output. Top picks: Kenney kits (CC0, consistent low-poly style, ~390 assets covering factory+survival+weapons+turrets), Quaternius Zombie Apocalypse Kit (CC0, animated enemies).
-- Lore design doc at `docs/plans/2026-03-06-lore-design.md` has open design questions (SLOP UI manifestation, dialogue system, endgame choice mechanics).
+- C-010 still open — proposes redefining Joe's scope to art/world-building. Awaiting Kevin's resolution.
+- Tower floor prefabs need visual inspection and layout tweaking in Unity editor.
+- Normal maps in terrain textures were auto-set to NormalMap import type by `KenneyMaterialSetup`.
+- Kenney palette textures set to Point filtering to preserve crisp low-poly colors.
+- Quaternius creature models (animated enemies) need manual download from itch.io — couldn't automate.
 
 ### Next tasks
 
-All code tasks are complete. Pending work is art/world-building focused (awaiting C-010 resolution):
-- Source and import asset packs (Kenney Conveyor Kit, Survival Kit, etc.)
-- Build tower floor layouts using sourced assets
+All code tasks complete. Art/world-building work to continue:
+- Visual polish on tower floor prefab interiors
 - Create overworld terrain
+- Source animated enemy models (Quaternius itch.io manual download)
 - Write SLOP dialogue lines and environmental storytelling content
-
-J-026 (stop Co-Authored-By) is a process fix, not a code task -- applied going forward.
 
 ### Blockers
 
-- C-010 awaiting Kevin's resolution. Joe has no assigned code tasks. Art/world-building work can proceed independently.
+- C-010 awaiting Kevin's resolution. No assigned code tasks.
 
 ### Test status
 
-- Zero compilation errors.
-- Turret tests: 28/28 passing (filtered run via MCP).
-- Full suite (815+) times out in MCP runner but no code changes to non-turret systems.
+- Last successful compile: 0 errors, only pre-existing warnings (deprecated FindObjectOfType, NavMeshBuilder, unused field).
+- MCP Unity unresponsive at session end — could not run tests. Previous session confirmed 28/28 turret tests passing, full suite 815+ (times out in MCP runner).
+- No changes to test files or tested code this session — all work was editor scripts, art assets, and scene dressing.
 
 ### Key context
 
-- `HomeBaseTerrainGenerator.cs` is idempotent -- re-run via `Slopworks > Generate HomeBase Terrain`.
-- Terrain centered at origin: (-100,0,-100) to (100,0,100). Flat zone = 50m radius from center.
-- Lore design establishes SLOP as central narrative device. All story/dialogue work should reference `docs/plans/2026-03-06-lore-design.md`.
+- `HomeBaseTerrainGenerator.cs` generates base terrain. `HomeBaseSceneryDresser.cs` dresses it (PBR textures, props, skybox). Both are idempotent — re-run from Slopworks menu.
+- `KenneyMaterialSetup.cs` applies palette textures to all Kenney model instances. Run `Slopworks > Apply Kenney Materials` after re-dressing scenery.
+- Terrain explorer: `Slopworks > Spawn Terrain Explorer` adds a walkable FPS controller to any scene with terrain.
+- Kenney model scale: floor tiles 2x2m, wall panels 2m wide x 3m tall, props ~0.25m (scaled 3x in scene for visual proportion).
+- Seed-based prop placement (Seed=42) — scenery dresser is deterministic.
+- Tower floor prefabs: 20x20m normal rooms, 30x30m boss room. 6 styles with Kenney models for walls, floors, and interior props.

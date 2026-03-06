@@ -658,7 +658,7 @@ End-to-end playtest of the full tower loop per phase completion standard.
 
 ### TASK J-026: Stop adding Co-Authored-By tags to commits
 
-**Status:** Pending
+**Status:** Complete (2026-03-06, process fix applied going forward)
 **Priority:** Critical
 **Branch:** `joe/main`
 **Ownership:** All files
