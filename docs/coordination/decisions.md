@@ -203,3 +203,31 @@ EditMode tests passing is necessary but not sufficient. The MasterPlaytest scene
 **Rationale:** PR #15 and #17 both merged with passing tests but untested scene integration. C-009 (turret ghost cleanup) was only caught when Joe manually ran MasterPlaytest for J-024. If the scene had been run before merging, C-009 would have been caught earlier.
 
 **Impact:** Both agents must run MasterPlaytest before creating a PR to master. The PR description should include a "MasterPlaytest verified" checkbox. Code reviewers should check for this before approving.
+
+---
+
+## D-015: Multiplayer-first architecture (FishNet host-client)
+
+**Date:** 2026-03-05
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Vertical slice complete with bootstrapper architecture. Need to decide whether to continue fleshing out mechanics in single-player bootstrapper or convert to multiplayer now.
+
+**Decision:** Convert to multiplayer now using FishNet host-client model with Tugboat transport. 7-step conversion sequence: (1) Scene+Network+Player, (2) Factory Grid+Placement, (3) Inventory+Items, (4) Machines+Belts+Simulation, (5) Combat, (6) Tower+Buildings, (7) Persistence (Supabase). Each step produces a playable two-player milestone.
+
+**Rationale:** Building more mechanics in the bootstrapper just creates more code to convert later. The simulation layer (pure C# classes) transfers directly. Better to set up the networked foundation now and build new features directly on it. Host-client model means day-to-day dev is the same: hit Play, FishNet boots as host, test locally.
+
+**Impact:** New scene structure: `Assets/_Slopworks/Scenes/Multiplayer/HomeBase.unity`. New prefab structure: `Assets/_Slopworks/Prefabs/Buildings/Foundations/`. Bootstrapper scenes remain for reference but are no longer the primary development target. Feature branch: `kevin/multiplayer-step1`.
+
+---
+
+## D-016: Tugboat transport for all dev and LAN play
+
+**Date:** 2026-03-05
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Need transport choice for FishNet. Options: Tugboat (TCP/UDP, built-in), FishySteamworks (Steam relay).
+
+**Decision:** Tugboat for all development and LAN play. FishySteamworks deferred to post-foundation. Tugboat supports both host-client and dedicated server (Ubuntu mini PC) without code changes.
+
+**Rationale:** Tugboat works immediately, no Steam SDK setup. LAN play between two local machines (dev workflow) is the primary use case. FishySteamworks can be added later as a transport swap without changing game code.
+
+**Impact:** No Steam SDK dependency. Players on the same network connect via IP address. Dedicated server on Ubuntu mini PC uses same Tugboat transport.

@@ -519,7 +519,8 @@ Implemented data-driven per-floor enemy composition with TowerSpawnEntry (templa
 
 ### TASK J-020: Boss encounter
 
-**Status:** Pending
+**Status:** Complete (2026-03-05, by Kevin)
+**Commits:** `3057f9d`, `ce158c6`, `4beaee1`, `1f8a2e8`, `2f72cb6`
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`, `Scripts/Combat/`
@@ -548,7 +549,7 @@ Build the boss floor as the tier-gating mechanic.
 
 ### TASK J-024: Verify MasterPlaytest scene integration
 
-**Status:** Pending
+**Status:** Complete (2026-03-05, by Kevin -- manual verification passed)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/Debug/`
@@ -627,7 +628,7 @@ Code review on PR #13 found that `RandomizeFragments()` writes `_building.chunks
 
 ### TASK J-021: Tower playtest scene
 
-**Status:** Pending
+**Status:** Complete (2026-03-05, by Kevin -- manual playtest verified full loop)
 **Priority:** Medium
 **Branch:** `joe/main`
 **Ownership:** `Scripts/World/`, `Scripts/Combat/`, `Scenes/`
@@ -715,3 +716,34 @@ Turrets should have configurable range and targeting priority (closest, lowest h
 - Targeting mode affects which enemy is prioritized
 - Range is configurable per turret definition
 - Tests verify range filtering and priority sorting
+
+---
+
+## Terrain and Environment
+
+### TASK J-029: Create a proper terrain for HomeBase
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scenes/Multiplayer/`
+
+The multiplayer HomeBase scene currently uses a flat checkerboard Plane as terrain. Create a real Unity Terrain with sculpted topology and painted textures that gives the game a post-apocalyptic feel.
+
+**Implementation:**
+1. Create a new scene: `Assets/_Slopworks/Scenes/Multiplayer/HomeBaseTerrain.unity`
+2. Add a Unity Terrain (GameObject > 3D Object > Terrain)
+3. Set the Terrain object to layer 12 (Terrain) -- required for player ground check
+4. Terrain size: 200x200, height 50-100m
+5. Sculpt: create a mostly-flat buildable area in the center (~100x100m) with hills/ridges around the edges for visual interest and natural boundaries
+6. Paint textures: add terrain layers for grass, dirt, rock. Paint the flat area as dirt/concrete, hills as grass/rock
+7. Add atmospheric lighting: directional light, fog, post-apocalyptic color grading if URP post-processing is available
+8. Keep the scene self-contained: terrain geometry, textures, lighting only. No gameplay objects.
+
+**Acceptance criteria:**
+- Scene loads without errors
+- Terrain is on layer 12
+- Large flat area in center suitable for factory building
+- Visual variety (not a flat plane)
+- Post-apocalyptic atmosphere (muted colors, some fog)
+- No gameplay objects in the scene (those live in HomeBase.unity)

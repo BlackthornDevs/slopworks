@@ -1,46 +1,50 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-05 21:30
-Branch: kevin/main
-Last commit: 2f72cb6 Fix Rigidbody teleport in tower elevator and building triggers
+Last updated: 2026-03-06 07:30
+Branch: kevin/multiplayer-step1
+Last commit: 6a8a5ad Add NetworkInventory, item pickup, and hotbar HUD for multiplayer Step 3
 
 ## What was completed this session
 
-### J-020: Boss encounter implementation
-- **PlaytestContext.cs**: Added `BossBlueprint` constant, `BossBlueprintDef`, `BossFaunaDef`, `BossEnemyTemplate` fields
-- **PlaytestBootstrap.cs**: Boss blueprint item def, boss fauna def (tower_boss, 300HP, 25dmg, bravery 1.0, purple 2.5x capsule), boss enemy template with NavMeshAgent, Continuous collision detection on player Rigidbody
-- **PlaytestToolController.cs**: Gold color for boss_blueprint in GetItemColor
-- **KevinPlaytestSetup.cs**: Boss loot entries in tower loot table (Legendary blueprint, Rare signal_decoder, floor 6-7 only), boss floor spawns (1 boss + 2 grunts via templateIndex 2), SpawnBossRewards method (guaranteed blueprint + 1-2 bonus drops), boss_blueprint in TowerItemIds and GetItemDefinition
-- **Design doc**: `docs/plans/2026-03-05-boss-encounter-design.md`
-
-### Rigidbody teleport bug fix (CRITICAL)
-- **Root cause**: Player uses Rigidbody, not CharacterController. All teleport code was using `transform.position` which gets silently overridden by the physics engine on the next physics step. Player appeared to teleport (position read back correctly) but snapped back to old position within one frame.
-- **Fix**: All teleports now use `rb.position = targetPos` + `Physics.SyncTransforms()` instead of `transform.position`. No kinematic toggle needed.
-- **Files fixed**: KevinPlaytestSetup (NavigateToFloor, TeleportPlayerToHomeBase), BuildingEntryTrigger, BuildingExitTrigger
-- **Also fixed**: BuildingEntryTrigger double-trigger with `_triggered` flag pattern
-
-### TowerElevatorUI debug logging
-- Added click debug log showing floor index and display name
+### Multiplayer Step 3: Inventory + Items (COMPLETE)
+- `Scripts/Network/NetworkInventory.cs` -- SyncList<ItemSlot> inventory on player, ServerRpc for pickup and hotbar selection
+- `Scripts/Network/NetworkWorldItem.cs` -- server-spawned pickup component (itemId + count)
+- `Scripts/Network/NetworkPickupTrigger.cs` -- trigger sphere on player, calls CmdPickupItem on overlap with NetworkWorldItem
+- `Scripts/Network/NetworkHotbarHUD.cs` -- OnGUI hotbar display at screen bottom, scroll wheel to select slot
+- `Scripts/Network/TestItemSpawner.cs` -- server-side spawner, drops test items in configurable circle (center/radius exposed in Inspector)
+- `Prefabs/Items/WorldItem.prefab` -- cube (0.3 scale), layer 14, NetworkObject + NetworkWorldItem
+- NetworkPlayer prefab updated with NetworkInventory, NetworkHotbarHUD, child PickupTrigger with NetworkPickupTrigger
+- Tested: host mode, walk over items, items despawn and appear in hotbar HUD
 
 ## What's in progress (not yet committed)
+
 None -- all committed.
 
 ## Next task to pick up
-- **J-021 (Tower end-to-end playtest)**: Full tower run verification -- enter tower, clear floors, collect fragments, boss fight, extract, verify loot banking. Remove debug logs from NavigateToFloor after confirming everything works.
-- **J-024 (MasterPlaytest verification)**: Verify MasterPlaytest scene passes
-- **Turret barrel orientation**: Still unfinished from previous session. FBX barrels face -X, need rotation offset in targeting.
+
+- **Step 4: Machines + Belts + Simulation** -- the biggest multiplayer step. Server-only factory simulation ticking over the network:
+  - NetworkMachine wrapping Machine simulation class, SyncVars for recipe/progress/state
+  - NetworkStorage wrapping StorageContainer, SyncList for contents
+  - NetworkBeltSegment wrapping BeltSimulation, SyncList<BeltItem>
+  - NetworkSimulationTick for server-side FixedUpdate ticking all factory objects
+  - Build mode extensions for machine/storage/belt placement
+- After Step 4: Steps 5-7 (Combat, Tower+Buildings, Supabase persistence)
 
 ## Blockers or decisions needed
-None.
+
+- None
 
 ## Test status
-- 891/891 passing (boss changes used existing patterns, no new simulation classes). Should re-verify after all commits.
+
+- EditMode tests not run this session (multiplayer work is scene/prefab/network setup)
+- Manual testing confirmed: host mode, item pickup, inventory sync, hotbar HUD all working
 
 ## Key context the next session needs
-- **NEVER use transform.position to teleport a Rigidbody.** Use `rb.position = pos; Physics.SyncTransforms();` -- this is saved in auto-memory.
-- **Player has NO CharacterController.** It's a Rigidbody + CapsuleCollider. All old CC references were wrong.
-- **C# `?.` operator doesn't respect Unity fake-null.** Use `if (x != null)` for Unity objects, not `x?.property`.
-- **Boss enemy**: templateIndex 2 in enemy templates array. Purple 2.5x capsule, 300 HP, bravery 1.0 (never flees).
-- **Boss rewards**: SpawnBossRewards creates WorldItem cubes at arena center -- 1 guaranteed blueprint + 1-2 random loot table drops.
-- **NavigateToFloor has debug logs**: Pre-teleport and post-teleport position logging still active. Remove once tower is fully verified.
-- **Turret barrel rotation is UNFINISHED** from previous session.
+
+- **Branch:** Work is on `kevin/multiplayer-step1`, NOT `kevin/main`
+- **FishNet auto-collects prefabs** with NetworkObject -- no manual registration in DefaultPrefabObjects needed
+- **Assets/Refresh** menu item needed after creating new .cs files via Write tool -- MCP recompile alone doesn't generate .meta files for brand new scripts
+- **TestItemSpawner** has `_spawnCenter` (default 50,0.5,50) and `_spawnRadius` (default 5) fields -- terrain corner is at origin, center is ~(50,0,50) for default 100x100 terrain
+- **NetworkPickupTrigger** is on a child GameObject "PickupTrigger" of the NetworkPlayer prefab
+- **NetworkHotbarHUD** uses legacy Input.mouseScrollDelta for scroll wheel (New Input System not wired for this yet)
+- **MCP Unity limitations:** Still can't find asmdef-scoped components by name. Use Assets/Refresh after creating new files.
