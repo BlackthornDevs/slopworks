@@ -68,13 +68,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
     // main body
     const bodyGeo = new THREE.BoxGeometry(monitorWidth, monitorHeight, monitorDepth);
-    const bodyMat = new THREE.MeshBasicMaterial({ color: COL_BODY });
+    const bodyMat = new THREE.MeshLambertMaterial({ color: COL_BODY });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     scene.add(body);
 
     // frame bezel — slightly larger box behind the front face for depth illusion
     const bezelGeo = new THREE.BoxGeometry(monitorWidth + 0.15, monitorHeight + 0.15, 0.08);
-    const bezelMat = new THREE.MeshBasicMaterial({ color: 0x0F1318 });
+    const bezelMat = new THREE.MeshLambertMaterial({ color: 0x0F1318 });
     const bezel = new THREE.Mesh(bezelGeo, bezelMat);
     bezel.position.z = monitorDepth / 2 + 0.01;
     scene.add(bezel);
@@ -100,7 +100,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     const originalBodyPositions = new Float32Array(bodyPosAttr.array.length);
     originalBodyPositions.set(bodyPosAttr.array);
 
-    // -- ambient glow from screen --
+    // dim ambient so body is visible even without point light
+    scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+
+    // -- amber glow from screen --
     const screenLight = new THREE.PointLight(COL_AMBER_HEX, 1.2, 8, 1.5);
     screenLight.position.set(0, 0, monitorDepth / 2 + 1);
     scene.add(screenLight);
@@ -119,15 +122,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     // -- draw screen content --
     let screenFlicker = 1.0;
     let screenNoise = false;
+    const noiseImageData = screenCtx.createImageData(screenCanvas.width, screenCanvas.height);
 
     function drawScreen() {
         const w = screenCanvas.width;
         const h = screenCanvas.height;
 
         if (screenNoise) {
-            // static noise
-            const imageData = screenCtx.createImageData(w, h);
-            const data = imageData.data;
+            // static noise (reuse pre-allocated ImageData)
+            const data = noiseImageData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const v = Math.random() * 80;
                 data[i] = v * 0.4;
@@ -135,7 +138,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
                 data[i + 2] = v * 0.3;
                 data[i + 3] = 255;
             }
-            screenCtx.putImageData(imageData, 0, 0);
+            screenCtx.putImageData(noiseImageData, 0, 0);
             screenTexture.needsUpdate = true;
             return;
         }
@@ -283,8 +286,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         );
     }
 
-    function randomDriftVelocity() {
-        return new THREE.Vector3(
+    function setRandomVelocity(vel) {
+        vel.set(
             (Math.random() - 0.5) * 0.008,
             (Math.random() - 0.5) * 0.006,
             0.003 + Math.random() * 0.005
@@ -293,7 +296,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
     for (let i = 0; i < FRAGMENT_TEXTS.length; i++) {
         const frag = createFragmentSprite(FRAGMENT_TEXTS[i], i);
-        frag.velocity = randomDriftVelocity();
+        frag.velocity = new THREE.Vector3();
+        setRandomVelocity(frag.velocity);
         fragments.push(frag);
     }
 
@@ -307,7 +311,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     // full glitch — static + geometry warp
     function scheduleGlitch() {
         const base = prefersReducedMotion ? 25000 : 15000;
-        const range = prefersReducedMotion ? 10000 : 10000;
+        const range = prefersReducedMotion ? 15000 : 10000;
         const speedup = Math.max(0.3, 1 - degradeValue * 0.6);
         const delay = (base + Math.random() * range) * speedup;
         return setTimeout(triggerFullGlitch, delay);
@@ -403,7 +407,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     function animate() {
         requestAnimationFrame(animate);
 
-        const delta = clock.getDelta();
         const elapsed = clock.getElapsedTime() * speedMultiplier;
         const now = performance.now();
 
@@ -438,7 +441,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
             // reset when too far
             if (dist > MAX_DRIFT) {
                 resetFragment(sp, frag.index);
-                frag.velocity = randomDriftVelocity();
+                setRandomVelocity(frag.velocity);
                 frag.material.opacity = 0.9;
             }
         }
