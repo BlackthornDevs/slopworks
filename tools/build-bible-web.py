@@ -192,12 +192,14 @@ BIBLE_CSS = """
     text-decoration: none;
 }
 .entry-card .entry-thumb {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     border-radius: 4px;
     object-fit: cover;
+    object-position: center;
     flex-shrink: 0;
     background: var(--bg-surface);
+    overflow: hidden;
 }
 .entry-card .entry-card-info {
     min-width: 0;
@@ -301,8 +303,8 @@ BIBLE_CSS = """
 .slop-callout {
     border-left: 3px solid var(--accent);
     background: rgba(232, 160, 49, 0.05);
-    padding: 1rem 1.5rem;
-    margin: 1.5rem 0;
+    padding: 1.5rem 1.5rem 1rem;
+    margin: 2.5rem 0 1.5rem;
     font-family: var(--font-mono);
     font-size: 0.85rem;
     color: var(--accent);
@@ -314,7 +316,7 @@ BIBLE_CSS = """
     font-size: 0.7rem;
     color: var(--accent-dim);
     position: absolute;
-    top: -0.8rem;
+    top: -1.2rem;
     left: 0;
 }
 .stats-table {
