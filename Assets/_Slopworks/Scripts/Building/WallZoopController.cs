@@ -22,7 +22,7 @@ public class WallZoopController
         _planned.Add(origin);
     }
 
-    public void Update(SnapPoint current, SnapPointRegistry registry, int level)
+    public void Update(SnapPoint current, SnapPointRegistry registry, float surfaceY)
     {
         if (!IsActive || Origin == null) return;
 
@@ -48,7 +48,7 @@ public class WallZoopController
                 ? new Vector2Int(i, Origin.Cell.y)
                 : new Vector2Int(Origin.Cell.x, i);
 
-            var snap = registry.GetAt(cell, level, edgeDir);
+            var snap = registry.GetAt(cell, surfaceY, edgeDir);
             if (snap != null && !snap.IsOccupied)
                 _planned.Add(snap);
 

@@ -2,20 +2,20 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Spatial registry for structural snap points. Keyed by (cell, level, edgeDirection)
+/// Spatial registry for structural snap points. Keyed by (cell, yBucket, edgeDirection)
 /// for O(1) lookup when placing walls and ramps.
 /// </summary>
 public class SnapPointRegistry
 {
-    // Key: (cell.x, cell.y, level, edgeDir.x, edgeDir.y) packed as a struct-tuple
+    // Key: (cell.x, cell.y, yBucket, edgeDir.x, edgeDir.y) packed as a struct-tuple
     private readonly Dictionary<(int, int, int, int, int), SnapPoint> _snapPoints = new();
     private readonly Dictionary<BuildingData, List<SnapPoint>> _pointsByOwner = new();
 
     public int Count => _snapPoints.Count;
 
-    private static (int, int, int, int, int) GetKey(Vector2Int cell, int level, Vector2Int edgeDir)
+    private static (int, int, int, int, int) GetKey(Vector2Int cell, float surfaceY, Vector2Int edgeDir)
     {
-        return (cell.x, cell.y, level, edgeDir.x, edgeDir.y);
+        return (cell.x, cell.y, FactoryGrid.YBucket(surfaceY), edgeDir.x, edgeDir.y);
     }
 
     /// <summary>
@@ -23,7 +23,7 @@ public class SnapPointRegistry
     /// </summary>
     public void Register(SnapPoint point)
     {
-        var key = GetKey(point.Cell, point.Level, point.EdgeDirection);
+        var key = GetKey(point.Cell, point.SurfaceY, point.EdgeDirection);
         _snapPoints[key] = point;
 
         if (!_pointsByOwner.TryGetValue(point.Owner, out var list))
@@ -39,7 +39,7 @@ public class SnapPointRegistry
     /// </summary>
     public void Unregister(SnapPoint point)
     {
-        var key = GetKey(point.Cell, point.Level, point.EdgeDirection);
+        var key = GetKey(point.Cell, point.SurfaceY, point.EdgeDirection);
         _snapPoints.Remove(key);
 
         if (_pointsByOwner.TryGetValue(point.Owner, out var list))
@@ -51,12 +51,12 @@ public class SnapPointRegistry
     }
 
     /// <summary>
-    /// Find a snap point at the given cell, level, and edge direction.
+    /// Find a snap point at the given cell, surface Y, and edge direction.
     /// Returns null if none exists.
     /// </summary>
-    public SnapPoint GetAt(Vector2Int cell, int level, Vector2Int edgeDirection)
+    public SnapPoint GetAt(Vector2Int cell, float surfaceY, Vector2Int edgeDirection)
     {
-        var key = GetKey(cell, level, edgeDirection);
+        var key = GetKey(cell, surfaceY, edgeDirection);
         _snapPoints.TryGetValue(key, out var point);
         return point;
     }
@@ -72,16 +72,16 @@ public class SnapPointRegistry
     }
 
     /// <summary>
-    /// Get all unoccupied snap points at a given cell and level.
+    /// Get all unoccupied snap points at a given cell and surface Y.
     /// </summary>
-    public List<SnapPoint> GetAvailableAt(Vector2Int cell, int level)
+    public List<SnapPoint> GetAvailableAt(Vector2Int cell, float surfaceY)
     {
         var result = new List<SnapPoint>();
         var directions = new[] { Vector2Int.up, Vector2Int.right, Vector2Int.down, Vector2Int.left };
 
         foreach (var dir in directions)
         {
-            var key = GetKey(cell, level, dir);
+            var key = GetKey(cell, surfaceY, dir);
             if (_snapPoints.TryGetValue(key, out var point) && !point.IsOccupied)
                 result.Add(point);
         }

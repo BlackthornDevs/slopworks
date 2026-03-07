@@ -41,21 +41,21 @@ public class BuildingPlacementService
     /// Place a machine on the grid. Creates the Machine simulation object, registers
     /// port nodes at the rotated port positions, and auto-wires compatible neighbors.
     /// </summary>
-    public PlacementResult PlaceMachine(MachineDefinitionSO def, Vector2Int cell, int rotation, int level = 0)
+    public PlacementResult PlaceMachine(MachineDefinitionSO def, Vector2Int cell, int rotation, float surfaceY = 0f)
     {
         var effectiveSize = GetEffectiveSize(def.size, rotation);
 
-        if (!HasFoundationsAndNoOverlap(cell, effectiveSize, level))
+        if (!HasFoundationsAndNoOverlap(cell, effectiveSize, surfaceY))
             return null;
 
-        var buildingData = new BuildingData(def.machineId, cell, effectiveSize, rotation, level);
-        OccupyAutomationCells(cell, effectiveSize, level);
+        var buildingData = new BuildingData(def.machineId, cell, effectiveSize, rotation, Mathf.RoundToInt(surfaceY));
+        OccupyAutomationCells(cell, effectiveSize, surfaceY);
 
         var machine = new Machine(def);
         _simulation.RegisterMachine(machine);
         _simulationObjects[buildingData] = machine;
 
-        var ports = CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Machine, machine, level);
+        var ports = CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Machine, machine, surfaceY);
         RegisterAndResolve(ports);
 
         return new PlacementResult(buildingData, machine, ports);
@@ -64,21 +64,21 @@ public class BuildingPlacementService
     /// <summary>
     /// Place a storage container on the grid.
     /// </summary>
-    public PlacementResult PlaceStorage(StorageDefinitionSO def, Vector2Int cell, int rotation, int level = 0)
+    public PlacementResult PlaceStorage(StorageDefinitionSO def, Vector2Int cell, int rotation, float surfaceY = 0f)
     {
         var effectiveSize = GetEffectiveSize(def.size, rotation);
 
-        if (!HasFoundationsAndNoOverlap(cell, effectiveSize, level))
+        if (!HasFoundationsAndNoOverlap(cell, effectiveSize, surfaceY))
             return null;
 
-        var buildingData = new BuildingData(def.storageId, cell, effectiveSize, rotation, level);
-        OccupyAutomationCells(cell, effectiveSize, level);
+        var buildingData = new BuildingData(def.storageId, cell, effectiveSize, rotation, Mathf.RoundToInt(surfaceY));
+        OccupyAutomationCells(cell, effectiveSize, surfaceY);
 
         var storage = new StorageContainer(def.slotCount, def.maxStackSize);
         _simulationObjects[buildingData] = storage;
 
         var ports = def.ports != null
-            ? CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Storage, storage, level)
+            ? CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Storage, storage, surfaceY)
             : new List<PortNode>();
 
         RegisterAndResolve(ports);
@@ -90,22 +90,22 @@ public class BuildingPlacementService
     /// Place a turret on the grid. Creates the TurretController simulation object,
     /// registers port nodes for ammo input, and auto-wires compatible neighbors.
     /// </summary>
-    public PlacementResult PlaceTurret(TurretDefinitionSO def, Vector2Int cell, int rotation, int level = 0, bool skipFoundationCheck = false)
+    public PlacementResult PlaceTurret(TurretDefinitionSO def, Vector2Int cell, int rotation, float surfaceY = 0f, bool skipFoundationCheck = false)
     {
         var effectiveSize = GetEffectiveSize(def.size, rotation);
 
-        if (!skipFoundationCheck && !HasFoundationsAndNoOverlap(cell, effectiveSize, level))
+        if (!skipFoundationCheck && !HasFoundationsAndNoOverlap(cell, effectiveSize, surfaceY))
             return null;
 
-        var buildingData = new BuildingData(def.turretId, cell, effectiveSize, rotation, level);
-        OccupyAutomationCells(cell, effectiveSize, level);
+        var buildingData = new BuildingData(def.turretId, cell, effectiveSize, rotation, Mathf.RoundToInt(surfaceY));
+        OccupyAutomationCells(cell, effectiveSize, surfaceY);
 
         var turret = new TurretController(def);
         _simulationObjects[buildingData] = turret;
 
         // Turret ammo storage is the port owner so inserters can deliver ammo
         var ports = def.ports != null
-            ? CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Turret, turret.AmmoStorage, level)
+            ? CreatePortNodes(def.ports, cell, rotation, PortOwnerType.Turret, turret.AmmoStorage, surfaceY)
             : new List<PortNode>();
 
         RegisterAndResolve(ports);
@@ -117,7 +117,7 @@ public class BuildingPlacementService
     /// Place a belt on the grid from startCell to endCell. Must be a straight line
     /// (same X or same Z). Creates a BeltSegment with port nodes at both endpoints.
     /// </summary>
-    public PlacementResult PlaceBelt(Vector2Int startCell, Vector2Int endCell, int level = 0)
+    public PlacementResult PlaceBelt(Vector2Int startCell, Vector2Int endCell, float surfaceY = 0f)
     {
         if (startCell == endCell)
             return null;
@@ -137,22 +137,25 @@ public class BuildingPlacementService
         for (int i = 0; i <= lengthInTiles; i++)
         {
             var checkCell = startCell + direction * i;
-            if (!HasFoundationsAndNoOverlap(checkCell, Vector2Int.one, level))
+            if (!HasFoundationsAndNoOverlap(checkCell, Vector2Int.one, surfaceY))
                 return null;
         }
 
+        int yBucket = FactoryGrid.YBucket(surfaceY);
+
         // Track automation cells (belts coexist on foundation grid cells)
-        var buildingData = new BuildingData("belt", startCell, new Vector2Int(1, 1), 0, level);
+        var buildingData = new BuildingData("belt", startCell, new Vector2Int(1, 1), 0, Mathf.RoundToInt(surfaceY));
         for (int i = 0; i <= lengthInTiles; i++)
         {
             var placeCell = startCell + direction * i;
-            _automationCells.Add(new Vector3Int(placeCell.x, placeCell.y, level));
+            _automationCells.Add(new Vector3Int(placeCell.x, placeCell.y, yBucket));
         }
 
         var belt = new BeltSegment(lengthInTiles);
         _simulation.RegisterBelt(belt);
         _simulationObjects[buildingData] = belt;
 
+        int level = Mathf.RoundToInt(surfaceY);
         // Input port at start, facing backward (items enter from behind)
         // Output port at end, facing forward (items exit ahead)
         var ports = new List<PortNode>
@@ -208,7 +211,7 @@ public class BuildingPlacementService
                 for (int i = 0; i <= len; i++)
                 {
                     var c = startCell + dir * i;
-                    _automationCells.Remove(new Vector3Int(c.x, c.y, data.Level));
+                    _automationCells.Remove(new Vector3Int(c.x, c.y, FactoryGrid.YBucket(data.Level)));
                 }
             }
         }
@@ -225,12 +228,13 @@ public class BuildingPlacementService
         int rotation,
         PortOwnerType ownerType,
         object owner,
-        int level = 0)
+        float surfaceY = 0f)
     {
         var ports = new List<PortNode>();
         if (portDefs == null)
             return ports;
 
+        int level = Mathf.RoundToInt(surfaceY);
         for (int i = 0; i < portDefs.Length; i++)
         {
             var def = portDefs[i];
@@ -271,35 +275,38 @@ public class BuildingPlacementService
     /// Check that all cells in the footprint have a structural foundation
     /// and no existing automation building.
     /// </summary>
-    private bool HasFoundationsAndNoOverlap(Vector2Int origin, Vector2Int size, int level)
+    private bool HasFoundationsAndNoOverlap(Vector2Int origin, Vector2Int size, float surfaceY)
     {
+        int yBucket = FactoryGrid.YBucket(surfaceY);
         for (int x = origin.x; x < origin.x + size.x; x++)
         {
             for (int y = origin.y; y < origin.y + size.y; y++)
             {
                 var cell = new Vector2Int(x, y);
-                var existing = _grid.GetAt(cell, level);
+                var existing = _grid.GetAt(cell, surfaceY);
                 if (existing == null || !existing.IsStructural)
                     return false;
-                if (_automationCells.Contains(new Vector3Int(x, y, level)))
+                if (_automationCells.Contains(new Vector3Int(x, y, yBucket)))
                     return false;
             }
         }
         return true;
     }
 
-    private void OccupyAutomationCells(Vector2Int origin, Vector2Int size, int level)
+    private void OccupyAutomationCells(Vector2Int origin, Vector2Int size, float surfaceY)
     {
+        int yBucket = FactoryGrid.YBucket(surfaceY);
         for (int x = origin.x; x < origin.x + size.x; x++)
             for (int y = origin.y; y < origin.y + size.y; y++)
-                _automationCells.Add(new Vector3Int(x, y, level));
+                _automationCells.Add(new Vector3Int(x, y, yBucket));
     }
 
-    private void ClearAutomationCells(Vector2Int origin, Vector2Int size, int level)
+    private void ClearAutomationCells(Vector2Int origin, Vector2Int size, float surfaceY)
     {
+        int yBucket = FactoryGrid.YBucket(surfaceY);
         for (int x = origin.x; x < origin.x + size.x; x++)
             for (int y = origin.y; y < origin.y + size.y; y++)
-                _automationCells.Remove(new Vector3Int(x, y, level));
+                _automationCells.Remove(new Vector3Int(x, y, yBucket));
     }
 
     private static Vector2Int GetEffectiveSize(Vector2Int size, int rotation)

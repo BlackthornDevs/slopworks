@@ -11,14 +11,14 @@ public class BuildModeController
     private Vector2Int _snappedCell;
     private int _rotation;
     private bool _isValid;
-    private int _currentLevel;
+    private float _currentSurfaceY;
 
     public bool IsInBuildMode => _currentDefinition != null;
     public IPlaceableDefinition CurrentDefinition => _currentDefinition;
     public Vector2Int SnappedCell => _snappedCell;
     public int Rotation => _rotation;
     public bool IsValidPlacement => _isValid;
-    public int CurrentLevel => _currentLevel;
+    public float CurrentSurfaceY => _currentSurfaceY;
 
     /// <summary>
     /// Returns the effective size after accounting for rotation.
@@ -41,11 +41,11 @@ public class BuildModeController
     /// Enter build mode with the given placeable definition.
     /// </summary>
     /// <summary>
-    /// Set the active build level (floor). Clamped to [0, MaxLevels).
+    /// Set the active build surface Y position.
     /// </summary>
-    public void SetLevel(int level)
+    public void SetSurfaceY(float surfaceY)
     {
-        _currentLevel = Mathf.Clamp(level, 0, FactoryGrid.MaxLevels - 1);
+        _currentSurfaceY = Mathf.Max(surfaceY, 0f);
     }
 
     public void EnterBuildMode(IPlaceableDefinition definition)
@@ -65,7 +65,7 @@ public class BuildModeController
         _rotation = 0;
         _snappedCell = Vector2Int.zero;
         _isValid = false;
-        _currentLevel = 0;
+        _currentSurfaceY = 0;
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class BuildModeController
     public void UpdatePreview(Vector3 cursorWorldPos, FactoryGrid grid)
     {
         _snappedCell = grid.WorldToCell(cursorWorldPos);
-        _isValid = grid.CanPlace(_snappedCell, EffectiveSize, _currentLevel);
+        _isValid = grid.CanPlace(_snappedCell, EffectiveSize, _currentSurfaceY);
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public class BuildModeController
 
         var effectiveSize = EffectiveSize;
 
-        if (!grid.CanPlace(_snappedCell, effectiveSize, _currentLevel))
+        if (!grid.CanPlace(_snappedCell, effectiveSize, _currentSurfaceY))
             return false;
 
         var data = new BuildingData(
@@ -97,10 +97,10 @@ public class BuildModeController
             _snappedCell,
             effectiveSize,
             _rotation,
-            _currentLevel
+            _currentSurfaceY
         );
 
-        grid.Place(_snappedCell, effectiveSize, _currentLevel, data);
+        grid.Place(_snappedCell, effectiveSize, _currentSurfaceY, data);
         return true;
     }
 

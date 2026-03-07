@@ -362,7 +362,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         {
             ClearTurretGhostPorts();
             var result = _ctx.AutomationService.PlaceTurret(
-                _turretDef, cell.Value, _turretRotation, _toolCtrl.CurrentLevel);
+                _turretDef, cell.Value, _turretRotation, _toolCtrl.CurrentSurfaceY);
             if (result != null)
             {
                 _toolCtrl.AutomationBuildings.Add(result);
@@ -381,7 +381,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
 
     private void SpawnTurretVisual(PlacementResult result, Vector2Int cell)
     {
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentSurfaceY);
         var turretController = (TurretController)result.SimulationObject;
 
         var turretPrefab = Resources.Load<GameObject>("Models/Turrets/Turret");
@@ -488,7 +488,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             }
         }
 
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentSurfaceY);
         _turretGhost.transform.position = worldPos;
         _turretGhost.transform.rotation = Quaternion.Euler(0f, _turretRotation, 0f);
         if (_turretGhost.GetComponent<Renderer>() != null)
@@ -506,7 +506,7 @@ public class KevinPlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         ClearTurretGhostPorts();
 
         float cellSize = FactoryGrid.CellSize;
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentSurfaceY);
 
         foreach (var portDef in _turretDef.ports)
         {

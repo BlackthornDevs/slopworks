@@ -260,7 +260,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         {
             ClearTurretGhostPorts();
             var result = _ctx.AutomationService.PlaceTurret(
-                _turretDef, cell.Value, _placeRotation, _toolCtrl.CurrentLevel);
+                _turretDef, cell.Value, _placeRotation, _toolCtrl.CurrentSurfaceY);
             if (result != null)
             {
                 _toolCtrl.AutomationBuildings.Add(result);
@@ -281,7 +281,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
 
     private void SpawnTurretVisual(PlacementResult result, Vector2Int cell)
     {
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentSurfaceY);
         var turretController = (TurretController)result.SimulationObject;
 
         // Base: dark red cylinder
@@ -337,7 +337,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
             if (col != null) Destroy(col);
         }
 
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel) + Vector3.up * 0.5f;
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentSurfaceY) + Vector3.up * 0.5f;
         _turretGhost.transform.position = worldPos;
         _turretGhost.transform.localScale = new Vector3(
             _turretDef.size.x * 0.9f * FactoryGrid.CellSize, 1f,
@@ -354,7 +354,7 @@ public class JoePlaytestSetup : MonoBehaviour, IPlaytestFeatureProvider
         ClearTurretGhostPorts();
 
         float cellSize = FactoryGrid.CellSize;
-        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, _toolCtrl.CurrentSurfaceY);
 
         foreach (var portDef in _turretDef.ports)
         {
