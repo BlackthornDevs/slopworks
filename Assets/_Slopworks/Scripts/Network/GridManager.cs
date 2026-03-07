@@ -205,6 +205,208 @@ public class GridManager : NetworkBehaviour
     }
 
     // ------------------------------------------------------------------
+    // Unified CmdPlace RPCs
+    // ------------------------------------------------------------------
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdPlace(Vector2Int cell, float surfaceY, int rotation, int variant,
+        BuildingCategory category, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var prefab = GetPrefab(category, variant);
+        if (prefab == null)
+        {
+            Debug.Log($"grid: no prefab for {category} variant {variant}");
+            return;
+        }
+
+        var key = RecordKey(cell, surfaceY);
+        if (_placedRecords.ContainsKey(key))
+        {
+            Debug.Log($"grid: {category} rejected -- cell occupied at ({cell.x},{cell.y}) y={surfaceY:F1}");
+            return;
+        }
+
+        Vector3 worldPos;
+        if (category == BuildingCategory.Foundation)
+        {
+            int fs = FactoryGrid.FoundationSize;
+            var size = new Vector2Int(fs, fs);
+            if (!_grid.CanPlace(cell, size, surfaceY)) return;
+            _grid.Place(cell, size, surfaceY, new BuildingData("foundation", cell, size, 0, 0));
+            worldPos = GetFoundationPlacementPos(cell, surfaceY, prefab);
+        }
+        else
+        {
+            worldPos = GetPlacementPos(cell, surfaceY, prefab);
+        }
+
+        var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
+        var info = go.AddComponent<PlacementInfo>();
+        info.Category = category;
+        info.Cell = cell;
+        info.SurfaceY = surfaceY;
+        info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
+        ServerManager.Spawn(go);
+
+        var record = new PlacedRecord
+        {
+            Category = category, Instance = go, SurfaceY = surfaceY,
+            NetMachine = go.GetComponent<NetworkMachine>(),
+            NetStorage = go.GetComponent<NetworkStorage>()
+        };
+        _placedRecords[key] = record;
+
+        if (record.NetMachine != null && _factorySimulation != null)
+            _factorySimulation.RegisterMachine(record.NetMachine);
+
+        AutoWire(record, cell);
+        Debug.Log($"grid: {category} placed at ({cell.x},{cell.y}) y={surfaceY:F1} by {sender?.ClientId}");
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdPlaceDirectional(Vector2Int cell, float surfaceY, Vector2Int direction,
+        int variant, BuildingCategory category, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var prefab = GetPrefab(category, variant);
+        if (prefab == null) return;
+
+        var key = RecordKey(cell, surfaceY, direction);
+        if (_placedRecords.ContainsKey(key))
+        {
+            Debug.Log($"grid: {category} already exists at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y})");
+            return;
+        }
+
+        GetDirectionalPlacement(cell, surfaceY, direction, prefab, category,
+            out var worldPos, out var rot);
+        var go = Instantiate(prefab, worldPos, rot);
+        var info = go.AddComponent<PlacementInfo>();
+        info.Category = category;
+        info.Cell = cell;
+        info.SurfaceY = surfaceY;
+        info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
+        info.EdgeDirection = direction;
+        ServerManager.Spawn(go);
+
+        _placedRecords[key] = new PlacedRecord
+        {
+            Category = category, Instance = go, SurfaceY = surfaceY, Direction = direction
+        };
+
+        Debug.Log($"grid: {category} placed at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y}) by {sender?.ClientId}");
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdPlaceBelt(Vector2Int fromCell, Vector2Int toCell, float surfaceY,
+        int variant = 0, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var prefab = GetPrefab(BuildingCategory.Belt, variant);
+        if (prefab == null) return;
+
+        Vector3 startPos = GetPlacementPos(fromCell, surfaceY, prefab);
+        Vector3 endPos = GetPlacementPos(toCell, surfaceY, prefab);
+        int length = Mathf.Max(1, Mathf.Abs(toCell.x - fromCell.x) + Mathf.Abs(toCell.y - fromCell.y));
+
+        var go = Instantiate(prefab, (startPos + endPos) * 0.5f, Quaternion.identity);
+
+        var diff = endPos - startPos;
+        float beltLen = diff.magnitude + FactoryGrid.CellSize;
+        if (Mathf.Abs(diff.x) > Mathf.Abs(diff.z))
+            go.transform.localScale = new Vector3(beltLen, 0.08f, 0.6f);
+        else
+            go.transform.localScale = new Vector3(0.6f, 0.08f, beltLen);
+
+        var info = go.AddComponent<PlacementInfo>();
+        info.Category = BuildingCategory.Belt;
+        info.Cell = fromCell;
+        info.SurfaceY = surfaceY;
+        info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
+
+        var netBelt = go.GetComponent<NetworkBeltSegment>();
+        if (netBelt != null)
+        {
+            var segment = new BeltSegment(length);
+            netBelt.ServerInit(segment, startPos, endPos);
+        }
+
+        ServerManager.Spawn(go);
+
+        var visualizer = go.AddComponent<BeltItemVisualizer>();
+        visualizer.Init(netBelt);
+
+        if (netBelt != null && _factorySimulation != null)
+            _factorySimulation.RegisterBelt(netBelt);
+
+        var fromKey = RecordKey(fromCell, surfaceY);
+        var record = new PlacedRecord
+        {
+            Category = BuildingCategory.Belt, Instance = go,
+            SurfaceY = surfaceY, NetBelt = netBelt
+        };
+        _placedRecords[fromKey] = record;
+
+        if (fromCell != toCell)
+            _placedRecords[RecordKey(toCell, surfaceY)] = record;
+
+        AutoWire(record, fromCell);
+        Debug.Log($"grid: belt placed from ({fromCell.x},{fromCell.y}) to ({toCell.x},{toCell.y}) y={surfaceY:F1} by {sender?.ClientId}");
+    }
+
+    // ------------------------------------------------------------------
+    // Unified CmdDelete RPCs
+    // ------------------------------------------------------------------
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdDelete(Vector2Int cell, float surfaceY, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var key = RecordKey(cell, surfaceY);
+        if (_placedRecords.TryGetValue(key, out var record))
+        {
+            if (record.Instance != null)
+                ServerManager.Despawn(record.Instance);
+            _placedRecords.Remove(key);
+
+            if (record.Category == BuildingCategory.Foundation)
+            {
+                int fs = FactoryGrid.FoundationSize;
+                _grid.Remove(cell, new Vector2Int(fs, fs), surfaceY);
+            }
+
+            Debug.Log($"grid: deleted {record.Category} at ({cell.x},{cell.y}) y={surfaceY:F1} by {sender?.ClientId}");
+            return;
+        }
+
+        Debug.Log($"grid: nothing to delete at ({cell.x},{cell.y}) y={surfaceY:F1}");
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdDeleteDirectional(Vector2Int cell, float surfaceY, Vector2Int direction,
+        NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var key = RecordKey(cell, surfaceY, direction);
+        if (_placedRecords.TryGetValue(key, out var record))
+        {
+            if (record.Instance != null)
+                ServerManager.Despawn(record.Instance);
+            _placedRecords.Remove(key);
+            Debug.Log($"grid: deleted {record.Category} at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y}) by {sender?.ClientId}");
+            return;
+        }
+
+        Debug.Log($"grid: nothing to delete at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y})");
+    }
+
+    // ------------------------------------------------------------------
     // Query methods
     // ------------------------------------------------------------------
 
