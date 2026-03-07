@@ -243,7 +243,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36d0800a76a7441158dc40c82b854c82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::WeaponBehaviour
-  _componentIndexCache: 255
+  _componentIndexCache: 0
   _addedNetworkObject: {fileID: 0}
   _networkObjectCache: {fileID: 0}
   _weaponDefinition: {fileID: 11400000, guid: 40766daf16084461692c1321a03ce300, type: 2}
