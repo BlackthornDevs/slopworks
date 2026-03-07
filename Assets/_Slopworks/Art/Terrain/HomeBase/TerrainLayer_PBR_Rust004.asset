@@ -9,13 +9,13 @@ TerrainLayer:
   m_Name: TerrainLayer_PBR_Rust004
   m_DiffuseTexture: {fileID: 2800000, guid: 8837a83228a6d42a8ae48de6acece178, type: 3}
   m_NormalMapTexture: {fileID: 2800000, guid: 6d57b7e42418a4309b44a742a28e8d81, type: 3}
-  m_MaskMapTexture: {fileID: 2800000, guid: f367e5f762c5f49268b73c2a88937b91, type: 3}
-  m_TileSize: {x: 6, y: 6}
+  m_MaskMapTexture: {fileID: 2800000, guid: 1abbd52a7c3f040e4bc1e7689d47d097, type: 3}
+  m_TileSize: {x: 15, y: 15}
   m_TileOffset: {x: 0, y: 0}
   m_Specular: {r: 0, g: 0, b: 0, a: 0}
   m_Metallic: 0
-  m_Smoothness: 0
-  m_NormalScale: 1
+  m_Smoothness: 1
+  m_NormalScale: 1.8
   m_DiffuseRemapMin: {x: 0, y: 0, z: 0, w: 0}
   m_DiffuseRemapMax: {x: 1, y: 1, z: 1, w: 1}
   m_MaskMapRemapMin: {x: 0, y: 0, z: 0, w: 0}
