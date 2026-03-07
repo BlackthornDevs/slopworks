@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company facilities — Slopworks Industrial</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .supply-chain-diagram {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            padding: var(--space-lg);
+            margin: var(--space-lg) 0;
+            overflow-x: auto;
+        }
+
+        .supply-chain-diagram pre {
+            font-family: var(--font-slop);
+            font-size: 0.75rem;
+            color: var(--accent-amber);
+            line-height: 1.8;
+            white-space: pre;
+        }
+
+        .building-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+        }
+
+        .building-type {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            padding: var(--space-md) var(--space-lg);
+        }
+
+        .building-type h4 {
+            font-family: var(--font-slop);
+            font-size: 0.8rem;
+            color: var(--accent-orange);
+            margin-bottom: var(--space-xs);
+        }
+
+        .building-type .output {
+            font-family: var(--font-slop);
+            font-size: 0.7rem;
+            color: var(--accent-amber);
+            margin-bottom: var(--space-sm);
+        }
+
+        .building-type p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div id="nav"></div>
+
+<main>
+    <div class="content-wrapper">
+
+        <section class="section" style="opacity:1;transform:none;">
+            <div class="section-header">
+                <span class="dept-tag">Dept. 02 // Production — Productivity optimization guidelines</span>
+                <h2>Company facilities</h2>
+            </div>
+
+            <div class="slop-says scan-lines">
+                Output targets for the current quarter remain unchanged despite the minor facility disruptions. Each restored production node must achieve minimum throughput within <span class="redacted">an unreasonable timeframe</span> of commissioning. SLOP will monitor compliance.
+            </div>
+        </section>
+
+        <!-- HOME BASE FACTORY -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Home base operations</span>
+                <h2>Your factory</h2>
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">How factory building works</p>
+                <p>Your home base is where Satisfactory meets survival. Lay foundation tiles on the terrain. Everything snaps to the grid. Place smelters, assemblers, conveyor belts, splitters, mergers, storage bins. Route materials between machines. Stack foundations for multi-story layouts. The factory you design IS your base — your production layout becomes your defense perimeter.</p>
+            </div>
+
+            <figure class="art-frame">
+                <img src="assets/img/home-base-factory.png" alt="Isometric view of a player-built factory base" loading="lazy">
+                <figcaption>Home base — production layout and defensive perimeter integrated</figcaption>
+            </figure>
+
+            <div class="card-grid">
+                <div class="card">
+                    <span class="card-tag">Foundations</span>
+                    <h3>Build the grid</h3>
+                    <p>Lay foundation tiles on terrain. Stack them with spacing for multi-story. Zoop-style batch placement for fast layout. Everything snaps to foundations.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Machines</span>
+                    <h3>Production stations</h3>
+                    <p>Smelters, assemblers, workbenches, fabricators. Each takes inputs and produces outputs. Place them on foundations, connect with conveyors.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Logistics</span>
+                    <h3>Conveyors and storage</h3>
+                    <p>Belt conveyors carry items between machines. Splitters divide flow. Mergers combine it. Storage bins buffer materials. Route everything.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Defenses</span>
+                    <h3>Walls and turrets</h3>
+                    <p>Walls enclose your factory. Turrets snap to walls and platforms. Power them from generators. Your production layout shapes your defensive geometry.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- DISTRIBUTED NETWORK -->
+        <section class="section" data-slop-interjection="SLOP has detected a 0.003% efficiency variance in supply line SW-7. This is within acceptable parameters. SLOP will continue monitoring.">
+            <div class="section-header">
+                <span class="dept-tag">Inter-facility logistics</span>
+                <h2>The production network</h2>
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">The big picture</p>
+                <p>Every reclaimed building becomes a production node in a distributed supply chain. Buildings process raw materials into intermediate goods. Those ship to your home base or to other buildings for higher-tier production. The whole thing is a factory that spans the map. You manage it from the isometric overworld — set recipes, assign output destinations, monitor throughput. No conveyor spaghetti between buildings — supply lines are abstract connections.</p>
+            </div>
+
+            <div class="building-types">
+                <div class="building-type">
+                    <h4>Power plant</h4>
+                    <span class="output">Output: electricity</span>
+                    <p>Required by other buildings. Lose power and everything stops.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Foundry</h4>
+                    <span class="output">Output: iron / copper / steel ingots</span>
+                    <p>Smelts raw scrap into usable metal. The first link in every production chain.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Warehouse</h4>
+                    <span class="output">Output: sorted raw salvage</span>
+                    <p>Sorts and distributes raw materials to specialized buildings.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Machine shop</h4>
+                    <span class="output">Output: mechanical components</span>
+                    <p>Turns ingots into gears, pistons, bearings. Mid-tier production.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Water treatment</h4>
+                    <span class="output">Output: clean water</span>
+                    <p>Required by some production processes and the hospital.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Electronics lab</h4>
+                    <span class="output">Output: circuit boards</span>
+                    <p>Copper ingots + components = circuits. High-tier production.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Hospital</h4>
+                    <span class="output">Output: medical supplies</span>
+                    <p>Chemicals + water = meds. Keeps your crew operational.</p>
+                </div>
+                <div class="building-type">
+                    <h4>Office building</h4>
+                    <span class="output">Output: research points</span>
+                    <p>Generates the currency for the tech tree. Unlocks new recipes and machines.</p>
+                </div>
+            </div>
+
+            <div class="supply-chain-diagram">
+                <pre>
+  Warehouse ──── raw scrap ────► Foundry ──── ingots ────► Machine Shop
+                                    │                          │
+                                    │                     components
+                                    │                          │
+                                    ├── ingots ──► Home Base ◄─┘
+                                    │                  │
+                                    │             weapons, armor,
+                                    │             turrets, tools
+                                    │
+                                    └── ingots ──► Electronics Lab
+                                                       │
+                                                   circuits
+                                                       │
+                                                       ▼
+                                                  Home Base
+                                              (advanced gear)
+                </pre>
+            </div>
+
+            <figure class="art-frame">
+                <img src="assets/img/overworld-map.png" alt="Territory map showing supply lines between buildings" loading="lazy">
+                <figcaption>Network overview — supply lines connect production nodes across the territory</figcaption>
+            </figure>
+
+            <div class="slop-says scan-lines">
+                Current network throughput: <span class="redacted">far below target</span>. SLOP recommends aggressive expansion of production capacity. Additional facility reclamation will bring output closer to pre-incident levels. SLOP has identified several candidate facilities within acceptable threat range. SLOP's definition of "acceptable" may differ from yours.
+            </div>
+        </section>
+
+        <!-- INTERACTIVE FACTORY -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Interactive demonstration</span>
+                <h2>Factory in motion</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-md);">A simplified factory layout showing materials flowing through a production chain. Drag to rotate, scroll to zoom.</p>
+
+            <div class="three-container" id="factory-scene">
+                <div class="art-placeholder"><span>[THREE.JS FACTORY DEMO — LOADING]</span></div>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<div id="footer"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

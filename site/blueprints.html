@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What makes this different — Slopworks Industrial</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .bim-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            margin: var(--space-lg) 0;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--border-dark);
+        }
+
+        .bim-comparison .bim-side {
+            position: relative;
+        }
+
+        .bim-comparison .bim-side img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .bim-comparison .bim-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: var(--space-sm) var(--space-md);
+            background: rgba(13, 13, 13, 0.85);
+            font-family: var(--font-slop);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .pipeline-steps {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+            max-width: 700px;
+        }
+
+        .pipeline-step {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            padding: var(--space-md) var(--space-lg);
+        }
+
+        .pipeline-step .step-arrow {
+            font-family: var(--font-slop);
+            font-size: 1.2rem;
+            color: var(--accent-orange);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .pipeline-step h4 {
+            font-family: var(--font-slop);
+            font-size: 0.8rem;
+            color: var(--accent-amber);
+            margin-bottom: var(--space-xs);
+        }
+
+        .pipeline-step p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .bim-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="nav"></div>
+
+<main>
+    <div class="content-wrapper">
+
+        <section class="section" style="opacity:1;transform:none;">
+            <div class="section-header">
+                <span class="dept-tag">Dept. 06 // Engineering — Facility documentation archive</span>
+                <h2>What makes this different</h2>
+            </div>
+
+            <div class="slop-says scan-lines">
+                SLOP maintains detailed architectural records for all company facilities. These records are <span class="redacted">mostly</span> accurate and <span class="redacted">somewhat</span> current. Engineering personnel may access facility blueprints for restoration purposes. Some records have experienced <span class="redacted">convenient data corruption</span> and may not reflect current structural conditions.
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">The short version</p>
+                <p>Every reclaimable building in Slopworks is modeled from real architectural data. Real Revit and Navisworks building models — the same files architects and engineers use to design actual buildings — are converted into explorable game levels. Real duct layouts, real pipe routing, real mechanical rooms, real electrical systems. No other game does this.</p>
+            </div>
+        </section>
+
+        <!-- BEFORE / AFTER -->
+        <section class="section">
+            <figure class="art-frame">
+                <img src="assets/img/before-after-complex.png" alt="The Slopworks complex before and after the collapse" loading="lazy">
+                <figcaption>Facility comparison — archival record vs. current survey data</figcaption>
+            </figure>
+        </section>
+
+        <!-- WHY IT MATTERS -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Environmental authenticity</span>
+                <h2>Why real buildings matter</h2>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <span class="card-tag">Exploration</span>
+                    <h3>Every building feels different</h3>
+                    <p>Because they ARE different real buildings. A hospital layout is nothing like a warehouse. A power plant has spaces a machine shop doesn't. The variety is architectural, not algorithmic.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Restoration</span>
+                    <h3>Real systems to fix</h3>
+                    <p>MEP restoration is grounded in actual building systems. The duct you're repairing follows a real routing path. The pipe manifold has valves where an actual building would. The electrical panel serves actual zones.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Scale</span>
+                    <h3>Thousands of source buildings</h3>
+                    <p>The BIM data library includes thousands of real building models — schools, hospitals, factories, offices, warehouses, power plants. Each one is a potential game level with unique architecture.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Atmosphere</span>
+                    <h3>Authentic industrial spaces</h3>
+                    <p>A mechanical room designed by a real engineer has a complexity and logic that procedural generation can't match. Pipes go somewhere. Ducts serve a purpose. The space makes sense even in ruin.</p>
+                </div>
+            </div>
+
+            <figure class="art-frame">
+                <img src="assets/img/mechanical-room.png" alt="A mechanical room being restored — half-lit, half-dark" loading="lazy">
+                <figcaption>Mechanical room restoration — real infrastructure, real complexity</figcaption>
+            </figure>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- BIM PIPELINE -->
+        <section class="section" data-slop-interjection="SLOP's facility records are the most comprehensive in the industry. SLOP has no reason to doubt their accuracy. SLOP has not verified them recently. Or ever.">
+            <div class="section-header">
+                <span class="dept-tag">Technical pipeline</span>
+                <h2>How real becomes game</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-lg); max-width: 650px;">The BIM-to-game pipeline converts architectural data into explorable, gameplay-ready levels.</p>
+
+            <div class="pipeline-steps">
+                <div class="pipeline-step">
+                    <span class="step-arrow">&rarr;</span>
+                    <div>
+                        <h4>Revit / Navisworks model</h4>
+                        <p>Start with a real building model created by architects and engineers. Complete with structural, mechanical, electrical, and plumbing systems.</p>
+                    </div>
+                </div>
+                <div class="pipeline-step">
+                    <span class="step-arrow">&rarr;</span>
+                    <div>
+                        <h4>Export and import</h4>
+                        <p>Convert to a Unity-compatible format. Mesh cleanup, material assignment, LOD generation for performance.</p>
+                    </div>
+                </div>
+                <div class="pipeline-step">
+                    <span class="step-arrow">&rarr;</span>
+                    <div>
+                        <h4>System identification</h4>
+                        <p>Automated detection of MEP systems — which pipes are restorable, which ducts carry air, which panels distribute power. These become gameplay objectives.</p>
+                    </div>
+                </div>
+                <div class="pipeline-step">
+                    <span class="step-arrow">&rarr;</span>
+                    <div>
+                        <h4>Ruin generation</h4>
+                        <p>Procedural damage: remove mesh sections for collapse, add vegetation scatter, apply corrosion materials, flood low points. The clean building becomes a ruin.</p>
+                    </div>
+                </div>
+                <div class="pipeline-step">
+                    <span class="step-arrow">&rarr;</span>
+                    <div>
+                        <h4>Gameplay population</h4>
+                        <p>Fauna spawn placement near mechanical rooms and dark areas. Hazard zones. Loot distribution. NavMesh baking for creature AI. The building becomes a dungeon.</p>
+                    </div>
+                </div>
+                <div class="pipeline-step">
+                    <span class="step-arrow">&rarr;</span>
+                    <div>
+                        <h4>Narrative layer</h4>
+                        <p>AI-generated building dossier from the architectural metadata. Who built it, what it produced, what happened. Environmental storytelling through logs, posters, and artifacts.</p>
+                    </div>
+                </div>
+            </div>
+
+            <figure class="art-frame">
+                <img src="assets/img/power-plant.png" alt="Interior of a ruined power plant — massive industrial scale" loading="lazy">
+                <figcaption>Power plant interior — real infrastructure at game scale</figcaption>
+            </figure>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- CLOSING -->
+        <section class="section">
+            <div class="slop-says scan-lines" style="text-align: center; border-left: none; border: 1px solid rgba(255,187,51,0.2);">
+                End of orientation materials. You have completed all required department briefings. SLOP has noted your thoroughness in your personnel file. This will be reflected in your next performance review, which is scheduled for <span class="redacted">a date that will never arrive</span>.<br><br>
+                Please report to your designated workstation. The facilities await restoration. Management is counting on you.<br><br>
+                <span style="font-size: 0.7rem; color: var(--text-muted);">SLOP v2.7.1 // Slopworks Logistics and Operations Protocol // BUILD STATUS: NOMINAL</span>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<div id="footer"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
