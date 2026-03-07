@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Cell-based placement grid for the home base factory.
-/// Supports multiple discrete floor levels via sparse Dictionary storage.
+/// Supports variable-height placement via Y-bucket keys in sparse Dictionary storage.
 /// Plain C# class (D-004) -- no MonoBehaviour, testable in EditMode.
 /// </summary>
 public class FactoryGrid
@@ -11,13 +11,20 @@ public class FactoryGrid
     public const float CellSize = 1.0f;
     public const int Width = 200;
     public const int Height = 200;
-    public const float LevelHeight = 1.0f;
-    public const int MaxLevels = 50;
+    public const float BucketSize = 0.5f;
     public const float WallHeight = 3.0f;
     public const int FoundationSize = 4; // 4x4 cells per foundation
     public const int WallWidth = 4; // wall spans 4 cells wide
 
     private readonly Dictionary<Vector3Int, BuildingData> _cells = new();
+
+    /// <summary>
+    /// Quantizes a world Y position into a bucket index at BucketSize resolution.
+    /// </summary>
+    public static int YBucket(float surfaceY)
+    {
+        return Mathf.RoundToInt(surfaceY / BucketSize);
+    }
 
     /// <summary>
     /// Converts a world position to the grid cell that contains it.
@@ -31,50 +38,44 @@ public class FactoryGrid
 
     /// <summary>
     /// Returns the world-space center of a grid cell (Y = 0).
-    /// Level-0 wrapper for backward compatibility.
     /// </summary>
     public Vector3 CellToWorld(Vector2Int cell)
     {
-        return CellToWorld(cell, 0);
+        return CellToWorld(cell, 0f);
     }
 
     /// <summary>
-    /// Returns the world-space center of a grid cell at the given level.
-    /// Y = level * LevelHeight.
+    /// Returns the world-space center of a grid cell at the given surface Y.
     /// </summary>
-    public Vector3 CellToWorld(Vector2Int cell, int level)
+    public Vector3 CellToWorld(Vector2Int cell, float surfaceY)
     {
         float x = (cell.x + 0.5f) * CellSize;
-        float y = level * LevelHeight;
         float z = (cell.y + 0.5f) * CellSize;
-        return new Vector3(x, y, z);
+        return new Vector3(x, surfaceY, z);
     }
 
     /// <summary>
-    /// Checks whether a rectangular area is fully in bounds and unoccupied.
-    /// Level-0 wrapper for backward compatibility.
+    /// Checks whether a rectangular area is fully in bounds and unoccupied (surfaceY = 0).
+    /// Backward-compatible overload.
     /// </summary>
     public bool CanPlace(Vector2Int origin, Vector2Int size)
     {
-        return CanPlace(origin, size, 0);
+        return CanPlace(origin, size, 0f);
     }
 
     /// <summary>
-    /// Checks whether a rectangular area at the given level is fully in bounds and unoccupied.
+    /// Checks whether a rectangular area at the given surface Y is fully in bounds and unoccupied.
     /// </summary>
-    public bool CanPlace(Vector2Int origin, Vector2Int size, int level)
+    public bool CanPlace(Vector2Int origin, Vector2Int size, float surfaceY)
     {
-        if (level < 0 || level >= MaxLevels)
-            return false;
-
+        int bucket = YBucket(surfaceY);
         for (int x = origin.x; x < origin.x + size.x; x++)
         {
             for (int z = origin.y; z < origin.y + size.y; z++)
             {
                 if (!InBounds(x, z))
                     return false;
-                var key = new Vector3Int(x, z, level);
-                if (_cells.ContainsKey(key))
+                if (_cells.ContainsKey(new Vector3Int(x, z, bucket)))
                     return false;
             }
         }
@@ -82,70 +83,72 @@ public class FactoryGrid
     }
 
     /// <summary>
-    /// Marks a rectangular area as occupied by the given building.
-    /// Level-0 wrapper for backward compatibility.
+    /// Marks a rectangular area as occupied (surfaceY = 0).
+    /// Backward-compatible overload.
     /// </summary>
     public void Place(Vector2Int origin, Vector2Int size, BuildingData data)
     {
-        Place(origin, size, 0, data);
+        Place(origin, size, 0f, data);
     }
 
     /// <summary>
-    /// Marks a rectangular area at the given level as occupied by the given building.
+    /// Marks a rectangular area at the given surface Y as occupied by the given building.
     /// Caller should check CanPlace first.
     /// </summary>
-    public void Place(Vector2Int origin, Vector2Int size, int level, BuildingData data)
+    public void Place(Vector2Int origin, Vector2Int size, float surfaceY, BuildingData data)
     {
+        int bucket = YBucket(surfaceY);
         for (int x = origin.x; x < origin.x + size.x; x++)
         {
             for (int z = origin.y; z < origin.y + size.y; z++)
             {
-                _cells[new Vector3Int(x, z, level)] = data;
+                _cells[new Vector3Int(x, z, bucket)] = data;
             }
         }
     }
 
     /// <summary>
-    /// Clears a rectangular area, setting all cells to empty.
-    /// Level-0 wrapper for backward compatibility.
+    /// Clears a rectangular area (surfaceY = 0).
+    /// Backward-compatible overload.
     /// </summary>
     public void Remove(Vector2Int origin, Vector2Int size)
     {
-        Remove(origin, size, 0);
+        Remove(origin, size, 0f);
     }
 
     /// <summary>
-    /// Clears a rectangular area at the given level.
+    /// Clears a rectangular area at the given surface Y.
     /// </summary>
-    public void Remove(Vector2Int origin, Vector2Int size, int level)
+    public void Remove(Vector2Int origin, Vector2Int size, float surfaceY)
     {
+        int bucket = YBucket(surfaceY);
         for (int x = origin.x; x < origin.x + size.x; x++)
         {
             for (int z = origin.y; z < origin.y + size.y; z++)
             {
                 if (InBounds(x, z))
-                    _cells.Remove(new Vector3Int(x, z, level));
+                    _cells.Remove(new Vector3Int(x, z, bucket));
             }
         }
     }
 
     /// <summary>
-    /// Returns the BuildingData at a cell, or null if empty/out of bounds.
-    /// Level-0 wrapper for backward compatibility.
+    /// Returns the BuildingData at a cell (surfaceY = 0), or null if empty/out of bounds.
+    /// Backward-compatible overload.
     /// </summary>
     public BuildingData GetAt(Vector2Int cell)
     {
-        return GetAt(cell, 0);
+        return GetAt(cell, 0f);
     }
 
     /// <summary>
-    /// Returns the BuildingData at a cell and level, or null if empty/out of bounds.
+    /// Returns the BuildingData at a cell and surface Y, or null if empty/out of bounds.
     /// </summary>
-    public BuildingData GetAt(Vector2Int cell, int level)
+    public BuildingData GetAt(Vector2Int cell, float surfaceY)
     {
         if (!InBounds(cell.x, cell.y))
             return null;
-        _cells.TryGetValue(new Vector3Int(cell.x, cell.y, level), out var data);
+        _cells.TryGetValue(new Vector3Int(cell.x, cell.y, YBucket(surfaceY)), out var data);
         return data;
     }
 
