@@ -176,26 +176,19 @@ public class GridManager : NetworkBehaviour
 
         if (category == BuildingCategory.Ramp)
         {
-            float rampLength = 3f * cs;
-            float rampRise = FactoryGrid.WallHeight;
-            float slopeLength = Mathf.Sqrt(rampLength * rampLength + rampRise * rampRise);
+            int fs = FactoryGrid.FoundationSize;
+            float halfBlock = fs * cs * 0.5f;
+            float halfHeight = GetPrefabHalfHeight(prefab);
+            Vector3 blockCenter = new Vector3(
+                cell.x * cs + halfBlock, surfaceY, cell.y * cs + halfBlock);
+            position = blockCenter + new Vector3(
+                direction.x * halfBlock, halfHeight, direction.y * halfBlock);
 
-            float pitch = Mathf.Atan2(rampRise, rampLength) * Mathf.Rad2Deg;
             float yAngle = 0f;
             if (direction == Vector2Int.right) yAngle = 90f;
             else if (direction == Vector2Int.down) yAngle = 180f;
             else if (direction == Vector2Int.left) yAngle = 270f;
-            rotation = Quaternion.Euler(-pitch, yAngle, 0f);
-
-            int fs = FactoryGrid.FoundationSize;
-            float halfBlock = fs * cs * 0.5f;
-            Vector3 blockCenter = new Vector3(
-                cell.x * cs + halfBlock, surfaceY, cell.y * cs + halfBlock);
-            Vector3 baseEdge = blockCenter + new Vector3(
-                direction.x * halfBlock, 0f, direction.y * halfBlock);
-
-            Vector3 localForward = rotation * Vector3.forward;
-            position = baseEdge + localForward * (slopeLength * 0.5f);
+            rotation = Quaternion.Euler(0f, yAngle, 0f);
             return;
         }
 
