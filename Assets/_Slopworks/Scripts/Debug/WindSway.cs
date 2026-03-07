@@ -2,9 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Applies subtle wind-driven oscillation to a transform.
-/// Attach to trees, grass, and foliage for ambient movement.
-/// Each instance gets a unique phase offset based on world position
-/// so they don't all sway in unison.
+/// Only updates when within range of AND visible to the main camera.
 /// </summary>
 public class WindSway : MonoBehaviour
 {
@@ -12,29 +10,62 @@ public class WindSway : MonoBehaviour
     [SerializeField] private float _swaySpeed = 0.8f;
     [SerializeField] private float _swayVariation = 0.3f;
 
+    private const float ActiveRange = 80f;
+    private const float ActiveRangeSq = ActiveRange * ActiveRange;
+    private const float CheckInterval = 0.5f;
+
     private float _phaseX;
     private float _phaseZ;
     private float _speedMult;
     private Quaternion _baseRotation;
+    private Camera _camera;
+    private float _nextCheck;
+    private bool _active;
 
     private void Start()
     {
         _baseRotation = transform.localRotation;
 
-        // derive unique phase from world position so each tree sways differently
         var pos = transform.position;
         _phaseX = pos.x * 0.7f + pos.z * 0.3f;
         _phaseZ = pos.z * 0.7f + pos.x * 0.5f;
-
-        // slight speed variation per instance
         _speedMult = 1f + Mathf.Sin(pos.x * 1.3f + pos.z * 0.9f) * _swayVariation;
+
+        _nextCheck = Time.time + Random.Range(0f, CheckInterval);
     }
 
     private void Update()
     {
+        if (Time.time > _nextCheck)
+        {
+            _nextCheck = Time.time + CheckInterval;
+
+            if (_camera == null)
+                _camera = Camera.main;
+
+            bool wasActive = _active;
+            _active = false;
+
+            if (_camera != null)
+            {
+                var delta = transform.position - _camera.transform.position;
+                if (delta.sqrMagnitude < ActiveRangeSq)
+                {
+                    // check if within camera viewport (with margin for off-screen sway-in)
+                    var vp = _camera.WorldToViewportPoint(transform.position);
+                    if (vp.z > 0f && vp.x > -0.1f && vp.x < 1.1f && vp.y > -0.1f && vp.y < 1.1f)
+                        _active = true;
+                }
+            }
+
+            if (wasActive && !_active)
+                transform.localRotation = _baseRotation;
+        }
+
+        if (!_active) return;
+
         float t = Time.time * _swaySpeed * _speedMult;
 
-        // layered sine waves for organic motion
         float swayX = Mathf.Sin(t + _phaseX) * 0.6f
                     + Mathf.Sin(t * 1.7f + _phaseX * 0.5f) * 0.3f
                     + Mathf.Sin(t * 0.4f + _phaseZ) * 0.1f;

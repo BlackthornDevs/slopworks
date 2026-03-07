@@ -10,8 +10,8 @@ using System.Collections.Generic;
 public static class HomeBaseSceneryDresser
 {
     private const int Seed = 42;
-    private const float TerrainWidth = 800f;
-    private const float TerrainHeight = 180f;
+    private const float TerrainWidth = 1200f;
+    private const float TerrainHeight = 220f;
     private const float FlatRadius = 50f;
 
     private static readonly string[] TextureSets = {
@@ -35,6 +35,41 @@ public static class HomeBaseSceneryDresser
     private static readonly float[] SmoothnessMax = { 0.55f, 0.35f, 0.35f, 0.4f, 0.65f };
 
     private static readonly List<Vector2> RiverbedPoints = new();
+
+    // waystation world-space positions (x, z)
+    private static readonly Vector2[] WaystationPositions = {
+        new(150f, -50f),    // bus stop: forest, near factory along road
+        new(-80f, 300f),    // train station: forest/floodplain boundary, near river crossing
+        new(-60f, 380f),    // subway entrance: floodplain, in ruined hamlet
+        new(-350f, -300f),  // helipad: rocky upland plateau, NW quadrant
+    };
+    private static readonly Vector2[] WaystationPadSizes = {
+        new(15f, 8f),   // bus stop
+        new(40f, 12f),  // train station
+        new(8f, 6f),    // subway entrance
+        new(20f, 20f),  // helipad
+    };
+
+    // settlement cluster centers (world-space x, z)
+    private static readonly Vector2[] FarmsteadPositions = {
+        new(200f, 50f),
+        new(-180f, 120f),
+        new(300f, -180f),
+        new(-250f, -100f),
+        new(120f, 200f),
+        new(-300f, 200f),
+        new(350f, 100f),
+    };
+    private static readonly Vector2[] SmallClusterPositions = {
+        new(250f, 250f),
+        new(-200f, -250f),
+    };
+    private static readonly Vector2 HamletCenter = new(-40f, 350f);
+
+    // merchant structure positions (world-space x, z)
+    private static readonly Vector2 GasStationPos = new(120f, -30f);
+    private static readonly Vector2 WoodshopPos = new(280f, 150f);
+    private static readonly Vector2 GaragePos = new(-100f, 280f);
 
     private struct PropDef
     {
@@ -130,6 +165,44 @@ public static class HomeBaseSceneryDresser
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/bottle-large.fbx", 2f, 3f, false),
     };
 
+    private struct SpeciesDef
+    {
+        public string SpeciesId;
+        public PropDef Prop;
+        public BiomeZone Zone;
+        public float WindAmount;
+        public float WindSpeed;
+
+        public SpeciesDef(string id, PropDef prop, BiomeZone zone, float windAmt = 1.5f, float windSpd = 0.8f)
+        {
+            SpeciesId = id; Prop = prop; Zone = zone; WindAmount = windAmt; WindSpeed = windSpd;
+        }
+    }
+
+    private static readonly SpeciesDef[] CanopySpecies = {
+        // floodplain (6)
+        new("weeping-willow", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn.fbx", 5f, 8f), BiomeZone.Floodplain, 2f, 0.6f),
+        new("cottonwood", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 6f, 10f), BiomeZone.Floodplain, 1.2f, 0.7f),
+        new("sycamore", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 6f, 9f), BiomeZone.Floodplain, 1.3f, 0.8f),
+        new("river-birch", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn-trunk.fbx", 4f, 6f), BiomeZone.Floodplain, 1.8f, 0.9f),
+        new("black-walnut", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 6f, 9f), BiomeZone.Floodplain, 1f, 0.7f),
+        new("box-elder", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn.fbx", 3f, 5f), BiomeZone.Floodplain, 1.5f, 1f),
+        // forest (8)
+        new("red-oak", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 7f, 11f), BiomeZone.Forest, 1f, 0.7f),
+        new("sugar-maple", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn.fbx", 6f, 10f), BiomeZone.Forest, 1.2f, 0.7f),
+        new("hickory", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 8f, 12f), BiomeZone.Forest, 0.8f, 0.6f),
+        new("white-ash", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 7f, 11f), BiomeZone.Forest, 1.1f, 0.75f),
+        new("beech", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 5f, 8f), BiomeZone.Forest, 0.9f, 0.65f),
+        new("black-cherry", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn-tall.fbx", 5f, 9f), BiomeZone.Forest, 1f, 0.8f),
+        new("tulip-poplar", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 10f, 15f), BiomeZone.Forest, 0.7f, 0.5f),
+        new("ironwood", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-trunk.fbx", 3f, 5f), BiomeZone.Forest, 1.5f, 0.9f),
+        // rocky upland (4)
+        new("pitch-pine", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 3f, 7f), BiomeZone.RockyUpland, 1.8f, 1f),
+        new("red-cedar", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 3f, 5f), BiomeZone.RockyUpland, 0.8f, 0.5f),
+        new("chestnut-oak", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 4f, 7f), BiomeZone.RockyUpland, 1.2f, 0.7f),
+        new("scrub-oak", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-trunk.fbx", 2f, 3f), BiomeZone.RockyUpland, 2f, 1.2f),
+    };
+
     [MenuItem("Slopworks/Dress HomeBase Scenery")]
     public static void Dress()
     {
@@ -154,26 +227,31 @@ public static class HomeBaseSceneryDresser
         RiverbedPoints.Clear();
 
         // resize terrain to match constants
-        td.heightmapResolution = 1025;
-        td.alphamapResolution = 512;
-        td.SetDetailResolution(512, 16);
+        td.heightmapResolution = 2049;
+        td.alphamapResolution = 1024;
+        td.SetDetailResolution(1024, 16);
         td.size = new Vector3(TerrainWidth, TerrainHeight, TerrainWidth);
         // recenter terrain so (0,0,0) is the middle
         terrain.transform.position = new Vector3(-TerrainWidth / 2f, 0f, -TerrainWidth / 2f);
         terrainPos = terrain.transform.position;
 
         UpgradeTerrainTextures(td);
-        AddTerrainNoise(td);
+        AddTerrainNoise(td);           // includes regional NW tilt
         AddTerrainFeatures(td);
+        CarveEscarpment(td);
+        CarveOutcrops(td);
+        CarveWetland(td);
         SmoothHeightmap(td, 6);
-        CarveRiverValley(td);  // after smoothing so banks stay defined
+        CarveRiverValley(td);          // after smoothing so banks stay defined
+        CarveWaystationPads(td);       // after river — flat pads
         RepaintSplatmap(td);
         SetupSkybox();
 
         ScatterNature(root.transform, terrain, terrainPos, rng, td);
+        PlaceSettlements(root.transform, terrain, terrainPos, rng, td);
+        PlaceMerchantStructures(root.transform, terrain, terrainPos, rng, td);
+        PlaceWaystations(root.transform, terrain, terrainPos, rng, td);
         ScatterIndustrial(root.transform, terrain, terrainPos, rng, td);
-        PlaceRuinClusters(root.transform, terrain, terrainPos, rng, td);
-        PlaceAbandonedCamps(root.transform, terrain, terrainPos, rng, td);
         DecorateRiverbed(root.transform, terrain, terrainPos, rng, td);
         CreateRiverWater(root.transform, terrain, terrainPos, td);
         PaintTerrainGrass(td, rng);
@@ -317,14 +395,9 @@ public static class HomeBaseSceneryDresser
         int res = td.heightmapResolution;
         float[,] heights = td.GetHeights(0, 0, res, res);
 
-        // multi-octave Perlin noise — gives fractal micro-terrain like real landscapes
-        // octave 1: broad rolling hills (wavelength ~400m)
-        // octave 2: medium undulation (wavelength ~130m)
-        // octave 3: small bumps (wavelength ~50m)
-        // octave 4: micro detail (wavelength ~20m)
-        float[] frequencies = { 0.0025f, 0.0075f, 0.02f, 0.05f };
-        float[] amplitudes = { 18f, 7f, 3f, 1.2f };  // meters — bigger for 180m height range
-        float[] offsets = { 0f, 137f, 293f, 431f };   // decorrelate octaves
+        float[] frequencies = { 0.002f, 0.006f, 0.016f, 0.04f };
+        float[] amplitudes = { 22f, 9f, 4f, 1.5f };
+        float[] offsets = { 0f, 137f, 293f, 431f };
 
         for (int z = 0; z < res; z++)
         {
@@ -333,15 +406,17 @@ public static class HomeBaseSceneryDresser
                 float nx = (float)x / (res - 1);
                 float nz = (float)z / (res - 1);
 
-                // world-space coordinates for noise sampling
                 float wx = nx * TerrainWidth;
                 float wz = nz * TerrainWidth;
 
-                // distance from center — reduce noise near the flat factory area
                 float dx = nx - 0.5f;
                 float dz = nz - 0.5f;
                 float dist = Mathf.Sqrt(dx * dx + dz * dz);
-                float outerMask = Mathf.Clamp01((dist - 0.06f) / 0.06f); // ramps 0→1 from factory edge outward
+                float outerMask = Mathf.Clamp01((dist - 0.04f) / 0.04f);
+
+                // regional tilt: push NW corner up for rocky upland zone
+                float tiltNW = (1f - nx) * (1f - nz);
+                float regionalTilt = tiltNW * 25f + Mathf.PerlinNoise(wx * 0.001f + 577f, wz * 0.001f + 577f) * 20f;
 
                 float totalNoise = 0f;
                 for (int o = 0; o < frequencies.Length; o++)
@@ -349,30 +424,35 @@ public static class HomeBaseSceneryDresser
                     float n = Mathf.PerlinNoise(
                         wx * frequencies[o] + offsets[o],
                         wz * frequencies[o] + offsets[o] + 50f);
-                    // center around 0 instead of 0.5
                     totalNoise += (n - 0.5f) * amplitudes[o];
                 }
 
-                // broad valley depression in southern third where the river will go
+                // per-zone amplitude modifier based on preliminary elevation
+                float prelimHeight = (regionalTilt + totalNoise * outerMask) / TerrainHeight;
+                float zoneMod = 1f;
+                if (prelimHeight < 0.35f)
+                    zoneMod = 0.5f;
+                else if (prelimHeight > 0.70f)
+                    zoneMod = 1.5f;
+
                 float riverValleyCenter = 0.72f;
                 float valleyDist = Mathf.Abs(nz - riverValleyCenter);
-                float valleyWidth = 0.08f; // ~64m each side = 128m total valley at 800m scale
-                float valleyDepth = 14f;   // meters — deeper for 180m height range
+                float valleyWidth = 0.07f;
+                float valleyDepth = 16f;
                 float valleyFactor = 0f;
                 if (valleyDist < valleyWidth)
                 {
                     float t = valleyDist / valleyWidth;
-                    // concave parabolic profile — natural valley shape from erosion
                     valleyFactor = valleyDepth * (1f - t * t);
                 }
 
-                float heightDelta = (totalNoise * outerMask - valleyFactor) / TerrainHeight;
+                float heightDelta = (regionalTilt + totalNoise * outerMask * zoneMod - valleyFactor) / TerrainHeight;
                 heights[z, x] += heightDelta;
             }
         }
 
         td.SetHeights(0, 0, heights);
-        Debug.Log("terrain noise added: 4 octaves + valley depression");
+        Debug.Log("terrain noise added: 4 octaves + regional tilt + valley depression");
     }
 
     // === TERRAIN FEATURES ===
@@ -506,6 +586,224 @@ public static class HomeBaseSceneryDresser
 
         td.SetHeights(0, 0, heights);
         Debug.Log("terrain features added: craters, erosion gullies, ridges");
+    }
+
+    private static void CarveEscarpment(TerrainData td)
+    {
+        int res = td.heightmapResolution;
+        float[,] heights = td.GetHeights(0, 0, res, res);
+
+        float escarpmentHeight = 30f / TerrainHeight;
+        float steepWidth = 20f / TerrainWidth;
+        float gentleWidth = 80f / TerrainWidth;
+
+        for (int z = 0; z < res; z++)
+        {
+            for (int x = 0; x < res; x++)
+            {
+                float nx = (float)x / (res - 1);
+                float nz = (float)z / (res - 1);
+
+                float lineStartX = 0.15f;
+                float lineStartZ = 0.15f;
+                float lineDirX = 0.30f;
+                float lineDirZ = 0.25f;
+                float lineLen = Mathf.Sqrt(lineDirX * lineDirX + lineDirZ * lineDirZ);
+                float ldx = lineDirX / lineLen;
+                float ldz = lineDirZ / lineLen;
+
+                float px = nx - lineStartX;
+                float pz = nz - lineStartZ;
+                float along = px * ldx + pz * ldz;
+                float across = px * (-ldz) + pz * ldx;
+
+                float alongNorm = along / lineLen;
+                if (alongNorm < -0.1f || alongNorm > 1.1f) continue;
+
+                float endTaper = 1f;
+                if (alongNorm < 0f) endTaper = 1f + alongNorm * 10f;
+                else if (alongNorm > 1f) endTaper = 1f - (alongNorm - 1f) * 10f;
+                endTaper = Mathf.Clamp01(endTaper);
+
+                float warp = (Mathf.PerlinNoise(nx * 12f + 200f, nz * 12f + 200f) - 0.5f) * 0.03f;
+                across += warp;
+
+                float heightMod = 0f;
+                if (across > 0f && across < steepWidth)
+                {
+                    float t = across / steepWidth;
+                    heightMod = -escarpmentHeight * (1f - (1f - t) * (1f - t) * (1f - t));
+                }
+                else if (across >= steepWidth)
+                {
+                    heightMod = -escarpmentHeight;
+                }
+                else if (across < 0f && across > -gentleWidth)
+                {
+                    float t = -across / gentleWidth;
+                    heightMod = escarpmentHeight * (1f - t) * 0.3f;
+                }
+
+                heights[z, x] += heightMod * endTaper;
+            }
+        }
+
+        td.SetHeights(0, 0, heights);
+        Debug.Log("escarpment carved: ~400m cliff face at forest/upland boundary");
+    }
+
+    private static void CarveOutcrops(TerrainData td)
+    {
+        int res = td.heightmapResolution;
+        float[,] heights = td.GetHeights(0, 0, res, res);
+
+        var rng = new System.Random(Seed + 100);
+        int outcropCount = 5 + rng.Next(2);
+
+        for (int o = 0; o < outcropCount; o++)
+        {
+            float cx = 0.08f + (float)rng.NextDouble() * 0.27f;
+            float cz = 0.08f + (float)rng.NextDouble() * 0.27f;
+            float radiusNorm = (7f + (float)rng.NextDouble() * 8f) / TerrainWidth;
+            float peakHeight = (8f + (float)rng.NextDouble() * 12f) / TerrainHeight;
+
+            for (int z = 0; z < res; z++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    float nx = (float)x / (res - 1);
+                    float nz = (float)z / (res - 1);
+                    float ddx = nx - cx;
+                    float ddz = nz - cz;
+                    float dist = Mathf.Sqrt(ddx * ddx + ddz * ddz);
+
+                    if (dist > radiusNorm * 1.5f) continue;
+
+                    if (dist < radiusNorm)
+                    {
+                        float t = dist / radiusNorm;
+                        float profile;
+                        if (t < 0.6f)
+                            profile = 1f;
+                        else
+                        {
+                            float edgeT = (t - 0.6f) / 0.4f;
+                            profile = 1f - edgeT * edgeT * edgeT;
+                        }
+                        float roughness = Mathf.PerlinNoise(nx * 40f + o * 50f, nz * 40f + o * 50f) * 0.15f;
+                        heights[z, x] += peakHeight * profile + roughness * peakHeight * 0.3f;
+                    }
+                    else
+                    {
+                        float apronT = (dist - radiusNorm) / (radiusNorm * 0.5f);
+                        heights[z, x] += peakHeight * 0.1f * (1f - apronT);
+                    }
+                }
+            }
+        }
+
+        td.SetHeights(0, 0, heights);
+        Debug.Log($"rocky outcrops carved: {outcropCount} formations in upland zone");
+    }
+
+    private static void CarveWetland(TerrainData td)
+    {
+        int res = td.heightmapResolution;
+        float[,] heights = td.GetHeights(0, 0, res, res);
+
+        float centerX = 0.55f;
+        float centerZ = 0.78f;
+        float radiusNorm = 35f / TerrainWidth;
+        float depth = 2.5f / TerrainHeight;
+        float elongation = 1.8f;
+
+        for (int z = 0; z < res; z++)
+        {
+            for (int x = 0; x < res; x++)
+            {
+                float nx = (float)x / (res - 1);
+                float nz = (float)z / (res - 1);
+
+                float ddx = (nx - centerX) / elongation;
+                float ddz = nz - centerZ;
+                float dist = Mathf.Sqrt(ddx * ddx + ddz * ddz);
+
+                if (dist > radiusNorm) continue;
+
+                float t = dist / radiusNorm;
+                float profile;
+                if (t < 0.7f)
+                    profile = 1f;
+                else
+                {
+                    float edgeT = (t - 0.7f) / 0.3f;
+                    profile = 1f - edgeT * edgeT;
+                }
+
+                float microVar = Mathf.PerlinNoise(nx * 50f + 333f, nz * 50f + 333f) * 0.3f;
+                heights[z, x] -= depth * profile * (1f + microVar * 0.2f);
+            }
+        }
+
+        td.SetHeights(0, 0, heights);
+        Debug.Log("wetland depression carved: oxbow depression in floodplain");
+    }
+
+    private static void CarveWaystationPads(TerrainData td)
+    {
+        int res = td.heightmapResolution;
+        float[,] heights = td.GetHeights(0, 0, res, res);
+
+        for (int w = 0; w < WaystationPositions.Length; w++)
+        {
+            var pos = WaystationPositions[w];
+            var padSize = WaystationPadSizes[w];
+            float nx = (pos.x + TerrainWidth / 2f) / TerrainWidth;
+            float nz = (pos.y + TerrainWidth / 2f) / TerrainWidth;
+
+            int cx = Mathf.Clamp(Mathf.RoundToInt(nx * (res - 1)), 0, res - 1);
+            int cz = Mathf.Clamp(Mathf.RoundToInt(nz * (res - 1)), 0, res - 1);
+            float targetHeight = heights[cz, cx];
+
+            if (w == 2)
+                targetHeight -= 3f / TerrainHeight;
+            if (w == 1)
+                targetHeight += 1f / TerrainHeight;
+
+            float halfX = (padSize.x / 2f + 5f) / TerrainWidth;
+            float halfZ = (padSize.y / 2f + 5f) / TerrainWidth;
+
+            for (int z = 0; z < res; z++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    float pnx = (float)x / (res - 1);
+                    float pnz = (float)z / (res - 1);
+                    float ddx = Mathf.Abs(pnx - nx);
+                    float ddz = Mathf.Abs(pnz - nz);
+
+                    if (ddx > halfX || ddz > halfZ) continue;
+
+                    float padHalfX = padSize.x / 2f / TerrainWidth;
+                    float padHalfZ = padSize.y / 2f / TerrainWidth;
+
+                    if (ddx < padHalfX && ddz < padHalfZ)
+                    {
+                        heights[z, x] = targetHeight;
+                    }
+                    else
+                    {
+                        float blendX = ddx > padHalfX ? (ddx - padHalfX) / (halfX - padHalfX) : 0f;
+                        float blendZ = ddz > padHalfZ ? (ddz - padHalfZ) / (halfZ - padHalfZ) : 0f;
+                        float blend = Mathf.Max(blendX, blendZ);
+                        heights[z, x] = Mathf.Lerp(targetHeight, heights[z, x], blend);
+                    }
+                }
+            }
+        }
+
+        td.SetHeights(0, 0, heights);
+        Debug.Log($"waystation pads flattened: {WaystationPositions.Length} locations");
     }
 
     private static void SmoothHeightmap(TerrainData td, int passes)
@@ -660,6 +958,61 @@ public static class HomeBaseSceneryDresser
             }
         }
 
+        // enforce monotonically decreasing riverbed from west to east
+        // first pass: collect centerline heights, then build a monotonic ceiling
+        float[] centerHeights = new float[res];
+        int[] centerZIndices = new int[res];
+        for (int x = 0; x < res; x++)
+        {
+            float nx = (float)x / (res - 1);
+            float riverNz = RiverCenterZ(nx);
+            int cz = Mathf.Clamp(Mathf.RoundToInt(riverNz * (res - 1)), 0, res - 1);
+            centerZIndices[x] = cz;
+            centerHeights[x] = heights[cz, x];
+        }
+
+        // build monotonic profile: east end is lowest, walk westward and clamp
+        // add a gentle gradient (8m total drop west to east)
+        float totalGradient = 8f / TerrainHeight;
+        float[] targetBed = new float[res];
+        targetBed[res - 1] = centerHeights[res - 1];
+        for (int x = res - 2; x >= 0; x--)
+        {
+            float minStep = totalGradient / (res - 1); // minimum drop per pixel
+            targetBed[x] = Mathf.Min(centerHeights[x], targetBed[x + 1] + minStep);
+        }
+
+        // second pass: where terrain is above the target, carve it down
+        // apply within a corridor wider than the channel to create a gorge through escarpments
+        float gorgeHalf = baseChannelHalf * 4f; // gorge cuts 4x wider than channel
+        for (int x = 0; x < res; x++)
+        {
+            float excess = centerHeights[x] - targetBed[x];
+            if (excess <= 0f) continue; // already at or below target
+
+            int cz = centerZIndices[x];
+            int halfPixels = Mathf.CeilToInt(gorgeHalf * (res - 1));
+            for (int dz = -halfPixels; dz <= halfPixels; dz++)
+            {
+                int zz = cz + dz;
+                if (zz < 0 || zz >= res) continue;
+                float d = Mathf.Abs((float)dz / (res - 1));
+
+                // full cut within channel, fading over gorge walls
+                float fade;
+                if (d < baseChannelHalf)
+                    fade = 1f;
+                else if (d < gorgeHalf)
+                    fade = 1f - (d - baseChannelHalf) / (gorgeHalf - baseChannelHalf);
+                else
+                    continue;
+
+                // smooth fade: use squared falloff for natural gorge walls
+                fade = fade * fade;
+                heights[zz, x] -= excess * fade;
+            }
+        }
+
         td.SetHeights(0, 0, heights);
         Debug.Log($"river valley carved: channel + terraces + floodplain ({RiverbedPoints.Count} path points)");
     }
@@ -681,105 +1034,101 @@ public static class HomeBaseSceneryDresser
                 float dz = nz - 0.5f;
                 float dist = Mathf.Sqrt(dx * dx + dz * dz);
                 float steepness = td.GetSteepness(nx, nz);
+                float wx = nx * TerrainWidth - TerrainWidth / 2f;
+                float wz = nz * TerrainWidth - TerrainWidth / 2f;
 
                 float concrete = 0f, dirt = 0f, grass = 0f, gravel = 0f, rust = 0f;
 
-                float flatEnd = 0.06f;   // ~48m radius = factory zone
-                float transEnd = 0.10f;  // ~80m = transition to wilderness
+                float flatEnd = FlatRadius / TerrainWidth / 2f;
+                float transEnd = (FlatRadius + 30f) / TerrainWidth / 2f;
 
                 if (dist < flatEnd)
                 {
                     concrete = 0.8f;
                     float rustNoise = Mathf.PerlinNoise(nx * 40f + 700f, nz * 40f + 700f);
-                    if (rustNoise > 0.55f)
-                    {
-                        rust = (rustNoise - 0.55f) * 3f;
-                        concrete -= rust * 0.5f;
-                    }
+                    if (rustNoise > 0.55f) { rust = (rustNoise - 0.55f) * 3f; concrete -= rust * 0.5f; }
                     float gravelNoise = Mathf.PerlinNoise(nx * 60f + 800f, nz * 60f + 800f);
-                    if (gravelNoise > 0.65f)
-                    {
-                        gravel = (gravelNoise - 0.65f) * 3f;
-                        concrete -= gravel * 0.3f;
-                    }
+                    if (gravelNoise > 0.65f) { gravel = (gravelNoise - 0.65f) * 3f; concrete -= gravel * 0.3f; }
                     dirt = Mathf.Max(0f, 1f - concrete - rust - gravel);
                 }
                 else if (dist < transEnd)
                 {
                     float t = (dist - flatEnd) / (transEnd - flatEnd);
                     concrete = (1f - t) * 0.5f;
-                    dirt = t * 0.4f;
-                    gravel = 0.3f;
-                    grass = t * 0.2f;
+                    dirt = t * 0.4f; gravel = 0.3f; grass = t * 0.2f;
                     float rustNoise = Mathf.PerlinNoise(nx * 25f + 900f, nz * 25f + 900f);
                     rust = rustNoise > 0.5f ? (rustNoise - 0.5f) * 1.5f : 0f;
                 }
                 else
                 {
-                    grass = 0.6f;
-                    dirt = 0.25f;
+                    var zone = GetBiomeZone(td, nx, nz);
 
-                    float noiseVal = Mathf.PerlinNoise(nx * 20f + 500f, nz * 20f + 500f);
-                    if (noiseVal > 0.55f)
+                    switch (zone)
                     {
-                        dirt += (noiseVal - 0.55f) * 2f;
-                        grass -= (noiseVal - 0.55f);
+                        case BiomeZone.Floodplain:
+                            grass = 0.65f; dirt = 0.25f; gravel = 0.1f;
+                            float riverZ = RiverCenterZ(nx);
+                            float riverDist = Mathf.Abs(nz - riverZ) * TerrainWidth;
+                            if (riverDist < 30f)
+                            {
+                                float wetBlend = 1f - riverDist / 30f;
+                                dirt += wetBlend * 0.3f; grass -= wetBlend * 0.2f;
+                                gravel += wetBlend * 0.15f;
+                            }
+                            break;
+
+                        case BiomeZone.Forest:
+                            grass = 0.55f; dirt = 0.35f; gravel = 0.1f;
+                            float forestNoise = Mathf.PerlinNoise(nx * 20f + 500f, nz * 20f + 500f);
+                            if (forestNoise > 0.55f) { dirt += (forestNoise - 0.55f) * 2f; grass -= (forestNoise - 0.55f); }
+                            break;
+
+                        case BiomeZone.RockyUpland:
+                            gravel = 0.5f; dirt = 0.3f; grass = 0.15f; concrete = 0.05f;
+                            if (steepness > 15f)
+                            {
+                                float rockBlend = Mathf.Clamp01((steepness - 15f) / 20f);
+                                gravel += rockBlend * 0.3f; grass *= (1f - rockBlend); dirt *= (1f - rockBlend * 0.5f);
+                            }
+                            break;
                     }
 
                     float pathNoise = Mathf.PerlinNoise(nx * 8f + 100f, nz * 12f + 100f);
                     if (pathNoise > 0.6f && pathNoise < 0.65f)
                     {
-                        gravel = 0.6f;
-                        grass *= 0.3f;
-                        dirt *= 0.3f;
-                    }
-
-                    if (steepness > 20f)
-                    {
-                        float rockBlend = Mathf.Clamp01((steepness - 20f) / 15f);
-                        gravel += rockBlend * 0.5f;
-                        grass *= (1f - rockBlend);
+                        gravel = 0.6f; grass *= 0.3f; dirt *= 0.3f;
                     }
                 }
 
-                // riparian zone — moisture gradient based on distance to river
-                float riverCenterZ = RiverCenterZ(nx);
-                float riverDist = Mathf.Abs(nz - riverCenterZ);
-                float channelHalf = 8f / TerrainWidth;
-                float floodplainEdge = 80f / TerrainWidth; // total influence radius in meters
-
-                if (riverDist < floodplainEdge)
+                // waystation pad splatmap overlay
+                for (int w = 0; w < WaystationPositions.Length; w++)
                 {
-                    float riverBlend = 1f - riverDist / floodplainEdge;
+                    var wpos = WaystationPositions[w];
+                    float wdx = Mathf.Abs(wx - wpos.x);
+                    float wdz = Mathf.Abs(wz - wpos.y);
+                    float padHalfX = WaystationPadSizes[w].x / 2f;
+                    float padHalfZ = WaystationPadSizes[w].y / 2f;
+                    if (wdx < padHalfX && wdz < padHalfZ)
+                    {
+                        concrete = 0.7f; gravel = 0.2f; rust = 0.1f;
+                        grass = 0f; dirt = 0f;
+                    }
+                }
 
-                    if (riverDist < channelHalf)
-                    {
-                        // inside channel: mostly gravel/sand riverbed
-                        gravel = 0.8f;
-                        dirt = 0.2f;
-                        grass = 0f;
-                        concrete = 0f;
-                        rust = 0f;
-                    }
-                    else if (riverDist < channelHalf + 12f / TerrainWidth)
-                    {
-                        // immediate banks: wet dirt and gravel
-                        float bankT = (riverDist - channelHalf) / (12f / TerrainWidth);
-                        gravel = 0.6f * (1f - bankT) + 0.3f * bankT;
-                        dirt = 0.3f * (1f - bankT) + 0.5f * bankT;
-                        grass = 0.1f * bankT;
-                        concrete *= (1f - riverBlend);
-                        rust *= (1f - riverBlend);
-                    }
-                    else
-                    {
-                        // floodplain: lush grass with dirt patches, decreasing moisture
-                        float fpBlend = riverBlend * 0.7f;
-                        grass += fpBlend * 0.4f;
-                        dirt += fpBlend * 0.2f;
-                        gravel += fpBlend * 0.1f;
-                        concrete *= (1f - fpBlend);
-                    }
+                // riparian zone override
+                float rz = RiverCenterZ(nx);
+                float rd = Mathf.Abs(nz - rz);
+                float channelHalf = 8f / TerrainWidth;
+                if (rd < channelHalf)
+                {
+                    gravel = 0.8f; dirt = 0.2f; grass = 0f; concrete = 0f; rust = 0f;
+                }
+                else if (rd < channelHalf + 12f / TerrainWidth)
+                {
+                    float bankT = (rd - channelHalf) / (12f / TerrainWidth);
+                    gravel = 0.6f * (1f - bankT) + 0.3f * bankT;
+                    dirt = 0.3f * (1f - bankT) + 0.5f * bankT;
+                    grass = 0.1f * bankT; concrete = 0f; rust = 0f;
                 }
 
                 float total = concrete + dirt + grass + gravel + rust;
@@ -799,7 +1148,7 @@ public static class HomeBaseSceneryDresser
         }
 
         td.SetAlphamaps(0, 0, alphas);
-        Debug.Log("splatmap repainted with 5 PBR layers");
+        Debug.Log("splatmap repainted: biome-aware with waystation pads");
     }
 
     // === SKYBOX ===
@@ -843,8 +1192,8 @@ public static class HomeBaseSceneryDresser
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.45f, 0.32f, 0.22f);
-        RenderSettings.fogStartDistance = 200f;
-        RenderSettings.fogEndDistance = 800f;
+        RenderSettings.fogStartDistance = 300f;
+        RenderSettings.fogEndDistance = 1200f;
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
 
@@ -862,12 +1211,10 @@ public static class HomeBaseSceneryDresser
         var undergrowthParent = new GameObject("Undergrowth").transform;
         undergrowthParent.SetParent(root);
 
-        int treesPlaced = 0;
-        int rocksPlaced = 0;
-        int undergrowthPlaced = 0;
+        int treesPlaced = 0, rocksPlaced = 0, undergrowthPlaced = 0;
 
-        // phase 1: tree clusters — scaled for 800m map
-        int clusterCount = 70 + rng.Next(20);
+        // phase 1: tree clusters — scaled for 1200m map
+        int clusterCount = 150 + rng.Next(30);
         for (int c = 0; c < clusterCount; c++)
         {
             float cx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
@@ -875,8 +1222,15 @@ public static class HomeBaseSceneryDresser
             float dist = Mathf.Sqrt(cx * cx + cz * cz);
             if (dist < FlatRadius + 8f) continue;
 
+            var zone = GetBiomeZoneFromWorldPos(td, cx, cz);
+            var zoneCanopy = GetCanopyForZone(zone);
+            if (zoneCanopy.Length == 0) continue;
+
+            if (zone == BiomeZone.RockyUpland && rng.NextDouble() > 0.3) continue;
+            if (zone == BiomeZone.Floodplain && rng.NextDouble() > 0.7) continue;
+
             float clusterRadius = 8f + (float)rng.NextDouble() * 12f;
-            int treesInCluster = 4 + rng.Next(7);
+            int treesInCluster = zone == BiomeZone.RockyUpland ? 2 + rng.Next(3) : 4 + rng.Next(7);
 
             for (int t = 0; t < treesInCluster; t++)
             {
@@ -888,25 +1242,25 @@ public static class HomeBaseSceneryDresser
                 float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
                 float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
                 if (nx < 0.02f || nx > 0.98f || nz < 0.02f || nz > 0.98f) continue;
-
-                float steepness = td.GetSteepness(nx, nz);
-                if (steepness > 25f) continue;
+                if (td.GetSteepness(nx, nz) > 25f) continue;
+                if (IsNearStructure(wx, wz, 8f)) continue;
 
                 float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-
-                var prop = TreeProps[rng.Next(TreeProps.Length)];
-                var instance = InstantiateProp(prop, rng);
+                var species = zoneCanopy[rng.Next(zoneCanopy.Length)];
+                var instance = InstantiateProp(species.Prop, rng);
                 if (instance == null) continue;
 
-                float yaw = (float)rng.NextDouble() * 360f;
                 instance.transform.position = new Vector3(wx, y, wz);
-                instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, yaw, rng, 4f);
+                instance.transform.rotation = UprightRotation((float)rng.NextDouble() * 360f, rng, 4f);
                 instance.transform.SetParent(treeParent);
                 instance.isStatic = false;
-                AddWindSway(instance, 1.2f + (float)rng.NextDouble() * 0.6f, 0.7f + (float)rng.NextDouble() * 0.3f);
+                AddWindSway(instance, species.WindAmount, species.WindSpeed);
+
+                var tag = instance.AddComponent<BiomeTag>();
+                tag.Zone = zone;
+                tag.SpeciesId = species.SpeciesId;
                 treesPlaced++;
 
-                // 2-4 undergrowth around each tree
                 int undergrowthCount = 2 + rng.Next(3);
                 for (int u = 0; u < undergrowthCount; u++)
                 {
@@ -920,14 +1274,12 @@ public static class HomeBaseSceneryDresser
                     if (unx < 0.02f || unx > 0.98f || unz < 0.02f || unz > 0.98f) continue;
 
                     float uy = SampleWorldHeight(terrain, terrainPos, uwx, uwz);
-
-                    // grass-type undergrowth near trees
                     var uprop = UndergrowthProps[rng.Next(4)];
                     var uinst = InstantiateProp(uprop, rng);
                     if (uinst == null) continue;
 
                     uinst.transform.position = new Vector3(uwx, uy, uwz);
-                    uinst.transform.rotation = SlopeAlignedRotation(td, unx, unz, (float)rng.NextDouble() * 360f, rng, 0f);
+                    uinst.transform.rotation = UprightRotation((float)rng.NextDouble() * 360f, rng, 0f);
                     uinst.transform.SetParent(undergrowthParent);
                     uinst.isStatic = false;
                     AddWindSway(uinst, 2f + (float)rng.NextDouble() * 1f, 1f + (float)rng.NextDouble() * 0.3f);
@@ -936,51 +1288,67 @@ public static class HomeBaseSceneryDresser
             }
         }
 
-        // phase 2: scattered solo trees
-        for (int i = 0; i < 500; i++)
+        // phase 2: scattered solo trees (scaled for 1200m)
+        for (int i = 0; i < 1000; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius + 5f) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius + 5f) continue;
+            if (IsNearStructure(wx, wz, 8f)) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
-            float steepness = td.GetSteepness(nx, nz);
-            if (steepness > 25f) continue;
+            if (td.GetSteepness(nx, nz) > 25f) continue;
+
+            var zone = GetBiomeZoneFromWorldPos(td, wx, wz);
+            var zoneCanopy = GetCanopyForZone(zone);
+            if (zoneCanopy.Length == 0) continue;
+
+            if (zone == BiomeZone.RockyUpland && rng.NextDouble() > 0.2) continue;
 
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-            var prop = TreeProps[rng.Next(TreeProps.Length)];
-            var instance = InstantiateProp(prop, rng);
+            var species = zoneCanopy[rng.Next(zoneCanopy.Length)];
+            var instance = InstantiateProp(species.Prop, rng);
             if (instance == null) continue;
 
             instance.transform.position = new Vector3(wx, y, wz);
-            instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, (float)rng.NextDouble() * 360f, rng, 3f);
+            instance.transform.rotation = UprightRotation((float)rng.NextDouble() * 360f, rng, 3f);
             instance.transform.SetParent(treeParent);
             instance.isStatic = false;
-            AddWindSway(instance, 1.2f + (float)rng.NextDouble() * 0.6f, 0.7f + (float)rng.NextDouble() * 0.3f);
+            AddWindSway(instance, species.WindAmount, species.WindSpeed);
+
+            var tag = instance.AddComponent<BiomeTag>();
+            tag.Zone = zone;
+            tag.SpeciesId = species.SpeciesId;
             treesPlaced++;
         }
 
-        // phase 3: rocks — biome-aware selection
-        for (int i = 0; i < 800; i++)
+        // phase 3: rocks — biome-aware (scaled for 1200m)
+        for (int i = 0; i < 1600; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
-
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
 
-            // pick rock type based on location
+            var zone = GetBiomeZoneFromWorldPos(td, wx, wz);
+
+            if (zone == BiomeZone.Floodplain && rng.NextDouble() > 0.3) continue;
+
             PropDef prop;
             if (IsNearRiverbed(wx, wz, 10f))
             {
                 int idx = SandyRockIndices[rng.Next(SandyRockIndices.Length)];
                 prop = RockProps[idx];
+            }
+            else if (zone == BiomeZone.RockyUpland)
+            {
+                prop = RockProps[rng.Next(RockProps.Length)];
             }
             else if (td.GetSteepness(nx, nz) < 10f && rng.NextDouble() < 0.3)
             {
@@ -1002,18 +1370,20 @@ public static class HomeBaseSceneryDresser
             rocksPlaced++;
         }
 
-        // phase 4: undergrowth patches in open areas
-        for (int i = 0; i < 1200; i++)
+        // phase 4: undergrowth patches (scaled for 1200m)
+        for (int i = 0; i < 2500; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius + 3f) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius + 3f) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
-            float steepness = td.GetSteepness(nx, nz);
-            if (steepness > 35f) continue;
+            if (td.GetSteepness(nx, nz) > 35f) continue;
+
+            var zone = GetBiomeZoneFromWorldPos(td, wx, wz);
+            if (zone == BiomeZone.RockyUpland && rng.NextDouble() > 0.3) continue;
 
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
             int propIdx = rng.Next(UndergrowthProps.Length);
@@ -1025,7 +1395,6 @@ public static class HomeBaseSceneryDresser
             instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, (float)rng.NextDouble() * 360f, rng, 0f);
             instance.transform.SetParent(undergrowthParent);
 
-            // only vegetation sways — logs, stones, planks, buckets are rigid
             bool isVegetation = propIdx < 4;
             instance.isStatic = !isVegetation;
             if (isVegetation)
@@ -1033,22 +1402,20 @@ public static class HomeBaseSceneryDresser
             undergrowthPlaced++;
         }
 
-        // phase 5: micro-detail clusters (rock + grass combos for natural groupings)
-        for (int i = 0; i < 250; i++)
+        // phase 5: micro-detail clusters (scaled for 1200m)
+        for (int i = 0; i < 500; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius + 5f) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius + 5f) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
             if (td.GetSteepness(nx, nz) > 30f) continue;
 
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-
-            // small rock
-            var rockProp = RockProps[rng.Next(3)]; // rock-a/b/c only
+            var rockProp = RockProps[rng.Next(3)];
             var rock = InstantiateProp(new PropDef(rockProp.Path, 1.5f, 3f, true), rng);
             if (rock != null)
             {
@@ -1059,7 +1426,6 @@ public static class HomeBaseSceneryDresser
                 rocksPlaced++;
             }
 
-            // 2-3 grass tufts around it
             for (int g = 0; g < 2 + rng.Next(2); g++)
             {
                 float ga = (float)rng.NextDouble() * Mathf.PI * 2f;
@@ -1083,13 +1449,11 @@ public static class HomeBaseSceneryDresser
             }
         }
 
-        // phase 6: riparian buffer — dense vegetation corridor along the river
-        // real riparian ecology: dense trees 10-25m from water, undergrowth 3-10m
+        // phase 6: riparian buffer (same structure, scaled for 1200m)
         for (int step = 0; step < RiverbedPoints.Count; step += 3)
         {
             var pt = RiverbedPoints[step];
 
-            // dense undergrowth band: 3-10m from channel center (both sides)
             for (int side = -1; side <= 1; side += 2)
             {
                 if (rng.NextDouble() > 0.6) continue;
@@ -1102,7 +1466,7 @@ public static class HomeBaseSceneryDresser
                 if (unx < 0.02f || unx > 0.98f || unz < 0.02f || unz > 0.98f) continue;
 
                 float uy = SampleWorldHeight(terrain, terrainPos, uwx, uwz);
-                var uProp = UndergrowthProps[rng.Next(4)]; // grass variants only
+                var uProp = UndergrowthProps[rng.Next(4)];
                 var uInst = InstantiateProp(uProp, rng);
                 if (uInst == null) continue;
 
@@ -1114,7 +1478,6 @@ public static class HomeBaseSceneryDresser
                 undergrowthPlaced++;
             }
 
-            // riparian tree band: 10-25m from channel center
             if (rng.NextDouble() > 0.35) continue;
             for (int side = -1; side <= 1; side += 2)
             {
@@ -1127,20 +1490,24 @@ public static class HomeBaseSceneryDresser
                 float tnz = (twz + TerrainWidth / 2f) / TerrainWidth;
                 if (tnx < 0.02f || tnx > 0.98f || tnz < 0.02f || tnz > 0.98f) continue;
 
-                float dist = Mathf.Sqrt(twx * twx + twz * twz);
-                if (dist < FlatRadius + 5f) continue;
+                float ddist = Mathf.Sqrt(twx * twx + twz * twz);
+                if (ddist < FlatRadius + 5f) continue;
 
                 float ty = SampleWorldHeight(terrain, terrainPos, twx, twz);
-                // prefer autumn trees near water (stand-in for willows/cottonwoods)
-                var tProp = TreeProps[3 + rng.Next(3)]; // autumn variants
-                var tInst = InstantiateProp(tProp, rng);
+                var floodCanopy = GetCanopyForZone(BiomeZone.Floodplain);
+                var species = floodCanopy[rng.Next(floodCanopy.Length)];
+                var tInst = InstantiateProp(species.Prop, rng);
                 if (tInst == null) continue;
 
                 tInst.transform.position = new Vector3(twx, ty, twz);
-                tInst.transform.rotation = SlopeAlignedRotation(td, tnx, tnz, (float)rng.NextDouble() * 360f, rng, 3f);
+                tInst.transform.rotation = UprightRotation((float)rng.NextDouble() * 360f, rng, 3f);
                 tInst.transform.SetParent(treeParent);
                 tInst.isStatic = false;
-                AddWindSway(tInst, 1.5f + (float)rng.NextDouble() * 0.5f, 0.8f);
+                AddWindSway(tInst, species.WindAmount, species.WindSpeed);
+
+                var tag = tInst.AddComponent<BiomeTag>();
+                tag.Zone = BiomeZone.Floodplain;
+                tag.SpeciesId = species.SpeciesId;
                 treesPlaced++;
             }
         }
@@ -1157,10 +1524,10 @@ public static class HomeBaseSceneryDresser
 
         int placed = 0;
 
-        for (int i = 0; i < 350; i++)
+        for (int i = 0; i < 600; i++)
         {
             float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-            float radius = FlatRadius + (float)rng.NextDouble() * 60f - 10f;
+            float radius = FlatRadius + (float)rng.NextDouble() * 100f - 10f;
             float wx = Mathf.Cos(angle) * radius;
             float wz = Mathf.Sin(angle) * radius;
 
@@ -1189,242 +1556,615 @@ public static class HomeBaseSceneryDresser
         Debug.Log($"industrial debris placed: {placed}");
     }
 
-    private static void PlaceRuinClusters(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
+    private static void PlaceSettlements(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
     {
-        var parent = new GameObject("RuinClusters").transform;
+        var parent = new GameObject("Settlements").transform;
         parent.SetParent(root);
-
-        Vector2[] clusterCenters = {
-            new(150f, 80f),
-            new(-140f, 120f),
-            new(-100f, -180f),
-            new(180f, -150f),
-            new(250f, 20f),
-            new(-200f, -80f),
-            new(80f, 220f),
-            new(-280f, 150f),
-            new(300f, -200f),
-            new(-60f, 280f),
-        };
-
         int totalPlaced = 0;
 
-        foreach (var center in clusterCenters)
+        // farmsteads
+        foreach (var center in FarmsteadPositions)
         {
-            var cluster = new GameObject($"Ruin_{totalPlaced}").transform;
-            cluster.SetParent(parent);
-
-            int pieceCount = 4 + rng.Next(5);
-            for (int p = 0; p < pieceCount; p++)
-            {
-                float ox = (float)(rng.NextDouble() - 0.5) * 12f;
-                float oz = (float)(rng.NextDouble() - 0.5) * 12f;
-                float wx = center.x + ox;
-                float wz = center.y + oz;
-
-                float y = terrain.SampleHeight(new Vector3(wx + TerrainWidth / 2f + terrainPos.x, 0f, wz + TerrainWidth / 2f + terrainPos.z));
-                y += terrainPos.y;
-
-                var prop = RuinProps[rng.Next(RuinProps.Length)];
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prop.Path);
-                if (prefab == null) continue;
-
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-
-                float tiltX = (float)(rng.NextDouble() - 0.5) * 30f;
-                float tiltZ = (float)(rng.NextDouble() - 0.5) * 20f;
-                if (rng.NextDouble() < 0.2f)
-                    tiltX = 80f + (float)rng.NextDouble() * 10f;
-
-                instance.transform.position = new Vector3(wx, y, wz);
-                instance.transform.rotation = Quaternion.Euler(tiltX, (float)rng.NextDouble() * 360f, tiltZ);
-                instance.transform.localScale = Vector3.one * prop.MinScale;
-                instance.transform.SetParent(cluster);
-                instance.isStatic = true;
-
-                totalPlaced++;
-            }
-
-            for (int d = 0; d < 3 + rng.Next(4); d++)
-            {
-                float ox = (float)(rng.NextDouble() - 0.5) * 16f;
-                float oz = (float)(rng.NextDouble() - 0.5) * 16f;
-                float wx = center.x + ox;
-                float wz = center.y + oz;
-
-                float y = terrain.SampleHeight(new Vector3(wx + TerrainWidth / 2f + terrainPos.x, 0f, wz + TerrainWidth / 2f + terrainPos.z));
-                y += terrainPos.y;
-
-                var prop = IndustrialProps[rng.Next(IndustrialProps.Length)];
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prop.Path);
-                if (prefab == null) continue;
-
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-                float scale = prop.MinScale + (float)rng.NextDouble() * (prop.MaxScale - prop.MinScale);
-                float tilt = (float)(rng.NextDouble() - 0.5) * 25f;
-
-                instance.transform.position = new Vector3(wx, y, wz);
-                instance.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
-                instance.transform.localScale = Vector3.one * scale;
-                instance.transform.SetParent(cluster);
-                instance.isStatic = true;
-
-                totalPlaced++;
-            }
-
-            // undergrowth reclaiming ruins
-            for (int u = 0; u < 4 + rng.Next(5); u++)
-            {
-                float ox = (float)(rng.NextDouble() - 0.5) * 14f;
-                float oz = (float)(rng.NextDouble() - 0.5) * 14f;
-                float wx = center.x + ox;
-                float wz = center.y + oz;
-                float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-
-                var uprop = UndergrowthProps[rng.Next(4)];
-                var uinst = InstantiateProp(uprop, rng);
-                if (uinst == null) continue;
-
-                uinst.transform.position = new Vector3(wx, y, wz);
-                uinst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                uinst.transform.SetParent(cluster);
-                uinst.isStatic = false;
-                AddWindSway(uinst, 2f, 1f);
-                totalPlaced++;
-            }
-        }
-
-        Debug.Log($"ruin cluster pieces placed: {totalPlaced}");
-    }
-
-    // === ABANDONED CAMPS ===
-
-    private static void PlaceAbandonedCamps(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
-    {
-        var parent = new GameObject("AbandonedCamps").transform;
-        parent.SetParent(root);
-
-        Vector2[] campCenters = {
-            new(120f, 60f),
-            new(-130f, 100f),
-            new(70f, -200f),
-            new(-180f, -90f),
-            new(100f, 250f),
-            new(-250f, 40f),
-            new(300f, 100f),
-            new(-80f, -300f),
-        };
-
-        int totalPlaced = 0;
-
-        foreach (var center in campCenters)
-        {
-            float cnx = (center.x + TerrainWidth / 2f) / TerrainWidth;
-            float cnz = (center.y + TerrainWidth / 2f) / TerrainWidth;
-            if (td.GetSteepness(cnx, cnz) > 15f) continue;
-
-            var camp = new GameObject($"Camp_{totalPlaced}").transform;
-            camp.SetParent(parent);
-
+            var farm = new GameObject($"Farmstead_{totalPlaced}").transform;
+            farm.SetParent(parent);
             float cy = SampleWorldHeight(terrain, terrainPos, center.x, center.y);
 
-            // campfire at center
-            var fire = InstantiateProp(CampProps[0], rng);
-            if (fire != null)
+            var mainProp = RuinProps[rng.Next(3)];
+            var main = InstantiateProp(mainProp, rng);
+            if (main != null)
             {
-                fire.transform.position = new Vector3(center.x, cy, center.y);
-                fire.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                fire.transform.SetParent(camp);
-                fire.isStatic = true;
+                float facing = 170f + (float)(rng.NextDouble() - 0.5) * 30f;
+                main.transform.position = new Vector3(center.x, cy, center.y);
+                main.transform.rotation = Quaternion.Euler(0f, facing, 0f);
+                main.transform.SetParent(farm);
+                main.isStatic = true;
                 totalPlaced++;
             }
 
-            // 1-2 tents facing the fire
-            int tentCount = 1 + rng.Next(2);
-            for (int t = 0; t < tentCount; t++)
+            if (rng.NextDouble() > 0.3)
             {
                 float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = 3f + (float)rng.NextDouble() * 4f;
-                float tx = center.x + Mathf.Cos(angle) * dist;
-                float tz = center.y + Mathf.Sin(angle) * dist;
-                float ty = SampleWorldHeight(terrain, terrainPos, tx, tz);
+                float dist = 8f + (float)rng.NextDouble() * 7f;
+                float ox = center.x + Mathf.Cos(angle) * dist;
+                float oz = center.y + Mathf.Sin(angle) * dist;
+                float oy = SampleWorldHeight(terrain, terrainPos, ox, oz);
 
-                float facingAngle = Mathf.Atan2(center.y - tz, center.x - tx) * Mathf.Rad2Deg;
-                var tentProp = CampProps[1 + rng.Next(3)];
-                var tent = InstantiateProp(tentProp, rng);
-                if (tent == null) continue;
+                var outProp = RuinProps[6 + rng.Next(3)];
+                var outBldg = InstantiateProp(outProp, rng);
+                if (outBldg != null)
+                {
+                    float tilt = (float)(rng.NextDouble() - 0.5) * 6f;
+                    outBldg.transform.position = new Vector3(ox, oy, oz);
+                    outBldg.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, tilt * 0.5f);
+                    outBldg.transform.SetParent(farm);
+                    outBldg.isStatic = true;
+                    totalPlaced++;
+                }
+            }
 
-                tent.transform.position = new Vector3(tx, ty, tz);
-                tent.transform.rotation = Quaternion.Euler(0f, facingAngle + ((float)rng.NextDouble() - 0.5f) * 30f, 0f);
-                tent.transform.SetParent(camp);
-                tent.isStatic = true;
+            for (int f = 0; f < 4 + rng.Next(4); f++)
+            {
+                float fAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float fDist = 12f + (float)rng.NextDouble() * 8f;
+                float fx = center.x + Mathf.Cos(fAngle) * fDist;
+                float fz = center.y + Mathf.Sin(fAngle) * fDist;
+                float fy = SampleWorldHeight(terrain, terrainPos, fx, fz);
+
+                var fenceProp = IndustrialProps[6 + rng.Next(3)];
+                var fence = InstantiateProp(fenceProp, rng);
+                if (fence == null) continue;
+
+                float faceFire = Mathf.Atan2(center.y - fz, center.x - fx) * Mathf.Rad2Deg;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 20f;
+                fence.transform.position = new Vector3(fx, fy, fz);
+                fence.transform.rotation = Quaternion.Euler(tilt, faceFire + (float)(rng.NextDouble() - 0.5) * 40f, 0f);
+                fence.transform.SetParent(farm);
+                fence.isStatic = true;
                 totalPlaced++;
             }
 
-            // 1-3 bedrolls
-            for (int b = 0; b < 1 + rng.Next(3); b++)
+            for (int d = 0; d < 4 + rng.Next(6); d++)
             {
-                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = 2f + (float)rng.NextDouble() * 5f;
-                float bx = center.x + Mathf.Cos(angle) * dist;
-                float bz = center.y + Mathf.Sin(angle) * dist;
-                float by = SampleWorldHeight(terrain, terrainPos, bx, bz);
-
-                var bedProp = CampProps[4 + rng.Next(2)];
-                var bedroll = InstantiateProp(bedProp, rng);
-                if (bedroll == null) continue;
-
-                bedroll.transform.position = new Vector3(bx, by, bz);
-                bedroll.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                bedroll.transform.SetParent(camp);
-                bedroll.isStatic = true;
-                totalPlaced++;
-            }
-
-            // 2-5 scattered bottles/debris
-            for (int d = 0; d < 2 + rng.Next(4); d++)
-            {
-                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = 1f + (float)rng.NextDouble() * 6f;
-                float dx = center.x + Mathf.Cos(angle) * dist;
-                float dz = center.y + Mathf.Sin(angle) * dist;
+                float dAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dDist = (float)rng.NextDouble() * 15f;
+                float dx = center.x + Mathf.Cos(dAngle) * dDist;
+                float dz = center.y + Mathf.Sin(dAngle) * dDist;
                 float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
 
-                var debrisProp = CampProps[6 + rng.Next(2)];
+                var debrisProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
                 var debris = InstantiateProp(debrisProp, rng);
                 if (debris == null) continue;
 
-                float tilt = (float)(rng.NextDouble() - 0.5) * 40f;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 30f;
                 debris.transform.position = new Vector3(dx, dy, dz);
                 debris.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, tilt * 0.3f);
-                debris.transform.SetParent(camp);
+                debris.transform.SetParent(farm);
                 debris.isStatic = true;
                 totalPlaced++;
             }
 
-            // undergrowth growing through the abandoned camp
-            for (int u = 0; u < 3 + rng.Next(4); u++)
+            for (int u = 0; u < 5 + rng.Next(5); u++)
             {
-                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = (float)rng.NextDouble() * 8f;
-                float ux = center.x + Mathf.Cos(angle) * dist;
-                float uz = center.y + Mathf.Sin(angle) * dist;
+                float uAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float uDist = 2f + (float)rng.NextDouble() * 5f;
+                float ux = center.x + Mathf.Cos(uAngle) * uDist;
+                float uz = center.y + Mathf.Sin(uAngle) * uDist;
                 float uy = SampleWorldHeight(terrain, terrainPos, ux, uz);
 
                 var uProp = UndergrowthProps[rng.Next(4)];
-                var uinst = InstantiateProp(uProp, rng);
-                if (uinst == null) continue;
+                var uInst = InstantiateProp(uProp, rng);
+                if (uInst == null) continue;
 
-                uinst.transform.position = new Vector3(ux, uy, uz);
-                uinst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                uinst.transform.SetParent(camp);
-                uinst.isStatic = false;
-                AddWindSway(uinst, 2f + (float)rng.NextDouble() * 1f, 1f + (float)rng.NextDouble() * 0.3f);
+                uInst.transform.position = new Vector3(ux, uy, uz);
+                uInst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                uInst.transform.SetParent(farm);
+                uInst.isStatic = false;
+                AddWindSway(uInst, 2f, 1f);
                 totalPlaced++;
             }
         }
 
-        Debug.Log($"abandoned camp pieces placed: {totalPlaced}");
+        // small clusters
+        foreach (var center in SmallClusterPositions)
+        {
+            var cluster = new GameObject($"Cluster_{totalPlaced}").transform;
+            cluster.SetParent(parent);
+
+            int buildingCount = 3 + rng.Next(3);
+            float yardRadius = 10f + (float)rng.NextDouble() * 5f;
+
+            for (int b = 0; b < buildingCount; b++)
+            {
+                float angle = ((float)b / buildingCount) * Mathf.PI * 2f + (float)(rng.NextDouble() - 0.5) * 0.5f;
+                float dist = yardRadius * (0.8f + (float)rng.NextDouble() * 0.4f);
+                float bx = center.x + Mathf.Cos(angle) * dist;
+                float bz = center.y + Mathf.Sin(angle) * dist;
+                float by = SampleWorldHeight(terrain, terrainPos, bx, bz);
+
+                var prop = RuinProps[rng.Next(RuinProps.Length)];
+                var bldg = InstantiateProp(prop, rng);
+                if (bldg == null) continue;
+
+                float facing = Mathf.Atan2(center.y - bz, center.x - bx) * Mathf.Rad2Deg;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 6f;
+                bldg.transform.position = new Vector3(bx, by, bz);
+                bldg.transform.rotation = Quaternion.Euler(tilt, facing + (float)(rng.NextDouble() - 0.5) * 20f, tilt * 0.5f);
+                bldg.transform.SetParent(cluster);
+                bldg.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int d = 0; d < 6 + rng.Next(6); d++)
+            {
+                float dAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dDist = (float)rng.NextDouble() * (yardRadius + 10f);
+                float dx = center.x + Mathf.Cos(dAngle) * dDist;
+                float dz = center.y + Mathf.Sin(dAngle) * dDist;
+                float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
+
+                bool isUndergrowth = rng.NextDouble() > 0.5;
+                PropDef prop;
+                if (isUndergrowth) prop = UndergrowthProps[rng.Next(4)];
+                else prop = IndustrialProps[rng.Next(IndustrialProps.Length)];
+
+                var inst = InstantiateProp(prop, rng);
+                if (inst == null) continue;
+
+                inst.transform.position = new Vector3(dx, dy, dz);
+                inst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                inst.transform.SetParent(cluster);
+                inst.isStatic = !isUndergrowth;
+                if (isUndergrowth) AddWindSway(inst, 2f, 1f);
+                totalPlaced++;
+            }
+        }
+
+        // ruined hamlet
+        {
+            var hamlet = new GameObject("RuinedHamlet").transform;
+            hamlet.SetParent(parent);
+
+            float roadDir = 0.3f;
+            int hamletBuildingCount = 12 + rng.Next(4);
+
+            for (int b = 0; b < hamletBuildingCount; b++)
+            {
+                float along = ((float)b / hamletBuildingCount - 0.5f) * 100f;
+                float perpOffset = ((float)(rng.NextDouble() - 0.5)) * 20f;
+                if (Mathf.Abs(perpOffset) < 5f) perpOffset = Mathf.Sign(perpOffset) * (5f + (float)rng.NextDouble() * 5f);
+
+                float bx = HamletCenter.x + Mathf.Cos(roadDir) * along + Mathf.Sin(roadDir) * perpOffset;
+                float bz = HamletCenter.y + Mathf.Sin(roadDir) * along - Mathf.Cos(roadDir) * perpOffset;
+                float by = SampleWorldHeight(terrain, terrainPos, bx, bz);
+
+                var prop = RuinProps[rng.Next(RuinProps.Length)];
+                var bldg = InstantiateProp(prop, rng);
+                if (bldg == null) continue;
+
+                float facing = roadDir * Mathf.Rad2Deg + (perpOffset > 0 ? -90f : 90f);
+                float tilt = (float)(rng.NextDouble() - 0.5) * 6f;
+
+                if (rng.NextDouble() < 0.4f)
+                    tilt = 15f + (float)rng.NextDouble() * 15f;
+
+                bldg.transform.position = new Vector3(bx, by, bz);
+                bldg.transform.rotation = Quaternion.Euler(tilt, facing + (float)(rng.NextDouble() - 0.5) * 10f, tilt * 0.3f);
+                bldg.transform.SetParent(hamlet);
+                bldg.isStatic = true;
+                totalPlaced++;
+
+                for (int d = 0; d < 2 + rng.Next(3); d++)
+                {
+                    float da = (float)rng.NextDouble() * Mathf.PI * 2f;
+                    float dd = 2f + (float)rng.NextDouble() * 8f;
+                    float dx = bx + Mathf.Cos(da) * dd;
+                    float dz = bz + Mathf.Sin(da) * dd;
+                    float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
+
+                    var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                    var dInst = InstantiateProp(dProp, rng);
+                    if (dInst == null) continue;
+
+                    float dt = (float)(rng.NextDouble() - 0.5) * 25f;
+                    dInst.transform.position = new Vector3(dx, dy, dz);
+                    dInst.transform.rotation = Quaternion.Euler(dt, (float)rng.NextDouble() * 360f, 0f);
+                    dInst.transform.SetParent(hamlet);
+                    dInst.isStatic = true;
+                    totalPlaced++;
+                }
+            }
+
+            for (int u = 0; u < 20 + rng.Next(10); u++)
+            {
+                float ux = HamletCenter.x + (float)(rng.NextDouble() - 0.5) * 120f;
+                float uz = HamletCenter.y + (float)(rng.NextDouble() - 0.5) * 40f;
+                float uy = SampleWorldHeight(terrain, terrainPos, ux, uz);
+
+                var uProp = UndergrowthProps[rng.Next(4)];
+                var uInst = InstantiateProp(uProp, rng);
+                if (uInst == null) continue;
+
+                uInst.transform.position = new Vector3(ux, uy, uz);
+                uInst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                uInst.transform.SetParent(hamlet);
+                uInst.isStatic = false;
+                AddWindSway(uInst, 2f, 1f);
+                totalPlaced++;
+            }
+
+            for (int t = 0; t < 1 + rng.Next(2); t++)
+            {
+                float tx = HamletCenter.x + (float)(rng.NextDouble() - 0.5) * 60f;
+                float tz = HamletCenter.y + (float)(rng.NextDouble() - 0.5) * 20f;
+                float ty = SampleWorldHeight(terrain, terrainPos, tx, tz);
+
+                var floodCanopy = GetCanopyForZone(BiomeZone.Floodplain);
+                var species = floodCanopy[rng.Next(floodCanopy.Length)];
+                var tree = InstantiateProp(species.Prop, rng);
+                if (tree == null) continue;
+
+                tree.transform.position = new Vector3(tx, ty, tz);
+                tree.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                tree.transform.SetParent(hamlet);
+                tree.isStatic = false;
+                AddWindSway(tree, species.WindAmount, species.WindSpeed);
+                totalPlaced++;
+            }
+        }
+
+        Debug.Log($"settlements placed: {totalPlaced} total pieces");
+    }
+
+    private static void PlaceMerchantStructures(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
+    {
+        var parent = new GameObject("Merchants").transform;
+        parent.SetParent(root);
+        int totalPlaced = 0;
+
+        // gas station
+        {
+            var station = new GameObject("GasStation").transform;
+            station.SetParent(parent);
+            float gy = SampleWorldHeight(terrain, terrainPos, GasStationPos.x, GasStationPos.y);
+
+            var canopy = InstantiateProp(RuinProps[3], rng);
+            if (canopy != null)
+            {
+                canopy.transform.position = new Vector3(GasStationPos.x, gy, GasStationPos.y);
+                canopy.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+                canopy.transform.SetParent(station);
+                canopy.isStatic = true;
+                totalPlaced++;
+            }
+
+            var shop = InstantiateProp(RuinProps[6], rng);
+            if (shop != null)
+            {
+                shop.transform.position = new Vector3(GasStationPos.x + 6f, gy, GasStationPos.y + 3f);
+                shop.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+                shop.transform.SetParent(station);
+                shop.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int d = 0; d < 6 + rng.Next(4); d++)
+            {
+                float ox = (float)(rng.NextDouble() - 0.5) * 20f;
+                float oz = (float)(rng.NextDouble() - 0.5) * 12f;
+                float dy = SampleWorldHeight(terrain, terrainPos, GasStationPos.x + ox, GasStationPos.y + oz);
+                var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                var dInst = InstantiateProp(dProp, rng);
+                if (dInst == null) continue;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 15f;
+                dInst.transform.position = new Vector3(GasStationPos.x + ox, dy, GasStationPos.y + oz);
+                dInst.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
+                dInst.transform.SetParent(station);
+                dInst.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        // woodshop
+        {
+            var shop = new GameObject("Woodshop").transform;
+            shop.SetParent(parent);
+            float wy = SampleWorldHeight(terrain, terrainPos, WoodshopPos.x, WoodshopPos.y);
+
+            var shed = InstantiateProp(RuinProps[0], rng);
+            if (shed != null)
+            {
+                shed.transform.position = new Vector3(WoodshopPos.x, wy, WoodshopPos.y);
+                shed.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                shed.transform.SetParent(shop);
+                shed.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int l = 0; l < 3 + rng.Next(3); l++)
+            {
+                float ox = 3f + (float)rng.NextDouble() * 8f;
+                float oz = (float)(rng.NextDouble() - 0.5) * 10f;
+                float ly = SampleWorldHeight(terrain, terrainPos, WoodshopPos.x + ox, WoodshopPos.y + oz);
+                var logProp = UndergrowthProps[6]; // resource-wood
+                var log = InstantiateProp(logProp, rng);
+                if (log == null) continue;
+                log.transform.position = new Vector3(WoodshopPos.x + ox, ly, WoodshopPos.y + oz);
+                log.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                log.transform.SetParent(shop);
+                log.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int f = 0; f < 6; f++)
+            {
+                float fAngle = ((float)f / 6f) * Mathf.PI * 2f;
+                float fDist = 10f;
+                float fx = WoodshopPos.x + Mathf.Cos(fAngle) * fDist;
+                float fz = WoodshopPos.y + Mathf.Sin(fAngle) * fDist;
+                float fy = SampleWorldHeight(terrain, terrainPos, fx, fz);
+                var fProp = IndustrialProps[6];
+                var fence = InstantiateProp(fProp, rng);
+                if (fence == null) continue;
+                fence.transform.position = new Vector3(fx, fy, fz);
+                fence.transform.rotation = Quaternion.Euler(0f, fAngle * Mathf.Rad2Deg + 90f, 0f);
+                fence.transform.SetParent(shop);
+                fence.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        // mechanic's garage
+        {
+            var garage = new GameObject("Garage").transform;
+            garage.SetParent(parent);
+            float my = SampleWorldHeight(terrain, terrainPos, GaragePos.x, GaragePos.y);
+
+            var mainBldg = InstantiateProp(RuinProps[8], rng);
+            if (mainBldg != null)
+            {
+                mainBldg.transform.position = new Vector3(GaragePos.x, my, GaragePos.y);
+                mainBldg.transform.rotation = Quaternion.Euler(0f, -20f, 0f);
+                mainBldg.transform.SetParent(garage);
+                mainBldg.isStatic = true;
+                totalPlaced++;
+            }
+
+            var annex = InstantiateProp(RuinProps[7], rng);
+            if (annex != null)
+            {
+                annex.transform.position = new Vector3(GaragePos.x + 5f, my, GaragePos.y - 3f);
+                annex.transform.rotation = Quaternion.Euler(0f, -20f, 0f);
+                annex.transform.SetParent(garage);
+                annex.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int d = 0; d < 8 + rng.Next(5); d++)
+            {
+                float ox = (float)(rng.NextDouble() - 0.5) * 18f;
+                float oz = (float)(rng.NextDouble() - 0.5) * 14f;
+                float dy = SampleWorldHeight(terrain, terrainPos, GaragePos.x + ox, GaragePos.y + oz);
+                var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                var dInst = InstantiateProp(dProp, rng);
+                if (dInst == null) continue;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 20f;
+                dInst.transform.position = new Vector3(GaragePos.x + ox, dy, GaragePos.y + oz);
+                dInst.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
+                dInst.transform.SetParent(garage);
+                dInst.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        // market stalls at hamlet center
+        {
+            var market = new GameObject("MarketStalls").transform;
+            market.SetParent(parent);
+
+            for (int s = 0; s < 4; s++)
+            {
+                float sx = HamletCenter.x + ((float)s - 1.5f) * 8f;
+                float sz = HamletCenter.y + 5f;
+                float sy = SampleWorldHeight(terrain, terrainPos, sx, sz);
+
+                var stallProp = RuinProps[4 + rng.Next(2)];
+                var stall = InstantiateProp(stallProp, rng);
+                if (stall == null) continue;
+
+                stall.transform.position = new Vector3(sx, sy + 2f, sz);
+                stall.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                stall.transform.SetParent(market);
+                stall.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        Debug.Log($"merchant structures placed: {totalPlaced} pieces");
+    }
+
+    private static void PlaceWaystations(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
+    {
+        var parent = new GameObject("Waystations").transform;
+        parent.SetParent(root);
+        int totalPlaced = 0;
+        string[] names = { "BusStop", "TrainStation", "SubwayEntrance", "Helipad" };
+
+        for (int w = 0; w < WaystationPositions.Length; w++)
+        {
+            var pos = WaystationPositions[w];
+            var ws = new GameObject(names[w]).transform;
+            ws.SetParent(parent);
+
+            float wy = SampleWorldHeight(terrain, terrainPos, pos.x, pos.y);
+
+            switch (w)
+            {
+                case 0: // bus stop
+                {
+                    var shelter = InstantiateProp(RuinProps[6], rng);
+                    if (shelter != null)
+                    {
+                        shelter.transform.position = new Vector3(pos.x, wy, pos.y);
+                        shelter.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                        shelter.transform.SetParent(ws);
+                        shelter.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int f = 0; f < 3; f++)
+                    {
+                        var fence = InstantiateProp(IndustrialProps[6 + rng.Next(3)], rng);
+                        if (fence == null) continue;
+                        fence.transform.position = new Vector3(pos.x + (f - 1) * 3f, wy, pos.y + 3f);
+                        fence.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                        fence.transform.SetParent(ws);
+                        fence.isStatic = true;
+                        totalPlaced++;
+                    }
+                    var sign = InstantiateProp(IndustrialProps[12], rng);
+                    if (sign != null)
+                    {
+                        sign.transform.position = new Vector3(pos.x - 5f, wy, pos.y);
+                        sign.transform.rotation = Quaternion.Euler(0f, 0f, 5f);
+                        sign.transform.SetParent(ws);
+                        sign.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+
+                case 1: // train station
+                {
+                    var platform = InstantiateProp(RuinProps[3], rng);
+                    if (platform != null)
+                    {
+                        platform.transform.position = new Vector3(pos.x, wy + 1f, pos.y);
+                        platform.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        platform.transform.localScale = new Vector3(1f, 0.3f, 3f);
+                        platform.transform.SetParent(ws);
+                        platform.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int col = 0; col < 3; col++)
+                    {
+                        var c = InstantiateProp(RuinProps[0], rng);
+                        if (c == null) continue;
+                        c.transform.position = new Vector3(pos.x + (col - 1) * 8f, wy + 1f, pos.y - 2f);
+                        c.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        c.transform.SetParent(ws);
+                        c.isStatic = true;
+                        totalPlaced++;
+                    }
+                    var sign = InstantiateProp(IndustrialProps[13], rng);
+                    if (sign != null)
+                    {
+                        sign.transform.position = new Vector3(pos.x - 15f, wy, pos.y);
+                        sign.transform.SetParent(ws);
+                        sign.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+
+                case 2: // subway entrance
+                {
+                    var door = InstantiateProp(RuinProps[2], rng);
+                    if (door != null)
+                    {
+                        door.transform.position = new Vector3(pos.x, wy - 1f, pos.y);
+                        door.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        door.transform.SetParent(ws);
+                        door.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int s = 0; s < 4; s++)
+                    {
+                        var wall = InstantiateProp(RuinProps[rng.Next(2)], rng);
+                        if (wall == null) continue;
+                        float wAngle = s * 90f;
+                        float wDist = 3f;
+                        wall.transform.position = new Vector3(
+                            pos.x + Mathf.Cos(wAngle * Mathf.Deg2Rad) * wDist,
+                            wy - 0.5f,
+                            pos.y + Mathf.Sin(wAngle * Mathf.Deg2Rad) * wDist);
+                        wall.transform.rotation = Quaternion.Euler(0f, wAngle, 0f);
+                        wall.transform.SetParent(ws);
+                        wall.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int step = 0; step < 4; step++)
+                    {
+                        var stair = InstantiateProp(RuinProps[4], rng);
+                        if (stair == null) continue;
+                        stair.transform.position = new Vector3(pos.x, wy - 0.5f * step, pos.y + 1f + step * 0.8f);
+                        stair.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        stair.transform.localScale = new Vector3(1f, 0.2f, 0.8f);
+                        stair.transform.SetParent(ws);
+                        stair.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+
+                case 3: // helipad
+                {
+                    var shack = InstantiateProp(RuinProps[8], rng);
+                    if (shack != null)
+                    {
+                        shack.transform.position = new Vector3(pos.x + 8f, wy, pos.y + 8f);
+                        shack.transform.rotation = Quaternion.Euler(0f, -45f, 0f);
+                        shack.transform.SetParent(ws);
+                        shack.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int f = 0; f < 8; f++)
+                    {
+                        var fence = InstantiateProp(IndustrialProps[6 + rng.Next(3)], rng);
+                        if (fence == null) continue;
+                        float fAngle = ((float)f / 8f) * Mathf.PI * 2f;
+                        float fDist = 10f;
+                        fence.transform.position = new Vector3(
+                            pos.x + Mathf.Cos(fAngle) * fDist,
+                            wy,
+                            pos.y + Mathf.Sin(fAngle) * fDist);
+                        fence.transform.rotation = Quaternion.Euler(0f, fAngle * Mathf.Rad2Deg + 90f, 0f);
+                        fence.transform.SetParent(ws);
+                        fence.isStatic = true;
+                        totalPlaced++;
+                    }
+                    var sign = InstantiateProp(IndustrialProps[12], rng);
+                    if (sign != null)
+                    {
+                        sign.transform.position = new Vector3(pos.x - 10f, wy, pos.y);
+                        sign.transform.SetParent(ws);
+                        sign.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+            }
+
+            for (int d = 0; d < 4 + rng.Next(4); d++)
+            {
+                float dAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dDist = WaystationPadSizes[w].x / 2f + (float)rng.NextDouble() * 10f;
+                float dx = pos.x + Mathf.Cos(dAngle) * dDist;
+                float dz = pos.y + Mathf.Sin(dAngle) * dDist;
+                float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
+
+                var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                var dInst = InstantiateProp(dProp, rng);
+                if (dInst == null) continue;
+
+                float tilt = (float)(rng.NextDouble() - 0.5) * 20f;
+                dInst.transform.position = new Vector3(dx, dy, dz);
+                dInst.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
+                dInst.transform.SetParent(ws);
+                dInst.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        Debug.Log($"waystations placed: {totalPlaced} pieces across {WaystationPositions.Length} locations");
     }
 
     // === RIVERBED DECORATION ===
@@ -1713,6 +2453,38 @@ public static class HomeBaseSceneryDresser
 
     // === HELPERS ===
 
+    private static BiomeZone GetBiomeZone(TerrainData td, float nx, float nz)
+    {
+        float height = td.GetHeight(
+            Mathf.Clamp((int)(nx * (td.heightmapResolution - 1)), 0, td.heightmapResolution - 1),
+            Mathf.Clamp((int)(nz * (td.heightmapResolution - 1)), 0, td.heightmapResolution - 1));
+        float normalizedHeight = height / TerrainHeight;
+
+        float riverZ = RiverCenterZ(nx);
+        float riverDist = Mathf.Abs(nz - riverZ) * TerrainWidth;
+
+        if (normalizedHeight < 0.35f || riverDist < 120f)
+            return BiomeZone.Floodplain;
+        if (normalizedHeight > 0.70f)
+            return BiomeZone.RockyUpland;
+        return BiomeZone.Forest;
+    }
+
+    private static SpeciesDef[] GetCanopyForZone(BiomeZone zone)
+    {
+        var list = new List<SpeciesDef>();
+        foreach (var s in CanopySpecies)
+            if (s.Zone == zone) list.Add(s);
+        return list.ToArray();
+    }
+
+    private static BiomeZone GetBiomeZoneFromWorldPos(TerrainData td, float wx, float wz)
+    {
+        float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
+        float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
+        return GetBiomeZone(td, nx, nz);
+    }
+
     private static float SampleWorldHeight(Terrain terrain, Vector3 terrainPos, float wx, float wz)
     {
         float y = terrain.SampleHeight(new Vector3(
@@ -1734,6 +2506,17 @@ public static class HomeBaseSceneryDresser
             instance.AddComponent<MeshCollider>();
 
         return instance;
+    }
+
+    private static Quaternion UprightRotation(float yaw, System.Random rng, float randomTiltDeg)
+    {
+        float tx = 0f, tz = 0f;
+        if (randomTiltDeg > 0f)
+        {
+            tx = ((float)rng.NextDouble() - 0.5f) * 2f * randomTiltDeg;
+            tz = ((float)rng.NextDouble() - 0.5f) * 2f * randomTiltDeg;
+        }
+        return Quaternion.Euler(tx, yaw, tz);
     }
 
     private static Quaternion SlopeAlignedRotation(TerrainData td, float nx, float nz, float yaw, System.Random rng, float randomTiltDeg)
@@ -1762,6 +2545,39 @@ public static class HomeBaseSceneryDresser
             if (dx * dx + dz * dz < thresholdSq)
                 return true;
         }
+        return false;
+    }
+
+    private static bool IsNearStructure(float wx, float wz, float threshold)
+    {
+        float thresholdSq = threshold * threshold;
+
+        foreach (var pos in WaystationPositions)
+        {
+            float ddx = wx - pos.x;
+            float ddz = wz - pos.y;
+            if (ddx * ddx + ddz * ddz < thresholdSq * 4f) return true;
+        }
+
+        foreach (var pos in FarmsteadPositions)
+        {
+            float ddx = wx - pos.x;
+            float ddz = wz - pos.y;
+            if (ddx * ddx + ddz * ddz < thresholdSq) return true;
+        }
+
+        float hdx = wx - HamletCenter.x;
+        float hdz = wz - HamletCenter.y;
+        if (hdx * hdx + hdz * hdz < 60f * 60f) return true;
+
+        Vector2[] merchants = { GasStationPos, WoodshopPos, GaragePos };
+        foreach (var pos in merchants)
+        {
+            float ddx = wx - pos.x;
+            float ddz = wz - pos.y;
+            if (ddx * ddx + ddz * ddz < thresholdSq * 2f) return true;
+        }
+
         return false;
     }
 
