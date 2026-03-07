@@ -7,12 +7,21 @@ public class GridManager : NetworkBehaviour
 {
     public static GridManager Instance { get; private set; }
 
-    [SerializeField] private GameObject _foundationPrefab;
-    [SerializeField] private GameObject _wallPrefab;
-    [SerializeField] private GameObject _rampPrefab;
-    [SerializeField] private GameObject _machinePrefab;
-    [SerializeField] private GameObject _storagePrefab;
-    [SerializeField] private GameObject _beltPrefab;
+    // Fallback serialized fields -- used only if Resources folder is empty for that type
+    [SerializeField] private GameObject _foundationPrefabFallback;
+    [SerializeField] private GameObject _wallPrefabFallback;
+    [SerializeField] private GameObject _rampPrefabFallback;
+    [SerializeField] private GameObject _machinePrefabFallback;
+    [SerializeField] private GameObject _storagePrefabFallback;
+    [SerializeField] private GameObject _beltPrefabFallback;
+
+    // Variant arrays loaded from Resources/Prefabs/Buildings/{Type}/
+    private GameObject[] _foundationPrefabs;
+    private GameObject[] _wallPrefabs;
+    private GameObject[] _rampPrefabs;
+    private GameObject[] _machinePrefabs;
+    private GameObject[] _storagePrefabs;
+    private GameObject[] _beltPrefabs;
 
     private NetworkFactorySimulation _factorySimulation;
 
@@ -46,12 +55,23 @@ public class GridManager : NetworkBehaviour
     public FactoryGrid Grid => _grid;
     public StructuralPlacementService StructuralService => _structuralService;
     public SnapPointRegistry SnapRegistry => _snapRegistry;
-    public GameObject FoundationPrefab => _foundationPrefab;
-    public GameObject WallPrefab => _wallPrefab;
-    public GameObject RampPrefab => _rampPrefab;
-    public GameObject MachinePrefab => _machinePrefab;
-    public GameObject StoragePrefab => _storagePrefab;
-    public GameObject BeltPrefab => _beltPrefab;
+
+    // Variant arrays -- for UI/build menu to enumerate available variants
+    public GameObject[] FoundationPrefabs => _foundationPrefabs;
+    public GameObject[] WallPrefabs => _wallPrefabs;
+    public GameObject[] RampPrefabs => _rampPrefabs;
+    public GameObject[] MachinePrefabs => _machinePrefabs;
+    public GameObject[] StoragePrefabs => _storagePrefabs;
+    public GameObject[] BeltPrefabs => _beltPrefabs;
+
+    /// <summary>
+    /// Returns the prefab at the given variant index for a type, clamped to valid range.
+    /// </summary>
+    public GameObject GetPrefab(GameObject[] variants, int variantIndex)
+    {
+        if (variants == null || variants.Length == 0) return null;
+        return variants[Mathf.Clamp(variantIndex, 0, variants.Length - 1)];
+    }
 
     private struct WallRecord
     {
@@ -72,16 +92,37 @@ public class GridManager : NetworkBehaviour
         _snapRegistry = new SnapPointRegistry();
         _structuralService = new StructuralPlacementService(_grid, _snapRegistry);
         _factorySimulation = GetComponent<NetworkFactorySimulation>();
+        LoadPrefabVariants();
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceFoundation(Vector2Int cell, int level, NetworkConnection sender = null)
+    private void LoadPrefabVariants()
     {
-        PlaceFoundationInternal(cell, level, sender);
+        _foundationPrefabs = LoadOrFallback("Prefabs/Buildings/Foundations", _foundationPrefabFallback);
+        _wallPrefabs = LoadOrFallback("Prefabs/Buildings/Walls", _wallPrefabFallback);
+        _rampPrefabs = LoadOrFallback("Prefabs/Buildings/Ramps", _rampPrefabFallback);
+        _machinePrefabs = LoadOrFallback("Prefabs/Buildings/Machines", _machinePrefabFallback);
+        _storagePrefabs = LoadOrFallback("Prefabs/Buildings/Storage", _storagePrefabFallback);
+        _beltPrefabs = LoadOrFallback("Prefabs/Buildings/Belts", _beltPrefabFallback);
+
+        Debug.Log($"grid: loaded prefab variants -- foundations:{_foundationPrefabs.Length} walls:{_wallPrefabs.Length} ramps:{_rampPrefabs.Length} machines:{_machinePrefabs.Length} storage:{_storagePrefabs.Length} belts:{_beltPrefabs.Length}");
+    }
+
+    private static GameObject[] LoadOrFallback(string resourcePath, GameObject fallback)
+    {
+        var loaded = Resources.LoadAll<GameObject>(resourcePath);
+        if (loaded != null && loaded.Length > 0) return loaded;
+        if (fallback != null) return new[] { fallback };
+        return System.Array.Empty<GameObject>();
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceFoundationRect(Vector2Int min, Vector2Int max, int level, NetworkConnection sender = null)
+    public void CmdPlaceFoundation(Vector2Int cell, int level, int variant = 0, NetworkConnection sender = null)
+    {
+        PlaceFoundationInternal(cell, level, variant, sender);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdPlaceFoundationRect(Vector2Int min, Vector2Int max, int level, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -90,7 +131,7 @@ public class GridManager : NetworkBehaviour
         {
             for (int z = min.y; z <= max.y; z++)
             {
-                if (PlaceFoundationInternal(new Vector2Int(x, z), level, sender))
+                if (PlaceFoundationInternal(new Vector2Int(x, z), level, variant, sender))
                     placed++;
             }
         }
@@ -99,7 +140,7 @@ public class GridManager : NetworkBehaviour
             Debug.Log($"grid: placed {placed} foundations in rect ({min.x},{min.y})-({max.x},{max.y}) level {level} by {sender?.ClientId}");
     }
 
-    private bool PlaceFoundationInternal(Vector2Int cell, int level, NetworkConnection sender)
+    private bool PlaceFoundationInternal(Vector2Int cell, int level, int variant, NetworkConnection sender)
     {
         if (!IsServerInitialized) return false;
 
@@ -136,8 +177,9 @@ public class GridManager : NetworkBehaviour
         data.IsStructural = true;
         _grid.Place(origin, size, level, data);
 
+        var prefab = GetPrefab(_foundationPrefabs, variant);
         Vector3 worldPos = GetFoundationWorldPos(origin, level);
-        var go = Instantiate(_foundationPrefab, worldPos, Quaternion.identity);
+        var go = Instantiate(prefab, worldPos, Quaternion.identity);
         var info = go.AddComponent<PlacementInfo>();
         info.Type = PlacementInfo.PlacementType.Foundation;
         info.Cell = origin;
@@ -178,7 +220,7 @@ public class GridManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceWall(Vector2Int cell, int level, Vector2Int direction, bool onFoundation = false, NetworkConnection sender = null)
+    public void CmdPlaceWall(Vector2Int cell, int level, Vector2Int direction, bool onFoundation = false, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -190,10 +232,11 @@ public class GridManager : NetworkBehaviour
         }
 
         var wallData = new WallData("wall", cell, level, direction);
+        var prefab = GetPrefab(_wallPrefabs, variant);
 
         Vector3 worldPos = GetWallWorldPos(cell, level, direction, onFoundation);
         Quaternion rotation = GetWallRotation(direction);
-        var go = Instantiate(_wallPrefab, worldPos, rotation);
+        var go = Instantiate(prefab, worldPos, rotation);
         var info = go.AddComponent<PlacementInfo>();
         info.Type = PlacementInfo.PlacementType.Wall;
         info.Cell = cell;
@@ -229,7 +272,7 @@ public class GridManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceRamp(Vector2Int foundationCell, int level, Vector2Int direction, bool onFoundation = false, NetworkConnection sender = null)
+    public void CmdPlaceRamp(Vector2Int foundationCell, int level, Vector2Int direction, bool onFoundation = false, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -243,10 +286,11 @@ public class GridManager : NetworkBehaviour
         int footprintLength = 3;
         var rampStart = foundationCell + direction;
         var rampData = new RampData(rampStart, level, direction, footprintLength);
+        var prefab = GetPrefab(_rampPrefabs, variant);
 
         GetRampPlacement(foundationCell, level, direction, onFoundation,
             out var worldPos, out var rotation);
-        var go = Instantiate(_rampPrefab, worldPos, rotation);
+        var go = Instantiate(prefab, worldPos, rotation);
         var info = go.AddComponent<PlacementInfo>();
         info.Type = PlacementInfo.PlacementType.Ramp;
         info.Cell = foundationCell;
@@ -307,7 +351,7 @@ public class GridManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceMachine(Vector2Int cell, int level, int rotation = 0, NetworkConnection sender = null)
+    public void CmdPlaceMachine(Vector2Int cell, int level, int rotation = 0, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -318,8 +362,9 @@ public class GridManager : NetworkBehaviour
             return;
         }
 
-        Vector3 worldPos = GetBuildingWorldPos(cell, level, _machinePrefab);
-        var go = Instantiate(_machinePrefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
+        var prefab = GetPrefab(_machinePrefabs, variant);
+        Vector3 worldPos = GetBuildingWorldPos(cell, level, prefab);
+        var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
         var mInfo = go.AddComponent<PlacementInfo>();
         mInfo.Type = PlacementInfo.PlacementType.Machine;
         mInfo.Cell = cell;
@@ -357,7 +402,7 @@ public class GridManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceStorage(Vector2Int cell, int level, int rotation = 0, NetworkConnection sender = null)
+    public void CmdPlaceStorage(Vector2Int cell, int level, int rotation = 0, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -368,8 +413,9 @@ public class GridManager : NetworkBehaviour
             return;
         }
 
-        Vector3 worldPos = GetBuildingWorldPos(cell, level, _storagePrefab);
-        var go = Instantiate(_storagePrefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
+        var prefab = GetPrefab(_storagePrefabs, variant);
+        Vector3 worldPos = GetBuildingWorldPos(cell, level, prefab);
+        var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
         var sInfo = go.AddComponent<PlacementInfo>();
         sInfo.Type = PlacementInfo.PlacementType.Storage;
         sInfo.Cell = cell;
@@ -396,7 +442,7 @@ public class GridManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceBelt(Vector2Int fromCell, Vector2Int toCell, int level, NetworkConnection sender = null)
+    public void CmdPlaceBelt(Vector2Int fromCell, Vector2Int toCell, int level, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -404,8 +450,9 @@ public class GridManager : NetworkBehaviour
         Vector3 endPos = GetBeltEndpointPos(toCell, level);
 
         int length = Mathf.Max(1, Mathf.Abs(toCell.x - fromCell.x) + Mathf.Abs(toCell.y - fromCell.y));
+        var prefab = GetPrefab(_beltPrefabs, variant);
 
-        var go = Instantiate(_beltPrefab, (startPos + endPos) * 0.5f, Quaternion.identity);
+        var go = Instantiate(prefab, (startPos + endPos) * 0.5f, Quaternion.identity);
 
         // Scale belt visual to match actual length
         var diff = endPos - startPos;
@@ -580,7 +627,7 @@ public class GridManager : NetworkBehaviour
     {
         int fs = FactoryGrid.FoundationSize;
         float halfBlock = fs * FactoryGrid.CellSize * 0.5f;
-        float halfHeight = GetPrefabHalfHeight(_foundationPrefab);
+        float halfHeight = GetPrefabHalfHeight(GetPrefab(_foundationPrefabs, 0));
         return new Vector3(
             origin.x * FactoryGrid.CellSize + halfBlock,
             level * FactoryGrid.LevelHeight + halfHeight,
@@ -594,7 +641,7 @@ public class GridManager : NetworkBehaviour
     {
         float cs = FactoryGrid.CellSize;
         float wallHeight = FactoryGrid.WallHeight;
-        float foundationFullHeight = GetPrefabHalfHeight(_foundationPrefab) * 2f;
+        float foundationFullHeight = GetPrefabHalfHeight(GetPrefab(_foundationPrefabs, 0)) * 2f;
         float baseY = onFoundation
             ? level * FactoryGrid.LevelHeight + foundationFullHeight
             : level * FactoryGrid.LevelHeight;
@@ -642,7 +689,7 @@ public class GridManager : NetworkBehaviour
         else if (direction == Vector2Int.left) yAngle = 270f;
         rotation = Quaternion.Euler(-pitch, yAngle, 0f);
 
-        float foundationFullHeight = GetPrefabHalfHeight(_foundationPrefab) * 2f;
+        float foundationFullHeight = GetPrefabHalfHeight(GetPrefab(_foundationPrefabs, 0)) * 2f;
         float baseY = onFoundation
             ? level * FactoryGrid.LevelHeight + foundationFullHeight
             : level * FactoryGrid.LevelHeight;
@@ -684,7 +731,7 @@ public class GridManager : NetworkBehaviour
     /// </summary>
     public Vector3 GetBeltEndpointPos(Vector2Int cell, int level)
     {
-        float halfHeight = GetPrefabHalfHeight(_beltPrefab);
+        float halfHeight = GetPrefabHalfHeight(GetPrefab(_beltPrefabs, 0));
         return _grid.CellToWorld(cell, level) + new Vector3(0f, halfHeight, 0f);
     }
 }

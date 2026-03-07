@@ -24,7 +24,7 @@ public static class FactoryPrefabSetup
 
     private static void CreateMachinePrefab()
     {
-        string dir = "Assets/_Slopworks/Prefabs/Buildings/Machines";
+        string dir = "Assets/_Slopworks/Resources/Prefabs/Buildings/Machines";
         string path = dir + "/Machine.prefab";
 
         if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
@@ -59,7 +59,7 @@ public static class FactoryPrefabSetup
 
     private static void CreateStoragePrefab()
     {
-        string dir = "Assets/_Slopworks/Prefabs/Buildings/Storage";
+        string dir = "Assets/_Slopworks/Resources/Prefabs/Buildings/Storage";
         string path = dir + "/Storage.prefab";
 
         if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
@@ -93,7 +93,7 @@ public static class FactoryPrefabSetup
 
     private static void CreateBeltPrefab()
     {
-        string dir = "Assets/_Slopworks/Prefabs/Buildings/Belts";
+        string dir = "Assets/_Slopworks/Resources/Prefabs/Buildings/Belts";
         string path = dir + "/Belt.prefab";
 
         if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
@@ -144,9 +144,12 @@ public static class FactoryPrefabSetup
         // Wire prefab references via SerializedObject
         var so = new SerializedObject(gridManager);
 
-        WirePrefabField(so, "_machinePrefab", "Assets/_Slopworks/Prefabs/Buildings/Machines/Machine.prefab");
-        WirePrefabField(so, "_storagePrefab", "Assets/_Slopworks/Prefabs/Buildings/Storage/Storage.prefab");
-        WirePrefabField(so, "_beltPrefab", "Assets/_Slopworks/Prefabs/Buildings/Belts/Belt.prefab");
+        WirePrefabField(so, "_foundationPrefabFallback", "Assets/_Slopworks/Resources/Prefabs/Buildings/Foundations/Foundation.prefab");
+        WirePrefabField(so, "_wallPrefabFallback", "Assets/_Slopworks/Resources/Prefabs/Buildings/Walls/Wall.prefab");
+        WirePrefabField(so, "_rampPrefabFallback", "Assets/_Slopworks/Resources/Prefabs/Buildings/Ramps/Ramp.prefab");
+        WirePrefabField(so, "_machinePrefabFallback", "Assets/_Slopworks/Resources/Prefabs/Buildings/Machines/Machine.prefab");
+        WirePrefabField(so, "_storagePrefabFallback", "Assets/_Slopworks/Resources/Prefabs/Buildings/Storage/Storage.prefab");
+        WirePrefabField(so, "_beltPrefabFallback", "Assets/_Slopworks/Resources/Prefabs/Buildings/Belts/Belt.prefab");
 
         so.ApplyModifiedProperties();
         EditorUtility.SetDirty(gridManager);

@@ -23,6 +23,9 @@ public class NetworkBuildController : NetworkBehaviour
     // Machine/storage rotation
     private int _placeRotation;
 
+    // Variant selection per tool type (Tab to cycle)
+    private readonly int[] _variantIndex = new int[System.Enum.GetValues(typeof(BuildTool)).Length];
+
     // Delete mode (X key toggle, auto-exits after delete)
     private bool _deleteMode;
     private GameObject _deleteHighlight;
@@ -147,6 +150,10 @@ public class NetworkBuildController : NetworkBehaviour
             _placeRotation = (_placeRotation + 90) % 360;
             Debug.Log($"build: rotation = {_placeRotation}");
         }
+
+        // Variant cycle: Tab key
+        if (kb.tabKey.wasPressedThisFrame)
+            CycleVariant();
 
         // Zoop toggle: Z key
         if (kb.zKey.wasPressedThisFrame)
@@ -362,6 +369,43 @@ public class NetworkBuildController : NetworkBehaviour
         Debug.Log($"build: tool = {tool}");
     }
 
+    private int CurrentVariant => _variantIndex[(int)_currentTool];
+
+    private GameObject[] GetVariantsForCurrentTool()
+    {
+        var gm = GridManager.Instance;
+        if (gm == null) return null;
+        return _currentTool switch
+        {
+            BuildTool.Foundation => gm.FoundationPrefabs,
+            BuildTool.Wall => gm.WallPrefabs,
+            BuildTool.Ramp => gm.RampPrefabs,
+            BuildTool.Machine => gm.MachinePrefabs,
+            BuildTool.Storage => gm.StoragePrefabs,
+            BuildTool.Belt => gm.BeltPrefabs,
+            _ => null
+        };
+    }
+
+    private GameObject GetSelectedPrefab()
+    {
+        var gm = GridManager.Instance;
+        if (gm == null) return null;
+        var variants = GetVariantsForCurrentTool();
+        return gm.GetPrefab(variants, CurrentVariant);
+    }
+
+    private void CycleVariant()
+    {
+        var variants = GetVariantsForCurrentTool();
+        if (variants == null || variants.Length <= 1) return;
+
+        int idx = (int)_currentTool;
+        _variantIndex[idx] = (_variantIndex[idx] + 1) % variants.Length;
+        DestroyGhost(); // Force ghost rebuild with new variant
+        Debug.Log($"build: variant {_variantIndex[idx] + 1}/{variants.Length} ({variants[_variantIndex[idx]].name})");
+    }
+
     private void CancelAllPending()
     {
         CancelZoop();
@@ -498,7 +542,7 @@ public class NetworkBuildController : NetworkBehaviour
 
             if (mouse.leftButton.wasPressedThisFrame)
             {
-                GridManager.Instance.CmdPlaceFoundation(centered, _lastLevel);
+                GridManager.Instance.CmdPlaceFoundation(centered, _lastLevel, CurrentVariant);
             }
         }
 
@@ -562,7 +606,7 @@ public class NetworkBuildController : NetworkBehaviour
 
     private GameObject CreateFoundationGhost()
     {
-        return CreateGhostFromPrefab(GridManager.Instance.FoundationPrefab);
+        return CreateGhostFromPrefab(GetSelectedPrefab());
     }
 
     private void PlaceFoundationRect(Vector2Int start, Vector2Int end)
@@ -580,7 +624,7 @@ public class NetworkBuildController : NetworkBehaviour
                 var cell = new Vector2Int(
                     start.x + nx * fs * dirX,
                     start.y + nz * fs * dirZ);
-                GridManager.Instance.CmdPlaceFoundation(cell, _zoopStartLevel);
+                GridManager.Instance.CmdPlaceFoundation(cell, _zoopStartLevel, CurrentVariant);
             }
         }
         Debug.Log($"build: foundation zoop placed at level {_zoopStartLevel}");
@@ -654,7 +698,7 @@ public class NetworkBuildController : NetworkBehaviour
 
             if (mouse.leftButton.wasPressedThisFrame && _lastValid)
             {
-                GridManager.Instance.CmdPlaceWall(cell, _lastLevel, edgeDir, _lastHitFoundation);
+                GridManager.Instance.CmdPlaceWall(cell, _lastLevel, edgeDir, _lastHitFoundation, CurrentVariant);
             }
         }
 
@@ -693,7 +737,7 @@ public class NetworkBuildController : NetworkBehaviour
         var wallRot = gm.GetWallRotation(_zoopStartDir);
 
         while (_zoopGhosts.Count < _wallZoopCells.Count)
-            _zoopGhosts.Add(CreateGhostFromPrefab(gm.WallPrefab));
+            _zoopGhosts.Add(CreateGhostFromPrefab(GetSelectedPrefab()));
 
         for (int i = 0; i < _wallZoopCells.Count; i++)
         {
@@ -714,7 +758,7 @@ public class NetworkBuildController : NetworkBehaviour
         var gm = GridManager.Instance;
         for (int i = 0; i < _wallZoopCells.Count; i++)
         {
-            gm.CmdPlaceWall(_wallZoopCells[i], _zoopStartLevel, _zoopStartDir, _zoopStartOnFoundation);
+            gm.CmdPlaceWall(_wallZoopCells[i], _zoopStartLevel, _zoopStartDir, _zoopStartOnFoundation, CurrentVariant);
         }
         Debug.Log($"build: wall zoop placed {_wallZoopCells.Count} walls");
     }
@@ -785,7 +829,7 @@ public class NetworkBuildController : NetworkBehaviour
 
             if (mouse.leftButton.wasPressedThisFrame && _lastValid)
             {
-                GridManager.Instance.CmdPlaceRamp(cell, _lastLevel, edgeDir, _lastHitFoundation);
+                GridManager.Instance.CmdPlaceRamp(cell, _lastLevel, edgeDir, _lastHitFoundation, CurrentVariant);
             }
         }
 
@@ -821,7 +865,7 @@ public class NetworkBuildController : NetworkBehaviour
         var gm = GridManager.Instance;
 
         while (_rampZoopGhosts.Count < _rampZoopCells.Count)
-            _rampZoopGhosts.Add(CreateGhostFromPrefab(gm.RampPrefab));
+            _rampZoopGhosts.Add(CreateGhostFromPrefab(GetSelectedPrefab()));
 
         for (int i = 0; i < _rampZoopCells.Count; i++)
         {
@@ -843,7 +887,7 @@ public class NetworkBuildController : NetworkBehaviour
         var gm = GridManager.Instance;
         for (int i = 0; i < _rampZoopCells.Count; i++)
         {
-            gm.CmdPlaceRamp(_rampZoopCells[i], _zoopStartLevel, _zoopStartDir, _zoopStartOnFoundation);
+            gm.CmdPlaceRamp(_rampZoopCells[i], _zoopStartLevel, _zoopStartDir, _zoopStartOnFoundation, CurrentVariant);
         }
         Debug.Log($"build: ramp zoop placed {_rampZoopCells.Count} ramps");
     }
@@ -862,19 +906,20 @@ public class NetworkBuildController : NetworkBehaviour
         bool cellFree = !gm.HasBuildingAt(cell, _lastLevel);
         _lastValid = cellFree;
 
-        if (gm.MachinePrefab != null)
-            EnsurePrefabGhost(gm.MachinePrefab);
+        var prefab = GetSelectedPrefab();
+        if (prefab != null)
+            EnsurePrefabGhost(prefab);
         else
             EnsureGhost(new Vector3(FactoryGrid.CellSize * 0.8f, 0.5f, FactoryGrid.CellSize * 0.8f));
 
-        _ghost.transform.position = gm.GetBuildingWorldPos(cell, _lastLevel, gm.MachinePrefab);
+        _ghost.transform.position = gm.GetBuildingWorldPos(cell, _lastLevel, prefab);
         _ghost.transform.rotation = Quaternion.Euler(0f, _placeRotation, 0f);
         _ghost.SetActive(true);
         SetGhostColor(_lastValid ? new Color(0.8f, 0.5f, 0f, 0.5f) : InvalidColor);
 
         if (mouse.leftButton.wasPressedThisFrame && _lastValid)
         {
-            gm.CmdPlaceMachine(cell, _lastLevel, _placeRotation);
+            gm.CmdPlaceMachine(cell, _lastLevel, _placeRotation, CurrentVariant);
         }
     }
 
@@ -892,19 +937,20 @@ public class NetworkBuildController : NetworkBehaviour
         bool cellFree = !gm.HasBuildingAt(cell, _lastLevel);
         _lastValid = cellFree;
 
-        if (gm.StoragePrefab != null)
-            EnsurePrefabGhost(gm.StoragePrefab);
+        var prefab = GetSelectedPrefab();
+        if (prefab != null)
+            EnsurePrefabGhost(prefab);
         else
             EnsureGhost(new Vector3(FactoryGrid.CellSize * 0.8f, 0.4f, FactoryGrid.CellSize * 0.8f));
 
-        _ghost.transform.position = gm.GetBuildingWorldPos(cell, _lastLevel, gm.StoragePrefab);
+        _ghost.transform.position = gm.GetBuildingWorldPos(cell, _lastLevel, prefab);
         _ghost.transform.rotation = Quaternion.Euler(0f, _placeRotation, 0f);
         _ghost.SetActive(true);
         SetGhostColor(_lastValid ? new Color(0.3f, 0.3f, 1f, 0.5f) : InvalidColor);
 
         if (mouse.leftButton.wasPressedThisFrame && _lastValid)
         {
-            gm.CmdPlaceStorage(cell, _lastLevel, _placeRotation);
+            gm.CmdPlaceStorage(cell, _lastLevel, _placeRotation, CurrentVariant);
         }
     }
 
@@ -950,7 +996,7 @@ public class NetworkBuildController : NetworkBehaviour
                     snappedEnd = new Vector2Int(_beltStartCell.x, cell.y);
 
                 if (snappedEnd != _beltStartCell)
-                    GridManager.Instance.CmdPlaceBelt(_beltStartCell, snappedEnd, _lastLevel);
+                    GridManager.Instance.CmdPlaceBelt(_beltStartCell, snappedEnd, _lastLevel, CurrentVariant);
                 else
                     Debug.Log("build: belt start and end are the same cell");
 
@@ -1024,7 +1070,7 @@ public class NetworkBuildController : NetworkBehaviour
         bool wallExists = gm.HasWallAt(cell, level, edgeDir);
         _lastValid = !wallExists;
 
-        EnsurePrefabGhost(gm.WallPrefab);
+        EnsurePrefabGhost(GetSelectedPrefab());
 
         _ghost.transform.position = gm.GetWallWorldPos(cell, level, edgeDir, _lastHitFoundation);
         _ghost.transform.rotation = gm.GetWallRotation(edgeDir);
@@ -1039,7 +1085,7 @@ public class NetworkBuildController : NetworkBehaviour
         bool rampExists = gm.HasRampAt(cell, level, edgeDir);
         _lastValid = !rampExists && level + 1 < FactoryGrid.MaxLevels;
 
-        EnsurePrefabGhost(gm.RampPrefab);
+        EnsurePrefabGhost(GetSelectedPrefab());
 
         gm.GetRampPlacement(cell, level, edgeDir, _lastHitFoundation,
             out var rampPos, out var rampRot);
@@ -1175,9 +1221,13 @@ public class NetworkBuildController : NetworkBehaviour
 
         string levelMode = _levelOverrideFrames > 0 ? "(manual)" : "(auto)";
         string zoopLabel = _zoopMode ? "ZOOP" : "Single";
-        GUILayout.Label($"BUILD MODE  |  Tool: {_currentTool}  |  Level: {_lastLevel} ({_lastLevel * FactoryGrid.LevelHeight}m) {levelMode}");
+        var variants = GetVariantsForCurrentTool();
+        string variantLabel = (variants != null && variants.Length > 1)
+            ? $"  |  Variant: {CurrentVariant + 1}/{variants.Length} ({variants[CurrentVariant].name})"
+            : "";
+        GUILayout.Label($"BUILD MODE  |  Tool: {_currentTool}  |  Level: {_lastLevel} ({_lastLevel * FactoryGrid.LevelHeight}m) {levelMode}{variantLabel}");
         GUILayout.Label($"1:Foundation 2:Wall 3:Ramp 4:Machine 5:Storage 6:Belt  |  Mode: {zoopLabel}");
-        GUILayout.Label($"Rotation: {_placeRotation}  |  [R] Rotate  [X] Delete  [Z] Zoop  [G] Grid  [PgUp/Dn] Level");
+        GUILayout.Label($"Rotation: {_placeRotation}  |  [R] Rotate  [X] Delete  [Z] Zoop  [G] Grid  [Tab] Variant  [PgUp/Dn] Level");
         GUILayout.Label("[B] Exit  |  [Esc] Cancel  |  LMB: Place  |  RMB: Remove");
 
         if (_zoopStartSet)
