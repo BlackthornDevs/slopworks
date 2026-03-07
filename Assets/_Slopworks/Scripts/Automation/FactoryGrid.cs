@@ -11,8 +11,11 @@ public class FactoryGrid
     public const float CellSize = 1.0f;
     public const int Width = 200;
     public const int Height = 200;
-    public const float LevelHeight = 3.0f;
-    public const int MaxLevels = 3;
+    public const float LevelHeight = 1.0f;
+    public const int MaxLevels = 50;
+    public const float WallHeight = 3.0f;
+    public const int FoundationSize = 4; // 4x4 cells per foundation
+    public const int WallWidth = 4; // wall spans 4 cells wide
 
     private readonly Dictionary<Vector3Int, BuildingData> _cells = new();
 
@@ -156,6 +159,6 @@ public class FactoryGrid
 
     private bool InBounds(int x, int z)
     {
-        return x >= 0 && x < Width && z >= 0 && z < Height;
+        return true;
     }
 }
