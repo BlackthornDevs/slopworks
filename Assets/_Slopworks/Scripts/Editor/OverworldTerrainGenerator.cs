@@ -9,7 +9,7 @@ using UnityEngine.Rendering;
 /// </summary>
 public static class OverworldTerrainGenerator
 {
-    private const string ScenePath = "Assets/_Slopworks/Scenes/Overworld/Overworld_Terrain.unity";
+    private const string ScenePath = "Assets/_Slopworks/Scenes/Joe/Overworld_Terrain.unity";
     private const string MaterialPath = "Assets/_Slopworks/Materials/Environment/OverworldHex.mat";
 
     private const int MapSize = 128;

@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public static class HomeBaseTerrainGenerator
 {
-    private const string ScenePath = "Assets/_Slopworks/Scenes/Multiplayer/HomeBaseTerrain.unity";
+    private const string ScenePath = "Assets/_Slopworks/Scenes/Joe/HomeBaseTerrain.unity";
     private const string TerrainDataPath = "Assets/_Slopworks/Art/Terrain/HomeBase/HomeBaseTerrainData.asset";
     private const int HeightmapRes = 513; // must be 2^n + 1
     private const int AlphamapRes = 512;
