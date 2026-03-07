@@ -64,12 +64,12 @@ import * as THREE from 'three';
     statusReadout.textContent = 'OUTPUT: NOMINAL // THROUGHPUT: 847 UNITS/HR';
     container.appendChild(statusReadout);
 
-    // throughput fluctuation
-    let throughputTimer = 0;
-    const throughputInterval = 1.0 + Math.random();
-    function updateThroughput(elapsed) {
-        if (elapsed - throughputTimer > throughputInterval) {
-            throughputTimer = elapsed + Math.random() * 0.5;
+    // throughput fluctuation (uses wall clock, not scaled animation time)
+    let lastThroughputUpdate = 0;
+    const throughputInterval = 1000 + Math.random() * 1000;
+    function updateThroughput(now) {
+        if (now - lastThroughputUpdate > throughputInterval) {
+            lastThroughputUpdate = now;
             const val = 820 + Math.floor(Math.random() * 60);
             statusReadout.textContent = 'OUTPUT: NOMINAL // THROUGHPUT: ' + val + ' UNITS/HR';
         }
@@ -110,9 +110,6 @@ import * as THREE from 'three';
         renderer.setSize(w, h);
     }
     updateSize();
-
-    // -- ambient light (subtle, since we use MeshBasicMaterial for most things) --
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
     // -- floor --
     const floorGeo = new THREE.BoxGeometry(14, 0.15, 6);
@@ -257,8 +254,8 @@ import * as THREE from 'three';
         const delta = clock.getDelta() * speedMultiplier;
         const elapsed = clock.getElapsedTime() * speedMultiplier;
 
-        // throughput readout update
-        updateThroughput(elapsed);
+        // throughput readout update (wall clock, unaffected by reduced motion)
+        updateThroughput(performance.now());
 
         // glitch intensity scales with degradation
         const glitchChance = (0.1 + degradeValue * 0.4) * glitchMultiplier;
