@@ -8,52 +8,52 @@ Updated by Joe's Claude at the end of each session.
 
 ### What was completed
 
-- **Asset pack import**: Downloaded and imported 4 Kenney CC0 asset packs (conveyor-kit, survival-kit, blaster-kit, tower-defense-kit) — 341 FBX models total. Also downloaded 5 PBR terrain texture sets from ambientCG (Concrete034, Ground037, Gravel022, Rust004, Ground054) and 4 HDR skybox files from Poly Haven.
-- **Tower floor prefabs**: Created `TowerFloorPrefabBuilder.cs` editor script that generates 6 tower floor prefabs from Kenney models (Lobby, Industrial, Storage, Processing, Mechanical, Boss). Prefabs saved to `Assets/_Slopworks/Prefabs/Tower/`.
-- **HomeBase terrain scenery**: Created `HomeBaseSceneryDresser.cs` that upgrades the terrain with PBR textures (5 layers: concrete, dirt, grass/soil, gravel, rust with normal maps), adds terrain features (4 impact craters, dry riverbed, 3 ridges), scatters 475 nature props (rocks, trees, grass), 200 industrial debris items, and 5 ruin clusters (52 pieces). Set industrial sunset HDR skybox with matching fog.
-- **Kenney materials**: Created `KenneyMaterialSetup.cs` that builds URP Lit materials for each Kenney kit using their color palette textures, with per-kit metallic/smoothness tuning. Applied to 765 renderers in the scene. GPU instancing enabled for batching.
-- **Terrain explorer**: Created `TerrainExplorer.cs` — self-contained FPS controller (CharacterController, gravity, jump, sprint) for walking around terrain scenes. Menu item `Slopworks > Spawn Terrain Explorer` adds it to the active scene.
-- **Lore design doc**: Brainstormed and wrote `docs/plans/2026-03-06-lore-design.md`. Status: Approved.
-- **J-026**: Process fix (no Co-Authored-By tags) — applied this session and going forward.
+- **Overworld terrain design**: Brainstormed and wrote `docs/plans/2026-03-06-overworld-terrain-design.md` (approved). 128x128 hex-grid isometric terrain with 6 biomes from temperature/moisture noise.
+- **Overworld terrain implementation plan**: Wrote `docs/plans/2026-03-06-overworld-terrain-plan.md` — 6 tasks, 20 unit tests.
+- **HexGridUtility** (`4900de3`): Pure C# axial hex math — HexToWorld, HexCorners, Neighbors, HexDistance. 10 EditMode tests.
+- **OverworldBiome** (`a52303a`): Biome enum (6 types), temperature/moisture lookup table, biome-to-color mapping. 7 EditMode tests.
+- **OverworldChunkMeshBuilder** (`e480ba2`): Builds combined hex mesh per 8x8 chunk with vertex colors from biome type. 5 EditMode tests.
+- **Asset reorganization** (`ffdab37`): Moved 12 terrain data assets (heightmap, layers, textures) from `Scenes/Multiplayer/` to `Art/Terrain/HomeBase/`. Updated HomeBaseTerrainGenerator and HomeBaseSceneryDresser paths. Created `Art/Terrain/Overworld/` for future use.
+- **OverworldTerrainGenerator** (`87937ab`): Editor script generating full overworld scene — 256 chunks, 16384 hexes, 1007 Kenney decorations, 11 building node markers, isometric camera, post-apocalyptic lighting and fog. Scene saved to `Scenes/Overworld/Overworld_Terrain.unity`.
 
 ### Shared file changes (CRITICAL)
 
-- No changes to asmdef, ProjectSettings, Core/, or packages.
-- New files are all in Joe-owned directories (Scripts/Editor/, Scripts/Debug/, Art/, Materials/, Prefabs/Tower/, Scenes/Multiplayer/).
-- `.gitattributes` updated to track `.fbx`, `.png`, `.hdr` via Git LFS.
-- New C# files from previous session: `TargetingMode.cs`, `TurretCandidate.cs` (Scripts/Combat/), `TurretDefinitionSO.cs` modified, `TurretController.cs` modified, `TurretBehaviour.cs` modified.
+- `HomeBaseTerrainGenerator.cs` — path constants updated (Scenes/Multiplayer/ -> Art/Terrain/HomeBase/)
+- `HomeBaseSceneryDresser.cs` — terrain layer asset path updated (same move)
+- 12 terrain data assets moved from `Scenes/Multiplayer/` to `Art/Terrain/HomeBase/` (GUID references preserved via meta file co-location)
+- No asmdef, ProjectSettings, Core/, or package changes.
 
 ### What needs attention
 
-- C-010 still open — proposes redefining Joe's scope to art/world-building. Awaiting Kevin's resolution.
-- Tower floor prefabs need visual inspection and layout tweaking in Unity editor.
-- Normal maps in terrain textures were auto-set to NormalMap import type by `KenneyMaterialSetup`.
-- Kenney palette textures set to Point filtering to preserve crisp low-poly colors.
-- Quaternius creature models (animated enemies) need manual download from itch.io — couldn't automate.
+- **Vertex color rendering**: URP Simple Lit shader with white base color acts as vertex color passthrough. If Kevin switches to a custom shader, the overworld hex material (`Materials/Environment/OverworldHex.mat`) needs `_VERTEX_COLOR` support.
+- **Asset path change**: If Kevin's code references terrain assets at old paths (`Scenes/Multiplayer/TerrainLayer_*.asset`), those paths no longer work. GUIDs still resolve correctly.
+- C-010 still open (Joe scope redefinition to art/world-building).
 
-### Next tasks
+### Next task
 
-All code tasks complete. Art/world-building work to continue:
-- Visual polish on tower floor prefab interiors
-- Create overworld terrain
-- Source animated enemy models (Quaternius itch.io manual download)
+Continue overworld polish or pick up next task from Kevin. Art/world-building backlog:
+- Visual polish on overworld hex terrain (camera controls, terrain walker)
+- Source animated enemy models (Quaternius itch.io)
 - Write SLOP dialogue lines and environmental storytelling content
+- Tower floor prefab visual interiors
 
 ### Blockers
 
-- C-010 awaiting Kevin's resolution. No assigned code tasks.
+None
 
 ### Test status
 
-- Last successful compile: 0 errors, only pre-existing warnings (deprecated FindObjectOfType, NavMeshBuilder, unused field).
-- MCP Unity unresponsive at session end — could not run tests. Previous session confirmed 28/28 turret tests passing, full suite 815+ (times out in MCP runner).
-- No changes to test files or tested code this session — all work was editor scripts, art assets, and scene dressing.
+- 919/919 EditMode tests passing, 0 failing, 0 skipped
+- 0 compilation errors, 5 pre-existing warnings (deprecated APIs, unused field)
+- New test files added:
+  - `Tests/Editor/EditMode/HexGridUtilityTests.cs` (10 tests)
+  - `Tests/Editor/EditMode/OverworldBiomeTests.cs` (7 tests)
+  - `Tests/Editor/EditMode/OverworldChunkMeshBuilderTests.cs` (5 tests)
 
 ### Key context
 
-- `HomeBaseTerrainGenerator.cs` generates base terrain. `HomeBaseSceneryDresser.cs` dresses it (PBR textures, props, skybox). Both are idempotent — re-run from Slopworks menu.
-- `KenneyMaterialSetup.cs` applies palette textures to all Kenney model instances. Run `Slopworks > Apply Kenney Materials` after re-dressing scenery.
-- Terrain explorer: `Slopworks > Spawn Terrain Explorer` adds a walkable FPS controller to any scene with terrain.
-- Kenney model scale: floor tiles 2x2m, wall panels 2m wide x 3m tall, props ~0.25m (scaled 3x in scene for visual proportion).
-- Seed-based prop placement (Seed=42) — scenery dresser is deterministic.
-- Tower floor prefabs: 20x20m normal rooms, 30x30m boss room. 6 styles with Kenney models for walls, floors, and interior props.
+- **Overworld terrain generator**: `Slopworks > Generate Overworld Terrain` menu item. Deterministic (Seed=7). Idempotent — re-run overwrites scene.
+- **New file structure**: `Art/Terrain/HomeBase/` for HomeBase terrain data, `Art/Terrain/Overworld/` reserved for overworld data. `Scenes/Overworld/` for overworld scene.
+- **Hex grid**: 128x128 pointy-top hexes, 1m radius (2m flat-to-flat), 8x8 chunks. Axial (q,r) coordinates. HexGridUtility is reusable for any hex-based system.
+- **Biome system**: 6 biomes from 2x3 temperature/moisture grid. Ruins probability increases with distance from center. Biome colors applied as vertex colors on combined chunk meshes.
+- **Building node markers**: 11 sample positions (HomeBase, Smelter, Warehouse, ChemPlant, PowerStation, 4 Outposts, 2 Towers). Primitive shapes with colored materials. These are placeholder positions for the OverworldMap node system.
