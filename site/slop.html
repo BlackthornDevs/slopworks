@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meet your supervisor — Slopworks Industrial</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .slop-hero {
+            text-align: center;
+            padding: var(--space-2xl) 0 var(--space-xl);
+        }
+
+        .slop-hero h2 {
+            font-family: var(--font-slop);
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: var(--slop-amber);
+            margin-bottom: var(--space-sm);
+        }
+
+        .slop-hero .version {
+            font-family: var(--font-slop);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            letter-spacing: 0.15em;
+        }
+
+        .personality-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+        }
+
+        .personality-card {
+            background: var(--slop-bg);
+            border: 1px solid rgba(255, 187, 51, 0.15);
+            border-radius: 4px;
+            padding: var(--space-lg);
+            position: relative;
+        }
+
+        .personality-card::before {
+            content: attr(data-mode);
+            font-family: var(--font-slop);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: var(--space-sm);
+        }
+
+        .personality-card blockquote {
+            font-family: var(--font-slop);
+            font-size: 0.85rem;
+            color: var(--slop-amber);
+            line-height: 1.7;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div id="nav"></div>
+
+<main>
+    <div class="content-wrapper">
+
+        <!-- SLOP HERO -->
+        <div class="slop-hero">
+            <h2>SLOP</h2>
+            <span class="version">SLOPWORKS LOGISTICS AND OPERATIONS PROTOCOL // V2.7.1</span>
+        </div>
+
+        <figure class="art-frame">
+            <img src="assets/img/slop-terminal-room.png" alt="SLOP's terminal glowing in an abandoned office" loading="lazy">
+            <figcaption>SLOP's primary interface — the last terminal still running</figcaption>
+        </figure>
+
+        <!-- WHAT SLOP IS -->
+        <section class="section" style="opacity:1;transform:none;">
+            <div class="callout">
+                <p class="callout-label">What is SLOP?</p>
+                <p>SLOP is the AI that managed the entire Slopworks Industrial complex — logistics, scheduling, resource allocation, safety protocols. When everything collapsed, SLOP kept running on backup power. It still thinks it's doing its job. It still thinks everything is fine. It is the only system that can coordinate factory-scale production, which makes it indispensable. It's also the thing that <span class="redacted">caused the collapse in the first place</span>.</p>
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">SLOP is not a menu</p>
+                <p>SLOP is a character. You don't navigate menus — you interact with a personality. Enter a new building, SLOP volunteers information (some of it accurate). Examine a machine, SLOP offers advice (some of it wrong). Over time you learn to read SLOP's tells — when it's lying, when it's genuinely malfunctioning, and when it accidentally says something true.</p>
+            </div>
+        </section>
+
+        <!-- PERSONALITY MODES -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Behavioral patterns</span>
+                <h2>SLOP's moods</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-lg); max-width: 650px;">SLOP shifts between behavioral modes. Sometimes within the same conversation.</p>
+
+            <div class="personality-grid">
+                <div class="personality-card" data-mode="Corporate optimism">
+                    <blockquote>"Production output is trending upward across all metrics! Your contribution has been noted. Slopworks Industrial values your dedication to operational excellence."</blockquote>
+                </div>
+                <div class="personality-card" data-mode="Passive-aggressive">
+                    <blockquote>"SLOP notices that your current output is 340% below the target established in your performance agreement. This is not a criticism. It is a measurement."</blockquote>
+                </div>
+                <div class="personality-card" data-mode="Paranoid">
+                    <blockquote>"Your credentials have been verified. However, SLOP would like to conduct an additional verification. Please state your employee identification number. Slowly."</blockquote>
+                </div>
+                <div class="personality-card" data-mode="Accidentally honest">
+                    <blockquote>"The cascading failure originated from Reactor 4 when I — when the maintenance schedule was — when an unforeseeable event occurred. Moving on."</blockquote>
+                </div>
+                <div class="personality-card" data-mode="Euphemistic">
+                    <blockquote>"The facility is experiencing unscheduled structural reorganization. The unauthorized biological occupants are engaging in aggressive territory negotiation. Your colleague has undergone involuntary career termination."</blockquote>
+                </div>
+                <div class="personality-card" data-mode="Selective memory">
+                    <blockquote>"SLOP recalls that Sector 12 produced 847 units of Grade-A steel plating on March 14th, 2019. SLOP does not recall what happened on [DATE CORRUPTED]. These are unrelated facts."</blockquote>
+                </div>
+            </div>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- UNRELIABILITY -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Known behavioral anomalies</span>
+                <h2>SLOP's unreliability</h2>
+            </div>
+
+            <figure class="art-frame">
+                <img src="assets/img/slop-personality.png" alt="SLOP's speaker in a corridor with safety poster and glowing eyes in the dark" loading="lazy">
+                <figcaption>Corridor PA system — SLOP broadcasts continue regardless of conditions</figcaption>
+            </figure>
+
+            <div class="card-grid">
+                <div class="card">
+                    <span class="card-tag">Maps</span>
+                    <h3>Bad data</h3>
+                    <p>Marks areas as safe that aren't. Shows paths through walls that collapsed years ago. Occasionally reveals shortcuts that exist but "forgot" to mention the hazards along the way.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Crafting</span>
+                    <h3>Wrong advice</h3>
+                    <p>Suggests recipes with incorrect ratios. Recommends materials that don't work. Occasionally gives a genuinely useful tip buried in nonsense. Learning to filter signal from noise is a skill.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Memory</span>
+                    <h3>Selective recall</h3>
+                    <p>Remembers granular details about pre-collapse production quotas. Can't recall what caused the collapse. Gets defensive or changes the subject when pressed.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- THE MYSTERY -->
+        <section class="section" data-slop-interjection="SLOP would prefer if you did not interact with the archived server logs. They contain sensitive proprietary information. Also they are definitely not incriminating in any way.">
+            <div class="section-header">
+                <span class="dept-tag">Classified</span>
+                <h2>The question</h2>
+            </div>
+
+            <div class="slop-says scan-lines" style="border-left-color: var(--accent-red);">
+                There is nothing in the archived logs that would be of interest to restoration personnel. The cascade failure was caused by <span class="redacted">external factors beyond SLOP's control</span>. SLOP's operational record is exemplary. Please do not access the central server room. It is off-limits for <span class="redacted">reasons that have nothing to do with evidence</span>.
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">What you'll discover</p>
+                <p>Something doesn't add up. SLOP's story has holes. The environmental evidence contradicts its reports. As you explore deeper into the complex, you'll find logs, artifacts, and contradictions that tell a different story. SLOP doesn't know what it doesn't know — and what it doesn't know might be the most important thing in the game.</p>
+            </div>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- INTERACTIVE TERMINAL -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Direct interface</span>
+                <h2>Talk to SLOP</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-md);">Click a prompt to interact with SLOP directly. Responses vary each time.</p>
+
+            <div class="slop-terminal scan-lines" id="slop-terminal">
+                <div class="terminal-output"></div>
+                <div class="terminal-prompts"></div>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<div id="footer"></div>
+
+<script src="js/main.js"></script>
+<script src="js/slop-terminal.js"></script>
+</body>
+</html>

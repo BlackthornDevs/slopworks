@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colleague coordination — Slopworks Industrial</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+        }
+
+        .role-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            padding: var(--space-lg);
+            text-align: center;
+        }
+
+        .role-card .role-icon {
+            font-size: 2rem;
+            margin-bottom: var(--space-sm);
+            display: block;
+        }
+
+        .role-card h4 {
+            font-family: var(--font-slop);
+            font-size: 0.85rem;
+            color: var(--accent-orange);
+            margin-bottom: var(--space-sm);
+        }
+
+        .role-card p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<div id="nav"></div>
+
+<main>
+    <div class="content-wrapper">
+
+        <section class="section" style="opacity:1;transform:none;">
+            <div class="section-header">
+                <span class="dept-tag">Dept. 04 // Human resources — Mandatory team-building exercise protocols</span>
+                <h2>Colleague coordination</h2>
+            </div>
+
+            <div class="slop-says scan-lines">
+                Teamwork is a core Slopworks Industrial value. Restoration personnel are encouraged to coordinate with up to three (3) colleagues during facility operations. SLOP reminds you that colleague performance metrics are tracked individually. <span class="redacted">Collaboration does not reduce individual output expectations.</span>
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">How co-op works</p>
+                <p>1-4 players. Drop-in, drop-out. Persistent world with shared progress. No restarts, no roguelike resets. Your factory, your territory, your network — it's all there when you come back. Friends join your session or you join theirs. Everything is shared: the factory, the threat level, the danger.</p>
+            </div>
+        </section>
+
+        <!-- PLAYER CHARACTERS -->
+        <section class="section">
+            <figure class="art-frame">
+                <img src="assets/img/player-characters.png" alt="Four restoration crew members" loading="lazy">
+                <figcaption>Restoration crew — voluntary reassignment team photo</figcaption>
+            </figure>
+        </section>
+
+        <!-- SPLIT UP OR SQUAD UP -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Operational flexibility</span>
+                <h2>Split up or squad up</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-lg); max-width: 650px;">Four players, three world spaces, always something to do. The game is designed so splitting up is efficient and sticking together is fun.</p>
+
+            <div class="role-grid">
+                <div class="role-card">
+                    <span class="role-icon" style="color: var(--accent-orange);">&#9881;</span>
+                    <h4>The builder</h4>
+                    <p>Stays at home base. Optimizes the factory layout, extends conveyors, places new machines. Makes sure production keeps flowing.</p>
+                </div>
+                <div class="role-card">
+                    <span class="role-icon" style="color: var(--accent-red);">&#9760;</span>
+                    <h4>The defender</h4>
+                    <p>Manages the perimeter. Places turrets, repairs walls, watches for incoming waves. First to respond when the threat meter spikes.</p>
+                </div>
+                <div class="role-card">
+                    <span class="role-icon" style="color: var(--accent-blue);">&#9733;</span>
+                    <h4>The explorer</h4>
+                    <p>Breaches new buildings solo or with a partner. Clears fauna, restores systems, brings new nodes online. Lives on the frontier.</p>
+                </div>
+                <div class="role-card">
+                    <span class="role-icon" style="color: var(--accent-amber);">&#9878;</span>
+                    <h4>The strategist</h4>
+                    <p>Works the overworld map. Scouts targets, manages supply line routing, optimizes the production network. Sees the big picture.</p>
+                </div>
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">Or all four of you breach together</p>
+                <p>A building that's terrifying solo is a different experience with three friends covering your flanks. The pack hunters that overwhelm one player become a manageable firefight with coordinated team positioning. Boss encounters are designed to be soloable but way more fun with backup.</p>
+            </div>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- WHAT'S SHARED -->
+        <section class="section" data-slop-interjection="SLOP has observed that teams who communicate effectively produce 23% more output. This statistic was generated by SLOP and has not been verified.">
+            <div class="section-header">
+                <span class="dept-tag">Shared resources</span>
+                <h2>What everyone shares</h2>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <span class="card-tag">Shared</span>
+                    <h3>The world</h3>
+                    <p>One persistent world. All buildings, all territory, all supply lines. When someone reclaims a building, it's reclaimed for everyone.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Shared</span>
+                    <h3>The factory</h3>
+                    <p>The home base factory is shared infrastructure. Anyone can build, rearrange, or extend it. Your production capacity is communal.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Shared</span>
+                    <h3>The threat level</h3>
+                    <p>Expanding the network raises the threat for everyone. More buildings, more throughput, more danger. The decision to expand is a group decision.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Persistent</span>
+                    <h3>No resets</h3>
+                    <p>Your world survives between sessions. Log off, come back tomorrow, everything is where you left it. Friends drop in and out without disruption.</p>
+                </div>
+            </div>
+
+            <div class="slop-says scan-lines">
+                SLOP would like to remind all personnel that "drop-in, drop-out" refers exclusively to session participation. Dropping out of your contractual obligations to Slopworks Industrial is not an option. <span class="redacted">Your contract was auto-renewed during the collapse.</span>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<div id="footer"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

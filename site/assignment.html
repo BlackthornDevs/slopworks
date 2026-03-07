@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your assignment — Slopworks Industrial</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="nav"></div>
+
+<main>
+    <div class="content-wrapper">
+
+        <section class="section" style="opacity:1;transform:none;">
+            <div class="section-header">
+                <span class="dept-tag">Dept. 01 // Operations — Facility reclamation protocol</span>
+                <h2>Your assignment</h2>
+            </div>
+
+            <div class="slop-says scan-lines">
+                Congratulations on your assignment to Restoration Division. Your role is straightforward: survey available facilities, neutralize unauthorized biological occupants, restore critical infrastructure, and re-establish production output to pre-incident levels. Estimated timeline: <span class="redacted">do not ask about the timeline</span>.
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">What this actually means</p>
+                <p>You're dropped back into the ruins of the factory complex you used to work at. Everything is wrecked, overgrown, and full of mutated creatures. You need to explore buildings, clear them out, fix the machines, and get production running again — one building at a time.</p>
+            </div>
+        </section>
+
+        <!-- THE LOOP -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Standard operating procedure</span>
+                <h2>The core loop</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-lg); max-width: 650px;">Every session follows the same rhythm. It starts slow and builds as your network grows.</p>
+
+            <div class="loop-steps">
+                <div class="loop-step">
+                    <span class="step-number">01</span>
+                    <h4>Scout</h4>
+                    <p class="slop-desc">"Strategic facility assessment"</p>
+                    <p>Open the isometric overworld map. Identify building types and threat levels on the frontier.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">02</span>
+                    <h4>Breach</h4>
+                    <p class="slop-desc">"Authorized facility entry protocol"</p>
+                    <p>Travel to an unexplored building. Switch to first-person. Push through the door into the unknown.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">03</span>
+                    <h4>Clear</h4>
+                    <p class="slop-desc">"Unauthorized occupant removal"</p>
+                    <p>FPS combat against mutated fauna nested inside. Each building type has its own creature ecosystem.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">04</span>
+                    <h4>Restore</h4>
+                    <p class="slop-desc">"Infrastructure rehabilitation"</p>
+                    <p>Fix the building's mechanical systems — ducts, pipes, electrical panels. Bring the building online.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">05</span>
+                    <h4>Connect</h4>
+                    <p class="slop-desc">"Network integration"</p>
+                    <p>Build supply lines — pipes, conveyors, power cables — connecting the building to your production network.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">06</span>
+                    <h4>Automate</h4>
+                    <p class="slop-desc">"Throughput optimization"</p>
+                    <p>Configure production at the building and hub level. Set recipes, output destinations, throughput ratios.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">07</span>
+                    <h4>Defend</h4>
+                    <p class="slop-desc">"Perimeter integrity maintenance"</p>
+                    <p>Expanding your network raises the threat level. Waves of fauna attack your base and supply lines. Build turrets, walls, defenses.</p>
+                </div>
+                <div class="loop-step">
+                    <span class="step-number">08</span>
+                    <h4>Expand</h4>
+                    <p class="slop-desc">"Territorial growth initiative"</p>
+                    <p>Scout the next building. The further you go, the harder the buildings — and the better the resources. Repeat.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- THREE WORLD SPACES -->
+        <section class="section" data-slop-interjection="SLOP recommends maintaining situational awareness during all inter-facility transitions. Unauthorized biological occupants have been observed in transit corridors.">
+            <div class="section-header">
+                <span class="dept-tag">Operational zones</span>
+                <h2>Three world spaces</h2>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: var(--space-lg); max-width: 650px;">The game uses three separate loaded environments. No seamless open world — each space has its own purpose, camera mode, and feel.</p>
+
+            <div class="card-grid">
+                <div class="card">
+                    <span class="card-tag">Isometric + FPS</span>
+                    <h3>Home base</h3>
+                    <p>Your factory and fortress. Satisfactory-style freeform building: foundations, conveyors, machines, walls, turrets. The production layout is the defense layout. Switch between isometric overview and first-person for close work.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">First-person</span>
+                    <h3>Reclaimed buildings</h3>
+                    <p>Self-contained dungeon levels generated from real BIM building data. Each has its own fauna, hazards, and MEP systems to restore. Travel to them from the overworld. Clear, restore, connect.</p>
+                </div>
+                <div class="card">
+                    <span class="card-tag">Isometric</span>
+                    <h3>Overworld map</h3>
+                    <p>Bird's-eye view of your territory. Connected buildings, supply lines, threat levels, the unexplored frontier. Used for scouting, logistics, and managing your network at scale.</p>
+                </div>
+            </div>
+
+            <figure class="art-frame mt-lg">
+                <img src="assets/img/building-breach.png" alt="First-person view of breaching a ruined industrial building" loading="lazy">
+                <figcaption>Facility entry — first-person perspective during breach protocol</figcaption>
+            </figure>
+
+            <figure class="art-frame">
+                <img src="assets/img/overworld-map.png" alt="Isometric overworld map showing territory and supply lines" loading="lazy">
+                <figcaption>Overworld network view — territory status and supply line routing</figcaption>
+            </figure>
+        </section>
+
+        <div class="caution-divider"></div>
+
+        <!-- CAMERA SYSTEM -->
+        <section class="section">
+            <div class="section-header">
+                <span class="dept-tag">Interface systems</span>
+                <h2>Two cameras, one game</h2>
+            </div>
+
+            <div class="callout">
+                <p class="callout-label">How it works</p>
+                <p>Toggle between first-person and isometric at any time. Use first-person for exploration, combat, and close-up building. Use isometric for factory overview, overworld management, and spotting problems in your production chain. The camera switch is the answer to the "I can't see what's jammed" problem every factory game has.</p>
+            </div>
+
+            <div class="slop-says scan-lines">
+                SLOP reminds all personnel that camera mode preference is not grounds for a workplace accommodation request. Both viewing modes are considered equally productive. <span class="redacted">SLOP's performance metrics suggest otherwise.</span>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<div id="footer"></div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
