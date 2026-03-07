@@ -11,6 +11,17 @@ GitHub Actions are disabled on the entire `jamditis` GitHub account until furthe
 
 Post-apocalyptic co-op factory/survival game built in Unity + FishNet. Two-person team: Joe (jamditis) + Kevin (kamditis) at BlackthornDevs. Both developers run parallel builds from the same design doc and merge the best parts — so both Claude instances working in this repo must follow identical rules.
 
+## Engineering principles
+
+Always adhere to the general principles of engineering:
+
+1. Make it work.
+2. Make it simple.
+3. Make it efficient/fast.
+4. Make it secure.
+
+---
+
 ## Agent hierarchy
 
 **Kevin's Claude is the lead developer. Joe's Claude is the junior developer.**
@@ -109,15 +120,56 @@ Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoB
 
 ---
 
-## Workflow
+## Workflow orchestration
 
-**Plan mode for non-trivial tasks.** Anything touching more than two files, changing a data contract (SO fields, SyncVar types, Supabase schema), or making an architectural decision warrants entering plan mode first.
+### 1. Plan mode default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately — don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
 
-**Subagents for research and parallel work.** Use subagents to research Unity docs, search for patterns, or work on independent problems. Docs are in `docs/reference/` — check there before web-searching something that may already be answered.
+### 2. Subagent strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
 
-**Verify before done.** Don't mark a task complete without proving it works. For simulation logic: run the test. For networking: test with two editor instances via ParrelSync.
+### 3. Self-improvement loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
 
-**Demand elegance.** If a fix feels like a workaround, it probably is. Ask: knowing everything now, what's the clean solution?
+### 4. Verification before done
+- Never mark a task complete without proving it works
+- Diff your behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 5. Demand elegance (balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes — don't over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous bug fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests — then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+### 7. Task management
+1. **Plan first**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify plan**: Check in before starting implementation
+3. **Track progress**: Mark items complete as you go
+4. **Explain changes**: High-level summary at each step
+5. **Document results**: Add review section to `tasks/todo.md`
+6. **Capture lessons**: Update `tasks/lessons.md` after corrections
+
+### Core principles
+- **Simplicity first**: Make every change as simple as possible. Impact minimal code.
+- **No laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 
 ---
 
