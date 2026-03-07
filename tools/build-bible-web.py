@@ -91,15 +91,14 @@ XREF_FIELDS = {"itemId", "effectId", "targetId", "recipeId", "machineId",
 
 
 def entry_display_name(entry):
-    """Get display name, falling back to the ID or text snippet."""
-    name = entry.get("displayName")
+    """Get display name, falling back to a humanised ID."""
+    name = entry.get("displayName") or entry.get("name")
     if name:
         return name
-    # Dialogue lines use 'text' instead of displayName
-    text = entry.get("text", "")
-    if text:
-        return text[:60] + ("..." if len(text) > 60 else "")
-    return entry.get("_id", "unknown")
+    # For dialogue/lore entries, use a humanised version of the ID
+    # rather than a truncated text blob (the full text shows in the description)
+    eid = entry.get("_id", "unknown")
+    return eid.replace("_", " ").title()
 
 
 def esc(text):
@@ -210,9 +209,10 @@ BIBLE_CSS = """
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: var(--text);
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 .entry-card .entry-card-id {
     font-family: var(--font-mono);
