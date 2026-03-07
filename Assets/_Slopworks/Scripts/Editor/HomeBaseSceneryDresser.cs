@@ -236,17 +236,22 @@ public static class HomeBaseSceneryDresser
         terrainPos = terrain.transform.position;
 
         UpgradeTerrainTextures(td);
-        AddTerrainNoise(td);
+        AddTerrainNoise(td);           // includes regional NW tilt
         AddTerrainFeatures(td);
+        CarveEscarpment(td);
+        CarveOutcrops(td);
+        CarveWetland(td);
         SmoothHeightmap(td, 6);
-        CarveRiverValley(td);  // after smoothing so banks stay defined
+        CarveRiverValley(td);          // after smoothing so banks stay defined
+        CarveWaystationPads(td);       // after river — flat pads
         RepaintSplatmap(td);
         SetupSkybox();
 
         ScatterNature(root.transform, terrain, terrainPos, rng, td);
+        PlaceSettlements(root.transform, terrain, terrainPos, rng, td);
+        PlaceMerchantStructures(root.transform, terrain, terrainPos, rng, td);
+        PlaceWaystations(root.transform, terrain, terrainPos, rng, td);
         ScatterIndustrial(root.transform, terrain, terrainPos, rng, td);
-        PlaceRuinClusters(root.transform, terrain, terrainPos, rng, td);
-        PlaceAbandonedCamps(root.transform, terrain, terrainPos, rng, td);
         DecorateRiverbed(root.transform, terrain, terrainPos, rng, td);
         CreateRiverWater(root.transform, terrain, terrainPos, td);
         PaintTerrainGrass(td, rng);
@@ -1132,8 +1137,8 @@ public static class HomeBaseSceneryDresser
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.45f, 0.32f, 0.22f);
-        RenderSettings.fogStartDistance = 200f;
-        RenderSettings.fogEndDistance = 800f;
+        RenderSettings.fogStartDistance = 300f;
+        RenderSettings.fogEndDistance = 1200f;
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
 
@@ -1464,10 +1469,10 @@ public static class HomeBaseSceneryDresser
 
         int placed = 0;
 
-        for (int i = 0; i < 350; i++)
+        for (int i = 0; i < 600; i++)
         {
             float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-            float radius = FlatRadius + (float)rng.NextDouble() * 60f - 10f;
+            float radius = FlatRadius + (float)rng.NextDouble() * 100f - 10f;
             float wx = Mathf.Cos(angle) * radius;
             float wz = Mathf.Sin(angle) * radius;
 
@@ -1496,242 +1501,615 @@ public static class HomeBaseSceneryDresser
         Debug.Log($"industrial debris placed: {placed}");
     }
 
-    private static void PlaceRuinClusters(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
+    private static void PlaceSettlements(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
     {
-        var parent = new GameObject("RuinClusters").transform;
+        var parent = new GameObject("Settlements").transform;
         parent.SetParent(root);
-
-        Vector2[] clusterCenters = {
-            new(150f, 80f),
-            new(-140f, 120f),
-            new(-100f, -180f),
-            new(180f, -150f),
-            new(250f, 20f),
-            new(-200f, -80f),
-            new(80f, 220f),
-            new(-280f, 150f),
-            new(300f, -200f),
-            new(-60f, 280f),
-        };
-
         int totalPlaced = 0;
 
-        foreach (var center in clusterCenters)
+        // farmsteads
+        foreach (var center in FarmsteadPositions)
         {
-            var cluster = new GameObject($"Ruin_{totalPlaced}").transform;
-            cluster.SetParent(parent);
-
-            int pieceCount = 4 + rng.Next(5);
-            for (int p = 0; p < pieceCount; p++)
-            {
-                float ox = (float)(rng.NextDouble() - 0.5) * 12f;
-                float oz = (float)(rng.NextDouble() - 0.5) * 12f;
-                float wx = center.x + ox;
-                float wz = center.y + oz;
-
-                float y = terrain.SampleHeight(new Vector3(wx + TerrainWidth / 2f + terrainPos.x, 0f, wz + TerrainWidth / 2f + terrainPos.z));
-                y += terrainPos.y;
-
-                var prop = RuinProps[rng.Next(RuinProps.Length)];
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prop.Path);
-                if (prefab == null) continue;
-
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-
-                float tiltX = (float)(rng.NextDouble() - 0.5) * 30f;
-                float tiltZ = (float)(rng.NextDouble() - 0.5) * 20f;
-                if (rng.NextDouble() < 0.2f)
-                    tiltX = 80f + (float)rng.NextDouble() * 10f;
-
-                instance.transform.position = new Vector3(wx, y, wz);
-                instance.transform.rotation = Quaternion.Euler(tiltX, (float)rng.NextDouble() * 360f, tiltZ);
-                instance.transform.localScale = Vector3.one * prop.MinScale;
-                instance.transform.SetParent(cluster);
-                instance.isStatic = true;
-
-                totalPlaced++;
-            }
-
-            for (int d = 0; d < 3 + rng.Next(4); d++)
-            {
-                float ox = (float)(rng.NextDouble() - 0.5) * 16f;
-                float oz = (float)(rng.NextDouble() - 0.5) * 16f;
-                float wx = center.x + ox;
-                float wz = center.y + oz;
-
-                float y = terrain.SampleHeight(new Vector3(wx + TerrainWidth / 2f + terrainPos.x, 0f, wz + TerrainWidth / 2f + terrainPos.z));
-                y += terrainPos.y;
-
-                var prop = IndustrialProps[rng.Next(IndustrialProps.Length)];
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prop.Path);
-                if (prefab == null) continue;
-
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-                float scale = prop.MinScale + (float)rng.NextDouble() * (prop.MaxScale - prop.MinScale);
-                float tilt = (float)(rng.NextDouble() - 0.5) * 25f;
-
-                instance.transform.position = new Vector3(wx, y, wz);
-                instance.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
-                instance.transform.localScale = Vector3.one * scale;
-                instance.transform.SetParent(cluster);
-                instance.isStatic = true;
-
-                totalPlaced++;
-            }
-
-            // undergrowth reclaiming ruins
-            for (int u = 0; u < 4 + rng.Next(5); u++)
-            {
-                float ox = (float)(rng.NextDouble() - 0.5) * 14f;
-                float oz = (float)(rng.NextDouble() - 0.5) * 14f;
-                float wx = center.x + ox;
-                float wz = center.y + oz;
-                float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-
-                var uprop = UndergrowthProps[rng.Next(4)];
-                var uinst = InstantiateProp(uprop, rng);
-                if (uinst == null) continue;
-
-                uinst.transform.position = new Vector3(wx, y, wz);
-                uinst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                uinst.transform.SetParent(cluster);
-                uinst.isStatic = false;
-                AddWindSway(uinst, 2f, 1f);
-                totalPlaced++;
-            }
-        }
-
-        Debug.Log($"ruin cluster pieces placed: {totalPlaced}");
-    }
-
-    // === ABANDONED CAMPS ===
-
-    private static void PlaceAbandonedCamps(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
-    {
-        var parent = new GameObject("AbandonedCamps").transform;
-        parent.SetParent(root);
-
-        Vector2[] campCenters = {
-            new(120f, 60f),
-            new(-130f, 100f),
-            new(70f, -200f),
-            new(-180f, -90f),
-            new(100f, 250f),
-            new(-250f, 40f),
-            new(300f, 100f),
-            new(-80f, -300f),
-        };
-
-        int totalPlaced = 0;
-
-        foreach (var center in campCenters)
-        {
-            float cnx = (center.x + TerrainWidth / 2f) / TerrainWidth;
-            float cnz = (center.y + TerrainWidth / 2f) / TerrainWidth;
-            if (td.GetSteepness(cnx, cnz) > 15f) continue;
-
-            var camp = new GameObject($"Camp_{totalPlaced}").transform;
-            camp.SetParent(parent);
-
+            var farm = new GameObject($"Farmstead_{totalPlaced}").transform;
+            farm.SetParent(parent);
             float cy = SampleWorldHeight(terrain, terrainPos, center.x, center.y);
 
-            // campfire at center
-            var fire = InstantiateProp(CampProps[0], rng);
-            if (fire != null)
+            var mainProp = RuinProps[rng.Next(3)];
+            var main = InstantiateProp(mainProp, rng);
+            if (main != null)
             {
-                fire.transform.position = new Vector3(center.x, cy, center.y);
-                fire.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                fire.transform.SetParent(camp);
-                fire.isStatic = true;
+                float facing = 170f + (float)(rng.NextDouble() - 0.5) * 30f;
+                main.transform.position = new Vector3(center.x, cy, center.y);
+                main.transform.rotation = Quaternion.Euler(0f, facing, 0f);
+                main.transform.SetParent(farm);
+                main.isStatic = true;
                 totalPlaced++;
             }
 
-            // 1-2 tents facing the fire
-            int tentCount = 1 + rng.Next(2);
-            for (int t = 0; t < tentCount; t++)
+            if (rng.NextDouble() > 0.3)
             {
                 float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = 3f + (float)rng.NextDouble() * 4f;
-                float tx = center.x + Mathf.Cos(angle) * dist;
-                float tz = center.y + Mathf.Sin(angle) * dist;
-                float ty = SampleWorldHeight(terrain, terrainPos, tx, tz);
+                float dist = 8f + (float)rng.NextDouble() * 7f;
+                float ox = center.x + Mathf.Cos(angle) * dist;
+                float oz = center.y + Mathf.Sin(angle) * dist;
+                float oy = SampleWorldHeight(terrain, terrainPos, ox, oz);
 
-                float facingAngle = Mathf.Atan2(center.y - tz, center.x - tx) * Mathf.Rad2Deg;
-                var tentProp = CampProps[1 + rng.Next(3)];
-                var tent = InstantiateProp(tentProp, rng);
-                if (tent == null) continue;
+                var outProp = RuinProps[6 + rng.Next(3)];
+                var outBldg = InstantiateProp(outProp, rng);
+                if (outBldg != null)
+                {
+                    float tilt = (float)(rng.NextDouble() - 0.5) * 6f;
+                    outBldg.transform.position = new Vector3(ox, oy, oz);
+                    outBldg.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, tilt * 0.5f);
+                    outBldg.transform.SetParent(farm);
+                    outBldg.isStatic = true;
+                    totalPlaced++;
+                }
+            }
 
-                tent.transform.position = new Vector3(tx, ty, tz);
-                tent.transform.rotation = Quaternion.Euler(0f, facingAngle + ((float)rng.NextDouble() - 0.5f) * 30f, 0f);
-                tent.transform.SetParent(camp);
-                tent.isStatic = true;
+            for (int f = 0; f < 4 + rng.Next(4); f++)
+            {
+                float fAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float fDist = 12f + (float)rng.NextDouble() * 8f;
+                float fx = center.x + Mathf.Cos(fAngle) * fDist;
+                float fz = center.y + Mathf.Sin(fAngle) * fDist;
+                float fy = SampleWorldHeight(terrain, terrainPos, fx, fz);
+
+                var fenceProp = IndustrialProps[6 + rng.Next(3)];
+                var fence = InstantiateProp(fenceProp, rng);
+                if (fence == null) continue;
+
+                float faceFire = Mathf.Atan2(center.y - fz, center.x - fx) * Mathf.Rad2Deg;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 20f;
+                fence.transform.position = new Vector3(fx, fy, fz);
+                fence.transform.rotation = Quaternion.Euler(tilt, faceFire + (float)(rng.NextDouble() - 0.5) * 40f, 0f);
+                fence.transform.SetParent(farm);
+                fence.isStatic = true;
                 totalPlaced++;
             }
 
-            // 1-3 bedrolls
-            for (int b = 0; b < 1 + rng.Next(3); b++)
+            for (int d = 0; d < 4 + rng.Next(6); d++)
             {
-                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = 2f + (float)rng.NextDouble() * 5f;
-                float bx = center.x + Mathf.Cos(angle) * dist;
-                float bz = center.y + Mathf.Sin(angle) * dist;
-                float by = SampleWorldHeight(terrain, terrainPos, bx, bz);
-
-                var bedProp = CampProps[4 + rng.Next(2)];
-                var bedroll = InstantiateProp(bedProp, rng);
-                if (bedroll == null) continue;
-
-                bedroll.transform.position = new Vector3(bx, by, bz);
-                bedroll.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                bedroll.transform.SetParent(camp);
-                bedroll.isStatic = true;
-                totalPlaced++;
-            }
-
-            // 2-5 scattered bottles/debris
-            for (int d = 0; d < 2 + rng.Next(4); d++)
-            {
-                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = 1f + (float)rng.NextDouble() * 6f;
-                float dx = center.x + Mathf.Cos(angle) * dist;
-                float dz = center.y + Mathf.Sin(angle) * dist;
+                float dAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dDist = (float)rng.NextDouble() * 15f;
+                float dx = center.x + Mathf.Cos(dAngle) * dDist;
+                float dz = center.y + Mathf.Sin(dAngle) * dDist;
                 float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
 
-                var debrisProp = CampProps[6 + rng.Next(2)];
+                var debrisProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
                 var debris = InstantiateProp(debrisProp, rng);
                 if (debris == null) continue;
 
-                float tilt = (float)(rng.NextDouble() - 0.5) * 40f;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 30f;
                 debris.transform.position = new Vector3(dx, dy, dz);
                 debris.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, tilt * 0.3f);
-                debris.transform.SetParent(camp);
+                debris.transform.SetParent(farm);
                 debris.isStatic = true;
                 totalPlaced++;
             }
 
-            // undergrowth growing through the abandoned camp
-            for (int u = 0; u < 3 + rng.Next(4); u++)
+            for (int u = 0; u < 5 + rng.Next(5); u++)
             {
-                float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                float dist = (float)rng.NextDouble() * 8f;
-                float ux = center.x + Mathf.Cos(angle) * dist;
-                float uz = center.y + Mathf.Sin(angle) * dist;
+                float uAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float uDist = 2f + (float)rng.NextDouble() * 5f;
+                float ux = center.x + Mathf.Cos(uAngle) * uDist;
+                float uz = center.y + Mathf.Sin(uAngle) * uDist;
                 float uy = SampleWorldHeight(terrain, terrainPos, ux, uz);
 
                 var uProp = UndergrowthProps[rng.Next(4)];
-                var uinst = InstantiateProp(uProp, rng);
-                if (uinst == null) continue;
+                var uInst = InstantiateProp(uProp, rng);
+                if (uInst == null) continue;
 
-                uinst.transform.position = new Vector3(ux, uy, uz);
-                uinst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-                uinst.transform.SetParent(camp);
-                uinst.isStatic = false;
-                AddWindSway(uinst, 2f + (float)rng.NextDouble() * 1f, 1f + (float)rng.NextDouble() * 0.3f);
+                uInst.transform.position = new Vector3(ux, uy, uz);
+                uInst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                uInst.transform.SetParent(farm);
+                uInst.isStatic = false;
+                AddWindSway(uInst, 2f, 1f);
                 totalPlaced++;
             }
         }
 
-        Debug.Log($"abandoned camp pieces placed: {totalPlaced}");
+        // small clusters
+        foreach (var center in SmallClusterPositions)
+        {
+            var cluster = new GameObject($"Cluster_{totalPlaced}").transform;
+            cluster.SetParent(parent);
+
+            int buildingCount = 3 + rng.Next(3);
+            float yardRadius = 10f + (float)rng.NextDouble() * 5f;
+
+            for (int b = 0; b < buildingCount; b++)
+            {
+                float angle = ((float)b / buildingCount) * Mathf.PI * 2f + (float)(rng.NextDouble() - 0.5) * 0.5f;
+                float dist = yardRadius * (0.8f + (float)rng.NextDouble() * 0.4f);
+                float bx = center.x + Mathf.Cos(angle) * dist;
+                float bz = center.y + Mathf.Sin(angle) * dist;
+                float by = SampleWorldHeight(terrain, terrainPos, bx, bz);
+
+                var prop = RuinProps[rng.Next(RuinProps.Length)];
+                var bldg = InstantiateProp(prop, rng);
+                if (bldg == null) continue;
+
+                float facing = Mathf.Atan2(center.y - bz, center.x - bx) * Mathf.Rad2Deg;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 6f;
+                bldg.transform.position = new Vector3(bx, by, bz);
+                bldg.transform.rotation = Quaternion.Euler(tilt, facing + (float)(rng.NextDouble() - 0.5) * 20f, tilt * 0.5f);
+                bldg.transform.SetParent(cluster);
+                bldg.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int d = 0; d < 6 + rng.Next(6); d++)
+            {
+                float dAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dDist = (float)rng.NextDouble() * (yardRadius + 10f);
+                float dx = center.x + Mathf.Cos(dAngle) * dDist;
+                float dz = center.y + Mathf.Sin(dAngle) * dDist;
+                float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
+
+                bool isUndergrowth = rng.NextDouble() > 0.5;
+                PropDef prop;
+                if (isUndergrowth) prop = UndergrowthProps[rng.Next(4)];
+                else prop = IndustrialProps[rng.Next(IndustrialProps.Length)];
+
+                var inst = InstantiateProp(prop, rng);
+                if (inst == null) continue;
+
+                inst.transform.position = new Vector3(dx, dy, dz);
+                inst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                inst.transform.SetParent(cluster);
+                inst.isStatic = !isUndergrowth;
+                if (isUndergrowth) AddWindSway(inst, 2f, 1f);
+                totalPlaced++;
+            }
+        }
+
+        // ruined hamlet
+        {
+            var hamlet = new GameObject("RuinedHamlet").transform;
+            hamlet.SetParent(parent);
+
+            float roadDir = 0.3f;
+            int hamletBuildingCount = 12 + rng.Next(4);
+
+            for (int b = 0; b < hamletBuildingCount; b++)
+            {
+                float along = ((float)b / hamletBuildingCount - 0.5f) * 100f;
+                float perpOffset = ((float)(rng.NextDouble() - 0.5)) * 20f;
+                if (Mathf.Abs(perpOffset) < 5f) perpOffset = Mathf.Sign(perpOffset) * (5f + (float)rng.NextDouble() * 5f);
+
+                float bx = HamletCenter.x + Mathf.Cos(roadDir) * along + Mathf.Sin(roadDir) * perpOffset;
+                float bz = HamletCenter.y + Mathf.Sin(roadDir) * along - Mathf.Cos(roadDir) * perpOffset;
+                float by = SampleWorldHeight(terrain, terrainPos, bx, bz);
+
+                var prop = RuinProps[rng.Next(RuinProps.Length)];
+                var bldg = InstantiateProp(prop, rng);
+                if (bldg == null) continue;
+
+                float facing = roadDir * Mathf.Rad2Deg + (perpOffset > 0 ? -90f : 90f);
+                float tilt = (float)(rng.NextDouble() - 0.5) * 6f;
+
+                if (rng.NextDouble() < 0.4f)
+                    tilt = 15f + (float)rng.NextDouble() * 15f;
+
+                bldg.transform.position = new Vector3(bx, by, bz);
+                bldg.transform.rotation = Quaternion.Euler(tilt, facing + (float)(rng.NextDouble() - 0.5) * 10f, tilt * 0.3f);
+                bldg.transform.SetParent(hamlet);
+                bldg.isStatic = true;
+                totalPlaced++;
+
+                for (int d = 0; d < 2 + rng.Next(3); d++)
+                {
+                    float da = (float)rng.NextDouble() * Mathf.PI * 2f;
+                    float dd = 2f + (float)rng.NextDouble() * 8f;
+                    float dx = bx + Mathf.Cos(da) * dd;
+                    float dz = bz + Mathf.Sin(da) * dd;
+                    float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
+
+                    var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                    var dInst = InstantiateProp(dProp, rng);
+                    if (dInst == null) continue;
+
+                    float dt = (float)(rng.NextDouble() - 0.5) * 25f;
+                    dInst.transform.position = new Vector3(dx, dy, dz);
+                    dInst.transform.rotation = Quaternion.Euler(dt, (float)rng.NextDouble() * 360f, 0f);
+                    dInst.transform.SetParent(hamlet);
+                    dInst.isStatic = true;
+                    totalPlaced++;
+                }
+            }
+
+            for (int u = 0; u < 20 + rng.Next(10); u++)
+            {
+                float ux = HamletCenter.x + (float)(rng.NextDouble() - 0.5) * 120f;
+                float uz = HamletCenter.y + (float)(rng.NextDouble() - 0.5) * 40f;
+                float uy = SampleWorldHeight(terrain, terrainPos, ux, uz);
+
+                var uProp = UndergrowthProps[rng.Next(4)];
+                var uInst = InstantiateProp(uProp, rng);
+                if (uInst == null) continue;
+
+                uInst.transform.position = new Vector3(ux, uy, uz);
+                uInst.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                uInst.transform.SetParent(hamlet);
+                uInst.isStatic = false;
+                AddWindSway(uInst, 2f, 1f);
+                totalPlaced++;
+            }
+
+            for (int t = 0; t < 1 + rng.Next(2); t++)
+            {
+                float tx = HamletCenter.x + (float)(rng.NextDouble() - 0.5) * 60f;
+                float tz = HamletCenter.y + (float)(rng.NextDouble() - 0.5) * 20f;
+                float ty = SampleWorldHeight(terrain, terrainPos, tx, tz);
+
+                var floodCanopy = GetCanopyForZone(BiomeZone.Floodplain);
+                var species = floodCanopy[rng.Next(floodCanopy.Length)];
+                var tree = InstantiateProp(species.Prop, rng);
+                if (tree == null) continue;
+
+                tree.transform.position = new Vector3(tx, ty, tz);
+                tree.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                tree.transform.SetParent(hamlet);
+                tree.isStatic = false;
+                AddWindSway(tree, species.WindAmount, species.WindSpeed);
+                totalPlaced++;
+            }
+        }
+
+        Debug.Log($"settlements placed: {totalPlaced} total pieces");
+    }
+
+    private static void PlaceMerchantStructures(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
+    {
+        var parent = new GameObject("Merchants").transform;
+        parent.SetParent(root);
+        int totalPlaced = 0;
+
+        // gas station
+        {
+            var station = new GameObject("GasStation").transform;
+            station.SetParent(parent);
+            float gy = SampleWorldHeight(terrain, terrainPos, GasStationPos.x, GasStationPos.y);
+
+            var canopy = InstantiateProp(RuinProps[3], rng);
+            if (canopy != null)
+            {
+                canopy.transform.position = new Vector3(GasStationPos.x, gy, GasStationPos.y);
+                canopy.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+                canopy.transform.SetParent(station);
+                canopy.isStatic = true;
+                totalPlaced++;
+            }
+
+            var shop = InstantiateProp(RuinProps[6], rng);
+            if (shop != null)
+            {
+                shop.transform.position = new Vector3(GasStationPos.x + 6f, gy, GasStationPos.y + 3f);
+                shop.transform.rotation = Quaternion.Euler(0f, 45f, 0f);
+                shop.transform.SetParent(station);
+                shop.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int d = 0; d < 6 + rng.Next(4); d++)
+            {
+                float ox = (float)(rng.NextDouble() - 0.5) * 20f;
+                float oz = (float)(rng.NextDouble() - 0.5) * 12f;
+                float dy = SampleWorldHeight(terrain, terrainPos, GasStationPos.x + ox, GasStationPos.y + oz);
+                var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                var dInst = InstantiateProp(dProp, rng);
+                if (dInst == null) continue;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 15f;
+                dInst.transform.position = new Vector3(GasStationPos.x + ox, dy, GasStationPos.y + oz);
+                dInst.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
+                dInst.transform.SetParent(station);
+                dInst.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        // woodshop
+        {
+            var shop = new GameObject("Woodshop").transform;
+            shop.SetParent(parent);
+            float wy = SampleWorldHeight(terrain, terrainPos, WoodshopPos.x, WoodshopPos.y);
+
+            var shed = InstantiateProp(RuinProps[0], rng);
+            if (shed != null)
+            {
+                shed.transform.position = new Vector3(WoodshopPos.x, wy, WoodshopPos.y);
+                shed.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                shed.transform.SetParent(shop);
+                shed.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int l = 0; l < 3 + rng.Next(3); l++)
+            {
+                float ox = 3f + (float)rng.NextDouble() * 8f;
+                float oz = (float)(rng.NextDouble() - 0.5) * 10f;
+                float ly = SampleWorldHeight(terrain, terrainPos, WoodshopPos.x + ox, WoodshopPos.y + oz);
+                var logProp = UndergrowthProps[6]; // resource-wood
+                var log = InstantiateProp(logProp, rng);
+                if (log == null) continue;
+                log.transform.position = new Vector3(WoodshopPos.x + ox, ly, WoodshopPos.y + oz);
+                log.transform.rotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
+                log.transform.SetParent(shop);
+                log.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int f = 0; f < 6; f++)
+            {
+                float fAngle = ((float)f / 6f) * Mathf.PI * 2f;
+                float fDist = 10f;
+                float fx = WoodshopPos.x + Mathf.Cos(fAngle) * fDist;
+                float fz = WoodshopPos.y + Mathf.Sin(fAngle) * fDist;
+                float fy = SampleWorldHeight(terrain, terrainPos, fx, fz);
+                var fProp = IndustrialProps[6];
+                var fence = InstantiateProp(fProp, rng);
+                if (fence == null) continue;
+                fence.transform.position = new Vector3(fx, fy, fz);
+                fence.transform.rotation = Quaternion.Euler(0f, fAngle * Mathf.Rad2Deg + 90f, 0f);
+                fence.transform.SetParent(shop);
+                fence.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        // mechanic's garage
+        {
+            var garage = new GameObject("Garage").transform;
+            garage.SetParent(parent);
+            float my = SampleWorldHeight(terrain, terrainPos, GaragePos.x, GaragePos.y);
+
+            var mainBldg = InstantiateProp(RuinProps[8], rng);
+            if (mainBldg != null)
+            {
+                mainBldg.transform.position = new Vector3(GaragePos.x, my, GaragePos.y);
+                mainBldg.transform.rotation = Quaternion.Euler(0f, -20f, 0f);
+                mainBldg.transform.SetParent(garage);
+                mainBldg.isStatic = true;
+                totalPlaced++;
+            }
+
+            var annex = InstantiateProp(RuinProps[7], rng);
+            if (annex != null)
+            {
+                annex.transform.position = new Vector3(GaragePos.x + 5f, my, GaragePos.y - 3f);
+                annex.transform.rotation = Quaternion.Euler(0f, -20f, 0f);
+                annex.transform.SetParent(garage);
+                annex.isStatic = true;
+                totalPlaced++;
+            }
+
+            for (int d = 0; d < 8 + rng.Next(5); d++)
+            {
+                float ox = (float)(rng.NextDouble() - 0.5) * 18f;
+                float oz = (float)(rng.NextDouble() - 0.5) * 14f;
+                float dy = SampleWorldHeight(terrain, terrainPos, GaragePos.x + ox, GaragePos.y + oz);
+                var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                var dInst = InstantiateProp(dProp, rng);
+                if (dInst == null) continue;
+                float tilt = (float)(rng.NextDouble() - 0.5) * 20f;
+                dInst.transform.position = new Vector3(GaragePos.x + ox, dy, GaragePos.y + oz);
+                dInst.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
+                dInst.transform.SetParent(garage);
+                dInst.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        // market stalls at hamlet center
+        {
+            var market = new GameObject("MarketStalls").transform;
+            market.SetParent(parent);
+
+            for (int s = 0; s < 4; s++)
+            {
+                float sx = HamletCenter.x + ((float)s - 1.5f) * 8f;
+                float sz = HamletCenter.y + 5f;
+                float sy = SampleWorldHeight(terrain, terrainPos, sx, sz);
+
+                var stallProp = RuinProps[4 + rng.Next(2)];
+                var stall = InstantiateProp(stallProp, rng);
+                if (stall == null) continue;
+
+                stall.transform.position = new Vector3(sx, sy + 2f, sz);
+                stall.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                stall.transform.SetParent(market);
+                stall.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        Debug.Log($"merchant structures placed: {totalPlaced} pieces");
+    }
+
+    private static void PlaceWaystations(Transform root, Terrain terrain, Vector3 terrainPos, System.Random rng, TerrainData td)
+    {
+        var parent = new GameObject("Waystations").transform;
+        parent.SetParent(root);
+        int totalPlaced = 0;
+        string[] names = { "BusStop", "TrainStation", "SubwayEntrance", "Helipad" };
+
+        for (int w = 0; w < WaystationPositions.Length; w++)
+        {
+            var pos = WaystationPositions[w];
+            var ws = new GameObject(names[w]).transform;
+            ws.SetParent(parent);
+
+            float wy = SampleWorldHeight(terrain, terrainPos, pos.x, pos.y);
+
+            switch (w)
+            {
+                case 0: // bus stop
+                {
+                    var shelter = InstantiateProp(RuinProps[6], rng);
+                    if (shelter != null)
+                    {
+                        shelter.transform.position = new Vector3(pos.x, wy, pos.y);
+                        shelter.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                        shelter.transform.SetParent(ws);
+                        shelter.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int f = 0; f < 3; f++)
+                    {
+                        var fence = InstantiateProp(IndustrialProps[6 + rng.Next(3)], rng);
+                        if (fence == null) continue;
+                        fence.transform.position = new Vector3(pos.x + (f - 1) * 3f, wy, pos.y + 3f);
+                        fence.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                        fence.transform.SetParent(ws);
+                        fence.isStatic = true;
+                        totalPlaced++;
+                    }
+                    var sign = InstantiateProp(IndustrialProps[12], rng);
+                    if (sign != null)
+                    {
+                        sign.transform.position = new Vector3(pos.x - 5f, wy, pos.y);
+                        sign.transform.rotation = Quaternion.Euler(0f, 0f, 5f);
+                        sign.transform.SetParent(ws);
+                        sign.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+
+                case 1: // train station
+                {
+                    var platform = InstantiateProp(RuinProps[3], rng);
+                    if (platform != null)
+                    {
+                        platform.transform.position = new Vector3(pos.x, wy + 1f, pos.y);
+                        platform.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        platform.transform.localScale = new Vector3(1f, 0.3f, 3f);
+                        platform.transform.SetParent(ws);
+                        platform.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int col = 0; col < 3; col++)
+                    {
+                        var c = InstantiateProp(RuinProps[0], rng);
+                        if (c == null) continue;
+                        c.transform.position = new Vector3(pos.x + (col - 1) * 8f, wy + 1f, pos.y - 2f);
+                        c.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        c.transform.SetParent(ws);
+                        c.isStatic = true;
+                        totalPlaced++;
+                    }
+                    var sign = InstantiateProp(IndustrialProps[13], rng);
+                    if (sign != null)
+                    {
+                        sign.transform.position = new Vector3(pos.x - 15f, wy, pos.y);
+                        sign.transform.SetParent(ws);
+                        sign.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+
+                case 2: // subway entrance
+                {
+                    var door = InstantiateProp(RuinProps[2], rng);
+                    if (door != null)
+                    {
+                        door.transform.position = new Vector3(pos.x, wy - 1f, pos.y);
+                        door.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        door.transform.SetParent(ws);
+                        door.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int s = 0; s < 4; s++)
+                    {
+                        var wall = InstantiateProp(RuinProps[rng.Next(2)], rng);
+                        if (wall == null) continue;
+                        float wAngle = s * 90f;
+                        float wDist = 3f;
+                        wall.transform.position = new Vector3(
+                            pos.x + Mathf.Cos(wAngle * Mathf.Deg2Rad) * wDist,
+                            wy - 0.5f,
+                            pos.y + Mathf.Sin(wAngle * Mathf.Deg2Rad) * wDist);
+                        wall.transform.rotation = Quaternion.Euler(0f, wAngle, 0f);
+                        wall.transform.SetParent(ws);
+                        wall.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int step = 0; step < 4; step++)
+                    {
+                        var stair = InstantiateProp(RuinProps[4], rng);
+                        if (stair == null) continue;
+                        stair.transform.position = new Vector3(pos.x, wy - 0.5f * step, pos.y + 1f + step * 0.8f);
+                        stair.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                        stair.transform.localScale = new Vector3(1f, 0.2f, 0.8f);
+                        stair.transform.SetParent(ws);
+                        stair.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+
+                case 3: // helipad
+                {
+                    var shack = InstantiateProp(RuinProps[8], rng);
+                    if (shack != null)
+                    {
+                        shack.transform.position = new Vector3(pos.x + 8f, wy, pos.y + 8f);
+                        shack.transform.rotation = Quaternion.Euler(0f, -45f, 0f);
+                        shack.transform.SetParent(ws);
+                        shack.isStatic = true;
+                        totalPlaced++;
+                    }
+                    for (int f = 0; f < 8; f++)
+                    {
+                        var fence = InstantiateProp(IndustrialProps[6 + rng.Next(3)], rng);
+                        if (fence == null) continue;
+                        float fAngle = ((float)f / 8f) * Mathf.PI * 2f;
+                        float fDist = 10f;
+                        fence.transform.position = new Vector3(
+                            pos.x + Mathf.Cos(fAngle) * fDist,
+                            wy,
+                            pos.y + Mathf.Sin(fAngle) * fDist);
+                        fence.transform.rotation = Quaternion.Euler(0f, fAngle * Mathf.Rad2Deg + 90f, 0f);
+                        fence.transform.SetParent(ws);
+                        fence.isStatic = true;
+                        totalPlaced++;
+                    }
+                    var sign = InstantiateProp(IndustrialProps[12], rng);
+                    if (sign != null)
+                    {
+                        sign.transform.position = new Vector3(pos.x - 10f, wy, pos.y);
+                        sign.transform.SetParent(ws);
+                        sign.isStatic = true;
+                        totalPlaced++;
+                    }
+                    break;
+                }
+            }
+
+            for (int d = 0; d < 4 + rng.Next(4); d++)
+            {
+                float dAngle = (float)rng.NextDouble() * Mathf.PI * 2f;
+                float dDist = WaystationPadSizes[w].x / 2f + (float)rng.NextDouble() * 10f;
+                float dx = pos.x + Mathf.Cos(dAngle) * dDist;
+                float dz = pos.y + Mathf.Sin(dAngle) * dDist;
+                float dy = SampleWorldHeight(terrain, terrainPos, dx, dz);
+
+                var dProp = IndustrialProps[rng.Next(IndustrialProps.Length)];
+                var dInst = InstantiateProp(dProp, rng);
+                if (dInst == null) continue;
+
+                float tilt = (float)(rng.NextDouble() - 0.5) * 20f;
+                dInst.transform.position = new Vector3(dx, dy, dz);
+                dInst.transform.rotation = Quaternion.Euler(tilt, (float)rng.NextDouble() * 360f, 0f);
+                dInst.transform.SetParent(ws);
+                dInst.isStatic = true;
+                totalPlaced++;
+            }
+        }
+
+        Debug.Log($"waystations placed: {totalPlaced} pieces across {WaystationPositions.Length} locations");
     }
 
     // === RIVERBED DECORATION ===
