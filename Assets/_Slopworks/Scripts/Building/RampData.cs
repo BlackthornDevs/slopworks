@@ -13,9 +13,9 @@ public class RampData
     public Vector2Int BaseCell { get; }
 
     /// <summary>
-    /// The lower level the ramp starts on.
+    /// World-space Y position of the surface at the base of the ramp.
     /// </summary>
-    public int BaseLevel { get; }
+    public float BaseSurfaceY { get; }
 
     /// <summary>
     /// Direction the ramp goes (from base toward top).
@@ -45,10 +45,10 @@ public class RampData
     /// </summary>
     public List<Vector2Int> OccupiedCells { get; } = new();
 
-    public RampData(Vector2Int baseCell, int baseLevel, Vector2Int direction, int footprintLength)
+    public RampData(Vector2Int baseCell, float baseSurfaceY, Vector2Int direction, int footprintLength)
     {
         BaseCell = baseCell;
-        BaseLevel = baseLevel;
+        BaseSurfaceY = baseSurfaceY;
         Direction = direction;
         FootprintLength = footprintLength;
     }

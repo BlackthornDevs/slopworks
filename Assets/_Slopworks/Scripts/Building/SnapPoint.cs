@@ -13,9 +13,9 @@ public class SnapPoint
     public Vector2Int Cell { get; }
 
     /// <summary>
-    /// Floor level.
+    /// World-space Y position of the surface this snap point sits on.
     /// </summary>
-    public int Level { get; }
+    public float SurfaceY { get; }
 
     /// <summary>
     /// Edge direction (N/E/S/W) this snap point faces.
@@ -38,10 +38,10 @@ public class SnapPoint
     /// </summary>
     public bool IsOccupied { get; set; }
 
-    public SnapPoint(Vector2Int cell, int level, Vector2Int edgeDirection, SnapPointType type, BuildingData owner)
+    public SnapPoint(Vector2Int cell, float surfaceY, Vector2Int edgeDirection, SnapPointType type, BuildingData owner)
     {
         Cell = cell;
-        Level = level;
+        SurfaceY = surfaceY;
         EdgeDirection = edgeDirection;
         Type = type;
         Owner = owner;
