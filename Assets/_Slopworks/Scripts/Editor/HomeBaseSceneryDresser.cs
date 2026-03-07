@@ -165,6 +165,44 @@ public static class HomeBaseSceneryDresser
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/bottle-large.fbx", 2f, 3f, false),
     };
 
+    private struct SpeciesDef
+    {
+        public string SpeciesId;
+        public PropDef Prop;
+        public BiomeZone Zone;
+        public float WindAmount;
+        public float WindSpeed;
+
+        public SpeciesDef(string id, PropDef prop, BiomeZone zone, float windAmt = 1.5f, float windSpd = 0.8f)
+        {
+            SpeciesId = id; Prop = prop; Zone = zone; WindAmount = windAmt; WindSpeed = windSpd;
+        }
+    }
+
+    private static readonly SpeciesDef[] CanopySpecies = {
+        // floodplain (6)
+        new("weeping-willow", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn.fbx", 5f, 8f), BiomeZone.Floodplain, 2f, 0.6f),
+        new("cottonwood", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 6f, 10f), BiomeZone.Floodplain, 1.2f, 0.7f),
+        new("sycamore", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 6f, 9f), BiomeZone.Floodplain, 1.3f, 0.8f),
+        new("river-birch", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn-trunk.fbx", 4f, 6f), BiomeZone.Floodplain, 1.8f, 0.9f),
+        new("black-walnut", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 6f, 9f), BiomeZone.Floodplain, 1f, 0.7f),
+        new("box-elder", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn.fbx", 3f, 5f), BiomeZone.Floodplain, 1.5f, 1f),
+        // forest (8)
+        new("red-oak", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 7f, 11f), BiomeZone.Forest, 1f, 0.7f),
+        new("sugar-maple", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn.fbx", 6f, 10f), BiomeZone.Forest, 1.2f, 0.7f),
+        new("hickory", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 8f, 12f), BiomeZone.Forest, 0.8f, 0.6f),
+        new("white-ash", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 7f, 11f), BiomeZone.Forest, 1.1f, 0.75f),
+        new("beech", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 5f, 8f), BiomeZone.Forest, 0.9f, 0.65f),
+        new("black-cherry", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-autumn-tall.fbx", 5f, 9f), BiomeZone.Forest, 1f, 0.8f),
+        new("tulip-poplar", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 10f, 15f), BiomeZone.Forest, 0.7f, 0.5f),
+        new("ironwood", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-trunk.fbx", 3f, 5f), BiomeZone.Forest, 1.5f, 0.9f),
+        // rocky upland (4)
+        new("pitch-pine", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 3f, 7f), BiomeZone.RockyUpland, 1.8f, 1f),
+        new("red-cedar", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-tall.fbx", 3f, 5f), BiomeZone.RockyUpland, 0.8f, 0.5f),
+        new("chestnut-oak", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree.fbx", 4f, 7f), BiomeZone.RockyUpland, 1.2f, 0.7f),
+        new("scrub-oak", new PropDef("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-trunk.fbx", 2f, 3f), BiomeZone.RockyUpland, 2f, 1.2f),
+    };
+
     [MenuItem("Slopworks/Dress HomeBase Scenery")]
     public static void Dress()
     {
@@ -1113,12 +1151,10 @@ public static class HomeBaseSceneryDresser
         var undergrowthParent = new GameObject("Undergrowth").transform;
         undergrowthParent.SetParent(root);
 
-        int treesPlaced = 0;
-        int rocksPlaced = 0;
-        int undergrowthPlaced = 0;
+        int treesPlaced = 0, rocksPlaced = 0, undergrowthPlaced = 0;
 
-        // phase 1: tree clusters — scaled for 800m map
-        int clusterCount = 70 + rng.Next(20);
+        // phase 1: tree clusters — scaled for 1200m map
+        int clusterCount = 150 + rng.Next(30);
         for (int c = 0; c < clusterCount; c++)
         {
             float cx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
@@ -1126,8 +1162,15 @@ public static class HomeBaseSceneryDresser
             float dist = Mathf.Sqrt(cx * cx + cz * cz);
             if (dist < FlatRadius + 8f) continue;
 
+            var zone = GetBiomeZoneFromWorldPos(td, cx, cz);
+            var zoneCanopy = GetCanopyForZone(zone);
+            if (zoneCanopy.Length == 0) continue;
+
+            if (zone == BiomeZone.RockyUpland && rng.NextDouble() > 0.3) continue;
+            if (zone == BiomeZone.Floodplain && rng.NextDouble() > 0.7) continue;
+
             float clusterRadius = 8f + (float)rng.NextDouble() * 12f;
-            int treesInCluster = 4 + rng.Next(7);
+            int treesInCluster = zone == BiomeZone.RockyUpland ? 2 + rng.Next(3) : 4 + rng.Next(7);
 
             for (int t = 0; t < treesInCluster; t++)
             {
@@ -1139,25 +1182,25 @@ public static class HomeBaseSceneryDresser
                 float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
                 float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
                 if (nx < 0.02f || nx > 0.98f || nz < 0.02f || nz > 0.98f) continue;
-
-                float steepness = td.GetSteepness(nx, nz);
-                if (steepness > 25f) continue;
+                if (td.GetSteepness(nx, nz) > 25f) continue;
+                if (IsNearStructure(wx, wz, 8f)) continue;
 
                 float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-
-                var prop = TreeProps[rng.Next(TreeProps.Length)];
-                var instance = InstantiateProp(prop, rng);
+                var species = zoneCanopy[rng.Next(zoneCanopy.Length)];
+                var instance = InstantiateProp(species.Prop, rng);
                 if (instance == null) continue;
 
-                float yaw = (float)rng.NextDouble() * 360f;
                 instance.transform.position = new Vector3(wx, y, wz);
-                instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, yaw, rng, 4f);
+                instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, (float)rng.NextDouble() * 360f, rng, 4f);
                 instance.transform.SetParent(treeParent);
                 instance.isStatic = false;
-                AddWindSway(instance, 1.2f + (float)rng.NextDouble() * 0.6f, 0.7f + (float)rng.NextDouble() * 0.3f);
+                AddWindSway(instance, species.WindAmount, species.WindSpeed);
+
+                var tag = instance.AddComponent<BiomeTag>();
+                tag.Zone = zone;
+                tag.SpeciesId = species.SpeciesId;
                 treesPlaced++;
 
-                // 2-4 undergrowth around each tree
                 int undergrowthCount = 2 + rng.Next(3);
                 for (int u = 0; u < undergrowthCount; u++)
                 {
@@ -1171,8 +1214,6 @@ public static class HomeBaseSceneryDresser
                     if (unx < 0.02f || unx > 0.98f || unz < 0.02f || unz > 0.98f) continue;
 
                     float uy = SampleWorldHeight(terrain, terrainPos, uwx, uwz);
-
-                    // grass-type undergrowth near trees
                     var uprop = UndergrowthProps[rng.Next(4)];
                     var uinst = InstantiateProp(uprop, rng);
                     if (uinst == null) continue;
@@ -1187,51 +1228,67 @@ public static class HomeBaseSceneryDresser
             }
         }
 
-        // phase 2: scattered solo trees
-        for (int i = 0; i < 500; i++)
+        // phase 2: scattered solo trees (scaled for 1200m)
+        for (int i = 0; i < 1000; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius + 5f) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius + 5f) continue;
+            if (IsNearStructure(wx, wz, 8f)) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
-            float steepness = td.GetSteepness(nx, nz);
-            if (steepness > 25f) continue;
+            if (td.GetSteepness(nx, nz) > 25f) continue;
+
+            var zone = GetBiomeZoneFromWorldPos(td, wx, wz);
+            var zoneCanopy = GetCanopyForZone(zone);
+            if (zoneCanopy.Length == 0) continue;
+
+            if (zone == BiomeZone.RockyUpland && rng.NextDouble() > 0.2) continue;
 
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-            var prop = TreeProps[rng.Next(TreeProps.Length)];
-            var instance = InstantiateProp(prop, rng);
+            var species = zoneCanopy[rng.Next(zoneCanopy.Length)];
+            var instance = InstantiateProp(species.Prop, rng);
             if (instance == null) continue;
 
             instance.transform.position = new Vector3(wx, y, wz);
             instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, (float)rng.NextDouble() * 360f, rng, 3f);
             instance.transform.SetParent(treeParent);
             instance.isStatic = false;
-            AddWindSway(instance, 1.2f + (float)rng.NextDouble() * 0.6f, 0.7f + (float)rng.NextDouble() * 0.3f);
+            AddWindSway(instance, species.WindAmount, species.WindSpeed);
+
+            var tag = instance.AddComponent<BiomeTag>();
+            tag.Zone = zone;
+            tag.SpeciesId = species.SpeciesId;
             treesPlaced++;
         }
 
-        // phase 3: rocks — biome-aware selection
-        for (int i = 0; i < 800; i++)
+        // phase 3: rocks — biome-aware (scaled for 1200m)
+        for (int i = 0; i < 1600; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
-
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
 
-            // pick rock type based on location
+            var zone = GetBiomeZoneFromWorldPos(td, wx, wz);
+
+            if (zone == BiomeZone.Floodplain && rng.NextDouble() > 0.3) continue;
+
             PropDef prop;
             if (IsNearRiverbed(wx, wz, 10f))
             {
                 int idx = SandyRockIndices[rng.Next(SandyRockIndices.Length)];
                 prop = RockProps[idx];
+            }
+            else if (zone == BiomeZone.RockyUpland)
+            {
+                prop = RockProps[rng.Next(RockProps.Length)];
             }
             else if (td.GetSteepness(nx, nz) < 10f && rng.NextDouble() < 0.3)
             {
@@ -1253,18 +1310,20 @@ public static class HomeBaseSceneryDresser
             rocksPlaced++;
         }
 
-        // phase 4: undergrowth patches in open areas
-        for (int i = 0; i < 1200; i++)
+        // phase 4: undergrowth patches (scaled for 1200m)
+        for (int i = 0; i < 2500; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius + 3f) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius + 3f) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
-            float steepness = td.GetSteepness(nx, nz);
-            if (steepness > 35f) continue;
+            if (td.GetSteepness(nx, nz) > 35f) continue;
+
+            var zone = GetBiomeZoneFromWorldPos(td, wx, wz);
+            if (zone == BiomeZone.RockyUpland && rng.NextDouble() > 0.3) continue;
 
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
             int propIdx = rng.Next(UndergrowthProps.Length);
@@ -1276,7 +1335,6 @@ public static class HomeBaseSceneryDresser
             instance.transform.rotation = SlopeAlignedRotation(td, nx, nz, (float)rng.NextDouble() * 360f, rng, 0f);
             instance.transform.SetParent(undergrowthParent);
 
-            // only vegetation sways — logs, stones, planks, buckets are rigid
             bool isVegetation = propIdx < 4;
             instance.isStatic = !isVegetation;
             if (isVegetation)
@@ -1284,22 +1342,20 @@ public static class HomeBaseSceneryDresser
             undergrowthPlaced++;
         }
 
-        // phase 5: micro-detail clusters (rock + grass combos for natural groupings)
-        for (int i = 0; i < 250; i++)
+        // phase 5: micro-detail clusters (scaled for 1200m)
+        for (int i = 0; i < 500; i++)
         {
             float wx = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
             float wz = (float)rng.NextDouble() * TerrainWidth - TerrainWidth / 2f;
-            float dist = Mathf.Sqrt(wx * wx + wz * wz);
-            if (dist < FlatRadius + 5f) continue;
+            float ddist = Mathf.Sqrt(wx * wx + wz * wz);
+            if (ddist < FlatRadius + 5f) continue;
 
             float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
             float nz = (wz + TerrainWidth / 2f) / TerrainWidth;
             if (td.GetSteepness(nx, nz) > 30f) continue;
 
             float y = SampleWorldHeight(terrain, terrainPos, wx, wz);
-
-            // small rock
-            var rockProp = RockProps[rng.Next(3)]; // rock-a/b/c only
+            var rockProp = RockProps[rng.Next(3)];
             var rock = InstantiateProp(new PropDef(rockProp.Path, 1.5f, 3f, true), rng);
             if (rock != null)
             {
@@ -1310,7 +1366,6 @@ public static class HomeBaseSceneryDresser
                 rocksPlaced++;
             }
 
-            // 2-3 grass tufts around it
             for (int g = 0; g < 2 + rng.Next(2); g++)
             {
                 float ga = (float)rng.NextDouble() * Mathf.PI * 2f;
@@ -1334,13 +1389,11 @@ public static class HomeBaseSceneryDresser
             }
         }
 
-        // phase 6: riparian buffer — dense vegetation corridor along the river
-        // real riparian ecology: dense trees 10-25m from water, undergrowth 3-10m
+        // phase 6: riparian buffer (same structure, scaled for 1200m)
         for (int step = 0; step < RiverbedPoints.Count; step += 3)
         {
             var pt = RiverbedPoints[step];
 
-            // dense undergrowth band: 3-10m from channel center (both sides)
             for (int side = -1; side <= 1; side += 2)
             {
                 if (rng.NextDouble() > 0.6) continue;
@@ -1353,7 +1406,7 @@ public static class HomeBaseSceneryDresser
                 if (unx < 0.02f || unx > 0.98f || unz < 0.02f || unz > 0.98f) continue;
 
                 float uy = SampleWorldHeight(terrain, terrainPos, uwx, uwz);
-                var uProp = UndergrowthProps[rng.Next(4)]; // grass variants only
+                var uProp = UndergrowthProps[rng.Next(4)];
                 var uInst = InstantiateProp(uProp, rng);
                 if (uInst == null) continue;
 
@@ -1365,7 +1418,6 @@ public static class HomeBaseSceneryDresser
                 undergrowthPlaced++;
             }
 
-            // riparian tree band: 10-25m from channel center
             if (rng.NextDouble() > 0.35) continue;
             for (int side = -1; side <= 1; side += 2)
             {
@@ -1378,20 +1430,24 @@ public static class HomeBaseSceneryDresser
                 float tnz = (twz + TerrainWidth / 2f) / TerrainWidth;
                 if (tnx < 0.02f || tnx > 0.98f || tnz < 0.02f || tnz > 0.98f) continue;
 
-                float dist = Mathf.Sqrt(twx * twx + twz * twz);
-                if (dist < FlatRadius + 5f) continue;
+                float ddist = Mathf.Sqrt(twx * twx + twz * twz);
+                if (ddist < FlatRadius + 5f) continue;
 
                 float ty = SampleWorldHeight(terrain, terrainPos, twx, twz);
-                // prefer autumn trees near water (stand-in for willows/cottonwoods)
-                var tProp = TreeProps[3 + rng.Next(3)]; // autumn variants
-                var tInst = InstantiateProp(tProp, rng);
+                var floodCanopy = GetCanopyForZone(BiomeZone.Floodplain);
+                var species = floodCanopy[rng.Next(floodCanopy.Length)];
+                var tInst = InstantiateProp(species.Prop, rng);
                 if (tInst == null) continue;
 
                 tInst.transform.position = new Vector3(twx, ty, twz);
                 tInst.transform.rotation = SlopeAlignedRotation(td, tnx, tnz, (float)rng.NextDouble() * 360f, rng, 3f);
                 tInst.transform.SetParent(treeParent);
                 tInst.isStatic = false;
-                AddWindSway(tInst, 1.5f + (float)rng.NextDouble() * 0.5f, 0.8f);
+                AddWindSway(tInst, species.WindAmount, species.WindSpeed);
+
+                var tag = tInst.AddComponent<BiomeTag>();
+                tag.Zone = BiomeZone.Floodplain;
+                tag.SpeciesId = species.SpeciesId;
                 treesPlaced++;
             }
         }
@@ -1981,6 +2037,14 @@ public static class HomeBaseSceneryDresser
         return BiomeZone.Forest;
     }
 
+    private static SpeciesDef[] GetCanopyForZone(BiomeZone zone)
+    {
+        var list = new List<SpeciesDef>();
+        foreach (var s in CanopySpecies)
+            if (s.Zone == zone) list.Add(s);
+        return list.ToArray();
+    }
+
     private static BiomeZone GetBiomeZoneFromWorldPos(TerrainData td, float wx, float wz)
     {
         float nx = (wx + TerrainWidth / 2f) / TerrainWidth;
@@ -2037,6 +2101,39 @@ public static class HomeBaseSceneryDresser
             if (dx * dx + dz * dz < thresholdSq)
                 return true;
         }
+        return false;
+    }
+
+    private static bool IsNearStructure(float wx, float wz, float threshold)
+    {
+        float thresholdSq = threshold * threshold;
+
+        foreach (var pos in WaystationPositions)
+        {
+            float ddx = wx - pos.x;
+            float ddz = wz - pos.y;
+            if (ddx * ddx + ddz * ddz < thresholdSq * 4f) return true;
+        }
+
+        foreach (var pos in FarmsteadPositions)
+        {
+            float ddx = wx - pos.x;
+            float ddz = wz - pos.y;
+            if (ddx * ddx + ddz * ddz < thresholdSq) return true;
+        }
+
+        float hdx = wx - HamletCenter.x;
+        float hdz = wz - HamletCenter.y;
+        if (hdx * hdx + hdz * hdz < 60f * 60f) return true;
+
+        Vector2[] merchants = { GasStationPos, WoodshopPos, GaragePos };
+        foreach (var pos in merchants)
+        {
+            float ddx = wx - pos.x;
+            float ddz = wz - pos.y;
+            if (ddx * ddx + ddz * ddz < thresholdSq * 2f) return true;
+        }
+
         return false;
     }
 
