@@ -48,6 +48,8 @@ public class ConnectionUI : MonoBehaviour
     {
         if (_connected)
         {
+            // Clear any IMGUI focus (e.g. TextField from join address) so it doesn't eat input
+            GUI.FocusControl(null);
             GUILayout.BeginArea(new Rect(10, 10, 200, 30));
             GUILayout.Label($"Connected ({(_networkManager.IsServerStarted ? "Host" : "Client")})");
             GUILayout.EndArea();
