@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class SettlementInspectUI : MonoBehaviour
@@ -39,7 +40,8 @@ public class SettlementInspectUI : MonoBehaviour
     private void Update()
     {
         if (!_isOpen) return;
-        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
+        var kb = Keyboard.current;
+        if (kb != null && (kb.escapeKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame))
             Close();
     }
 

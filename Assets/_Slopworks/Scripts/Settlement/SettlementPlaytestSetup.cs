@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Self-contained settlement playtest bootstrapper. Drop on a GameObject, hit Play.
@@ -311,9 +312,14 @@ public class SettlementPlaytestSetup : MonoBehaviour
         var cc = _explorer.GetComponent<CharacterController>();
         if (cc == null) return;
 
+        var mouse = Mouse.current;
+        var kb = Keyboard.current;
+        if (mouse == null || kb == null) return;
+
         // mouse look
-        _yaw += Input.GetAxis("Mouse X") * LookSensitivity;
-        _pitch -= Input.GetAxis("Mouse Y") * LookSensitivity;
+        var mouseDelta = mouse.delta.ReadValue();
+        _yaw += mouseDelta.x * LookSensitivity * 0.1f;
+        _pitch -= mouseDelta.y * LookSensitivity * 0.1f;
         _pitch = Mathf.Clamp(_pitch, -80f, 80f);
 
         _explorer.transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
@@ -322,9 +328,11 @@ public class SettlementPlaytestSetup : MonoBehaviour
             camTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
 
         // WASD movement
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-        var move = _explorer.transform.forward * v + _explorer.transform.right * h;
+        var move = Vector3.zero;
+        if (kb.wKey.isPressed) move += _explorer.transform.forward;
+        if (kb.sKey.isPressed) move -= _explorer.transform.forward;
+        if (kb.dKey.isPressed) move += _explorer.transform.right;
+        if (kb.aKey.isPressed) move -= _explorer.transform.right;
         move *= MoveSpeed;
 
         // gravity
@@ -336,39 +344,43 @@ public class SettlementPlaytestSetup : MonoBehaviour
 
     private void HandleDebugKeys()
     {
+        var kb = Keyboard.current;
+        var mouse = Mouse.current;
+        if (kb == null) return;
+
         // T: toggle territory debug spheres
-        if (Input.GetKeyDown(KeyCode.T))
+        if (kb.tKey.wasPressedThisFrame)
             ToggleTerritorySpheres();
 
         // M: log full settlement state
-        if (Input.GetKeyDown(KeyCode.M))
+        if (kb.mKey.wasPressedThisFrame)
             LogSettlementState();
 
         // E: interact with nearest building
-        if (Input.GetKeyDown(KeyCode.E))
+        if (kb.eKey.wasPressedThisFrame)
             InteractWithNearest();
 
         // R: repair nearest building (debug)
-        if (Input.GetKeyDown(KeyCode.R))
+        if (kb.rKey.wasPressedThisFrame)
             RepairNearest();
 
         // U: upgrade nearest building (debug)
-        if (Input.GetKeyDown(KeyCode.U))
+        if (kb.uKey.wasPressedThisFrame)
             UpgradeNearest();
 
         // N: build road between two nearest buildings to the player
-        if (Input.GetKeyDown(KeyCode.N))
+        if (kb.nKey.wasPressedThisFrame)
             BuildRoadNearest();
 
         // Escape: unlock cursor
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (kb.escapeKey.wasPressedThisFrame)
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
 
         // Left click: lock cursor
-        if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
