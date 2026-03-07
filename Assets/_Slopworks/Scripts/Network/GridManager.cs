@@ -178,7 +178,7 @@ public class GridManager : NetworkBehaviour
         _grid.Place(origin, size, level, data);
 
         var prefab = GetPrefab(_foundationPrefabs, variant);
-        Vector3 worldPos = GetFoundationWorldPos(origin, level);
+        Vector3 worldPos = GetFoundationWorldPos(origin, level, prefab);
         var go = Instantiate(prefab, worldPos, Quaternion.identity);
         var info = go.AddComponent<PlacementInfo>();
         info.Type = PlacementInfo.PlacementType.Foundation;
@@ -622,12 +622,13 @@ public class GridManager : NetworkBehaviour
 
     /// <summary>
     /// World position for a foundation block at the given origin cell and level.
+    /// Uses the specified prefab's height to place bottom face on the surface.
     /// </summary>
-    public Vector3 GetFoundationWorldPos(Vector2Int origin, int level)
+    public Vector3 GetFoundationWorldPos(Vector2Int origin, int level, GameObject prefab = null)
     {
         int fs = FactoryGrid.FoundationSize;
         float halfBlock = fs * FactoryGrid.CellSize * 0.5f;
-        float halfHeight = GetPrefabHalfHeight(GetPrefab(_foundationPrefabs, 0));
+        float halfHeight = GetPrefabHalfHeight(prefab != null ? prefab : GetPrefab(_foundationPrefabs, 0));
         return new Vector3(
             origin.x * FactoryGrid.CellSize + halfBlock,
             level * FactoryGrid.LevelHeight + halfHeight,

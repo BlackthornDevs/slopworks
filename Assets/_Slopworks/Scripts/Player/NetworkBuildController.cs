@@ -402,8 +402,25 @@ public class NetworkBuildController : NetworkBehaviour
 
         int idx = (int)_currentTool;
         _variantIndex[idx] = (_variantIndex[idx] + 1) % variants.Length;
-        DestroyGhost(); // Force ghost rebuild with new variant
+        DestroyAllGhosts(); // Destroy all ghost pools so they rebuild from new prefab
         Debug.Log($"build: variant {_variantIndex[idx] + 1}/{variants.Length} ({variants[_variantIndex[idx]].name})");
+    }
+
+    private void DestroyAllGhosts()
+    {
+        DestroyGhost();
+        DestroyGhostPool(_ghostPool);
+        DestroyGhostPool(_zoopGhosts);
+        DestroyGhostPool(_rampZoopGhosts);
+    }
+
+    private static void DestroyGhostPool(List<GameObject> pool)
+    {
+        for (int i = 0; i < pool.Count; i++)
+        {
+            if (pool[i] != null) Destroy(pool[i]);
+        }
+        pool.Clear();
     }
 
     private void CancelAllPending()
@@ -562,7 +579,7 @@ public class NetworkBuildController : NetworkBehaviour
             _ghostPool.Add(CreateFoundationGhost());
 
         _ghostPool[0].SetActive(true);
-        _ghostPool[0].transform.position = gm.GetFoundationWorldPos(snapped, _lastLevel);
+        _ghostPool[0].transform.position = gm.GetFoundationWorldPos(snapped, _lastLevel, GetSelectedPrefab());
         ApplyGhostColor(_ghostPool[0], valid ? ValidColor : InvalidColor);
 
         for (int i = 1; i < _ghostPool.Count; i++)
@@ -594,7 +611,7 @@ public class NetworkBuildController : NetworkBehaviour
                 bool valid = gm.Grid.CanPlace(origin, new Vector2Int(fs, fs), _zoopStartLevel);
 
                 _ghostPool[idx].SetActive(true);
-                _ghostPool[idx].transform.position = gm.GetFoundationWorldPos(origin, _zoopStartLevel);
+                _ghostPool[idx].transform.position = gm.GetFoundationWorldPos(origin, _zoopStartLevel, GetSelectedPrefab());
                 ApplyGhostColor(_ghostPool[idx], valid ? ValidColor : InvalidColor);
                 idx++;
             }
