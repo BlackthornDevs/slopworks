@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 public static class HomeBaseTerrainGenerator
 {
     private const string ScenePath = "Assets/_Slopworks/Scenes/Multiplayer/HomeBaseTerrain.unity";
-    private const string TerrainDataPath = "Assets/_Slopworks/Scenes/Multiplayer/HomeBaseTerrainData.asset";
+    private const string TerrainDataPath = "Assets/_Slopworks/Art/Terrain/HomeBase/HomeBaseTerrainData.asset";
     private const int HeightmapRes = 513; // must be 2^n + 1
     private const int AlphamapRes = 512;
     private const float TerrainWidth = 200f;
@@ -228,13 +228,13 @@ public static class HomeBaseTerrainGenerator
         tex.wrapMode = TextureWrapMode.Repeat;
 
         // Save texture as asset so it persists
-        string texPath = $"Assets/_Slopworks/Scenes/Multiplayer/TerrainTex_{name}.asset";
+        string texPath = $"Assets/_Slopworks/Art/Terrain/HomeBase/TerrainTex_{name}.asset";
         AssetDatabase.CreateAsset(tex, texPath);
 
         layer.diffuseTexture = tex;
 
         // Save layer as asset
-        string layerPath = $"Assets/_Slopworks/Scenes/Multiplayer/TerrainLayer_{name}.asset";
+        string layerPath = $"Assets/_Slopworks/Art/Terrain/HomeBase/TerrainLayer_{name}.asset";
         AssetDatabase.CreateAsset(layer, layerPath);
 
         return layer;

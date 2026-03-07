@@ -158,7 +158,7 @@ public static class HomeBaseSceneryDresser
             layer.tileSize = TileSizes[i];
             layer.tileOffset = Vector2.zero;
 
-            string layerPath = $"Assets/_Slopworks/Scenes/Multiplayer/TerrainLayer_PBR_{setName}.asset";
+            string layerPath = $"Assets/_Slopworks/Art/Terrain/HomeBase/TerrainLayer_PBR_{setName}.asset";
             AssetDatabase.CreateAsset(layer, layerPath);
             layers[i] = layer;
         }
