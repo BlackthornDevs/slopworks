@@ -10,6 +10,7 @@
         { href: 'story.html', label: 'Story', id: 'story' },
         { href: 'build.html', label: 'Build', id: 'build' },
         { href: 'explore.html', label: 'Explore', id: 'explore' },
+        { href: 'tower.html', label: 'Tower', id: 'tower' },
         { href: 'slop.html', label: 'S.L.O.P.', id: 'slop' },
         { href: 'bible/', label: 'Bible', id: 'bible' },
     ];
