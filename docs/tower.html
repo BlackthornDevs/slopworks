@@ -18,12 +18,126 @@
     <meta name="twitter:description" content="Real NYC skyscrapers as vertical dungeons.">
     <meta name="twitter:image" content="https://blackthorndevs.com/slopworks/assets/img/tower-skyline.png">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Override scroll reveal — everything visible immediately */
+        .section { opacity: 1 !important; transform: none !important; }
+
+        /* ── Loop diagram styles ── */
+        .loop-diagram-wrap {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 auto;
+            max-width: 800px;
+        }
+        .loop-diagram-wrap svg { display: block; }
+
+        /* Node glow animation — sequential, 6s cycle */
+        @keyframes nodeGlow {
+            0%, 8%, 100%  { fill: rgba(232,160,49,0.03); stroke-opacity: 0.35; }
+            10%, 14%      { fill: rgba(232,160,49,0.15); stroke-opacity: 1; }
+            18%           { fill: rgba(232,160,49,0.03); stroke-opacity: 0.35; }
+        }
+        @keyframes nodeGlowTeal {
+            0%, 8%, 100%  { fill: rgba(92,207,230,0.03); stroke-opacity: 0.35; }
+            10%, 14%      { fill: rgba(92,207,230,0.15); stroke-opacity: 1; }
+            18%           { fill: rgba(92,207,230,0.03); stroke-opacity: 0.35; }
+        }
+        @keyframes labelBright {
+            0%, 8%, 100%  { fill-opacity: 0.55; }
+            10%, 14%      { fill-opacity: 1; }
+            18%           { fill-opacity: 0.55; }
+        }
+
+        /* Dot travel — moves right along connector */
+        @keyframes dotRight {
+            0%, 6%, 100%  { opacity: 0; transform: translateX(0); }
+            8%            { opacity: 1; transform: translateX(0); }
+            14%           { opacity: 1; transform: translateX(var(--dx)); }
+            16%           { opacity: 0; transform: translateX(var(--dx)); }
+        }
+        @keyframes dotEchoRight {
+            0%, 7%, 100%  { opacity: 0; transform: translateX(0); }
+            9%            { opacity: 0.5; transform: translateX(4px); }
+            15%           { opacity: 0; transform: translateX(var(--dx)); }
+        }
+        /* Dot travel — moves down along connector */
+        @keyframes dotDown {
+            0%, 6%, 100%  { opacity: 0; transform: translateY(0); }
+            8%            { opacity: 1; transform: translateY(0); }
+            14%           { opacity: 1; transform: translateY(var(--dy)); }
+            16%           { opacity: 0; transform: translateY(var(--dy)); }
+        }
+        @keyframes dotEchoDown {
+            0%, 7%, 100%  { opacity: 0; transform: translateY(0); }
+            9%            { opacity: 0.5; transform: translateY(4px); }
+            15%           { opacity: 0; transform: translateY(var(--dy)); }
+        }
+        /* Return path — moves left then up (two-step) */
+        @keyframes dotReturn {
+            0%, 6%, 100%  { opacity: 0; transform: translate(0, 0); }
+            8%            { opacity: 1; transform: translate(0, 0); }
+            11%           { opacity: 1; transform: translate(-430px, 0); }
+            14%           { opacity: 1; transform: translate(-430px, -90px); }
+            16%           { opacity: 0; transform: translate(-430px, -90px); }
+        }
+
+        /* Node animation assignments — 6s cycle, staggered */
+        .n1 rect { animation: nodeGlow 6s 0s infinite; }
+        .n2 rect { animation: nodeGlow 6s 0.8s infinite; }
+        .n3 rect { animation: nodeGlowTeal 6s 1.6s infinite; }
+        .n4 rect { animation: nodeGlowTeal 6s 2.4s infinite; }
+        .n5 rect { animation: nodeGlow 6s 3.2s infinite; }
+        .n6 rect { animation: nodeGlowTeal 6s 3.2s infinite; }
+
+        .n1 text { animation: labelBright 6s 0s infinite; }
+        .n2 text { animation: labelBright 6s 0.8s infinite; }
+        .n3 text { animation: labelBright 6s 1.6s infinite; }
+        .n4 text { animation: labelBright 6s 2.4s infinite; }
+        .n5 text { animation: labelBright 6s 3.2s infinite; }
+        .n6 text { animation: labelBright 6s 3.2s infinite; }
+
+        /* Traveling dots */
+        .dot-main, .dot-echo { transform-box: fill-box; transform-origin: center; }
+        .d1 { --dx: 50px;  animation: dotRight 6s 0.4s infinite; }
+        .d2 { --dx: 70px;  animation: dotRight 6s 1.2s infinite; }
+        .d3 { --dx: 50px;  animation: dotRight 6s 2.0s infinite; }
+        .d4 { --dy: 70px;  animation: dotDown  6s 2.8s infinite; }
+        .d5 { --dy: 110px; animation: dotDown  6s 2.0s infinite; }
+        .d6 { animation: dotReturn 6s 3.6s infinite; }
+
+        .de1 { --dx: 50px;  animation: dotEchoRight 6s 0.55s infinite; }
+        .de2 { --dx: 70px;  animation: dotEchoRight 6s 1.35s infinite; }
+        .de3 { --dx: 50px;  animation: dotEchoRight 6s 2.15s infinite; }
+        .de4 { --dy: 70px;  animation: dotEchoDown  6s 2.95s infinite; }
+        .de5 { --dy: 110px; animation: dotEchoDown  6s 2.15s infinite; }
+
+        /* Dashed return path crawl */
+        @keyframes dashCrawl {
+            to { stroke-dashoffset: -20; }
+        }
+        .return-path {
+            stroke-dasharray: 5 5;
+            animation: dashCrawl 1.5s linear infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .n1 rect, .n2 rect, .n3 rect, .n4 rect, .n5 rect, .n6 rect,
+            .n1 text, .n2 text, .n3 text, .n4 text, .n5 text, .n6 text,
+            .d1, .d2, .d3, .d4, .d5, .d6,
+            .de1, .de2, .de3, .de4, .de5, .return-path {
+                animation: none !important;
+            }
+            .n1 rect, .n2 rect, .n5 rect { fill: rgba(232,160,49,0.08); stroke-opacity: 0.6; }
+            .n3 rect, .n4 rect, .n6 rect { fill: rgba(92,207,230,0.08); stroke-opacity: 0.6; }
+            .d1, .d2, .d3, .d4, .d5, .d6 { opacity: 0.7 !important; }
+        }
+    </style>
 </head>
 <body>
     <div id="nav"></div>
 
     <!-- Page header -->
-    <section class="section" style="opacity:1;transform:none;padding-bottom:0;">
+    <section class="section" style="padding-bottom:0;">
         <div class="container">
             <h1>The tower</h1>
             <p class="text-dim">Every building is a contract. Every contract has a ceiling.</p>
@@ -174,10 +288,84 @@
         </div>
     </section>
 
-    <!-- Loop diagram (full width, canvas) -->
+    <!-- Loop diagram (inline SVG, CSS-only animation) -->
     <section class="section" style="padding-top:0;">
         <div class="container">
-            <canvas id="loop-canvas" style="display:block;margin:0 auto;" aria-label="Three-pillar progression loop diagram"></canvas>
+            <div class="loop-diagram-wrap">
+                <svg viewBox="0 0 780 310" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-pillar progression loop: tower contracts produce loot, which feeds factory upgrades, producing better gear for harder tower tiers and wave defense">
+
+                    <!-- Connector lines (dim guides) -->
+                    <line x1="160" y1="40" x2="220" y2="40" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <line x1="310" y1="40" x2="380" y2="40" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <line x1="540" y1="40" x2="600" y2="40" stroke="#5CCFE6" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <!-- Gear down to Harder Towers -->
+                    <polyline points="680,60 680,120 640,160" fill="none" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <!-- Factory down to Wave Defense -->
+                    <polyline points="460,60 460,170 420,210" fill="none" stroke="#5CCFE6" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <!-- Return: Harder Towers back to Tower (dashed, animated crawl) -->
+                    <polyline class="return-path" points="540,180 90,180 90,60" fill="none" stroke="#E8A031" stroke-opacity="0.25" stroke-width="1.5"/>
+                    <!-- Return arrowhead -->
+                    <polygon points="90,62 84,72 96,72" fill="#E8A031" fill-opacity="0.3"/>
+
+                    <!-- Arrowheads on connectors -->
+                    <polygon points="220,40 212,35 212,45" fill="#E8A031" fill-opacity="0.3"/>
+                    <polygon points="380,40 372,35 372,45" fill="#E8A031" fill-opacity="0.3"/>
+                    <polygon points="600,40 592,35 592,45" fill="#5CCFE6" fill-opacity="0.3"/>
+                    <polygon points="640,160 635,150 645,150" fill="#E8A031" fill-opacity="0.3"/>
+                    <polygon points="420,210 415,200 425,200" fill="#5CCFE6" fill-opacity="0.3"/>
+
+                    <!-- Node 1: Tower contracts -->
+                    <g class="n1">
+                        <rect x="10" y="14" width="150" height="52" rx="4" fill="rgba(232,160,49,0.03)" stroke="#E8A031" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="85" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#E8A031" fill-opacity="0.55">Tower contracts</text>
+                    </g>
+                    <!-- Node 2: Loot -->
+                    <g class="n2">
+                        <rect x="220" y="14" width="90" height="52" rx="4" fill="rgba(232,160,49,0.03)" stroke="#E8A031" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="265" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#E8A031" fill-opacity="0.55">Loot</text>
+                    </g>
+                    <!-- Node 3: Factory upgrades -->
+                    <g class="n3">
+                        <rect x="380" y="14" width="160" height="52" rx="4" fill="rgba(92,207,230,0.03)" stroke="#5CCFE6" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="460" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Factory upgrades</text>
+                    </g>
+                    <!-- Node 4: Better gear -->
+                    <g class="n4">
+                        <rect x="600" y="14" width="160" height="52" rx="4" fill="rgba(92,207,230,0.03)" stroke="#5CCFE6" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="680" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Better gear</text>
+                    </g>
+                    <!-- Node 5: Harder tower tiers -->
+                    <g class="n5">
+                        <rect x="540" y="155" width="200" height="52" rx="4" fill="rgba(232,160,49,0.03)" stroke="#E8A031" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="640" y="185" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#E8A031" fill-opacity="0.55">Harder tower tiers</text>
+                    </g>
+                    <!-- Node 6: Wave defense + territory -->
+                    <g class="n6">
+                        <rect x="280" y="250" width="280" height="52" rx="4" fill="rgba(92,207,230,0.03)" stroke="#5CCFE6" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="420" y="280" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Wave defense + territory</text>
+                    </g>
+
+                    <!-- Traveling dots: bright white circles that slide along connectors -->
+                    <!-- d1: Tower -> Loot -->
+                    <circle class="dot-main d1" cx="162" cy="40" r="5" fill="#fff" opacity="0"/>
+                    <circle class="dot-echo de1" cx="162" cy="40" r="3" fill="rgba(255,255,255,0.4)" opacity="0"/>
+                    <!-- d2: Loot -> Factory -->
+                    <circle class="dot-main d2" cx="312" cy="40" r="5" fill="#fff" opacity="0"/>
+                    <circle class="dot-echo de2" cx="312" cy="40" r="3" fill="rgba(255,255,255,0.4)" opacity="0"/>
+                    <!-- d3: Factory -> Gear -->
+                    <circle class="dot-main d3" cx="542" cy="40" r="5" fill="#fff" opacity="0"/>
+                    <circle class="dot-echo de3" cx="542" cy="40" r="3" fill="rgba(255,255,255,0.4)" opacity="0"/>
+                    <!-- d4: Gear -> Harder Towers (down) -->
+                    <circle class="dot-main d4" cx="680" cy="62" r="5" fill="#fff" opacity="0"/>
+                    <circle class="dot-echo de4" cx="680" cy="62" r="3" fill="rgba(255,255,255,0.4)" opacity="0"/>
+                    <!-- d5: Factory -> Wave Defense (down) -->
+                    <circle class="dot-main d5" cx="460" cy="62" r="5" fill="#fff" opacity="0"/>
+                    <circle class="dot-echo de5" cx="460" cy="62" r="3" fill="rgba(255,255,255,0.4)" opacity="0"/>
+                    <!-- d6: Return path (Harder Towers -> Tower) -->
+                    <circle class="dot-main d6" cx="538" cy="180" r="5" fill="#fff" opacity="0"/>
+
+                </svg>
+            </div>
         </div>
     </section>
 
@@ -185,6 +373,5 @@
 
     <script src="js/main.js"></script>
     <script src="js/scene-contracts.js"></script>
-    <script src="js/scene-loop.js"></script>
 </body>
 </html>
