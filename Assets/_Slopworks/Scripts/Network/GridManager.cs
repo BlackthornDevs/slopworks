@@ -238,6 +238,52 @@ public class GridManager : NetworkBehaviour
     }
 
     /// <summary>
+    /// Snap placement: position a new building flush against an existing building's snap point.
+    /// For horizontal normals: offset along normal by half the incoming depth, Y = snapY + halfHeight.
+    /// For vertical normals (top): place center-bottom on snap point.
+    /// </summary>
+    public static (Vector3 position, Quaternion rotation) GetSnapPlacementPosition(
+        BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg)
+    {
+        // Get renderer extents from prefab, fallback 0.5
+        Vector3 extents = Vector3.one * 0.5f;
+        if (prefab != null)
+        {
+            var renderer = prefab.GetComponentInChildren<Renderer>();
+            if (renderer != null)
+                extents = renderer.bounds.extents;
+        }
+
+        Vector3 snapPos = snapPoint.transform.position;
+        Vector3 normal = snapPoint.Normal;
+        float halfHeight = extents.y;
+
+        // Vertical normal: stack on top
+        if (Mathf.Abs(normal.y) > 0.9f)
+        {
+            float yOffset = normal.y > 0 ? halfHeight : -halfHeight;
+            Vector3 position = new Vector3(snapPos.x, snapPos.y + yOffset, snapPos.z);
+            Quaternion rotation = Quaternion.Euler(0f, rotationDeg, 0f);
+            return (position, rotation);
+        }
+
+        // Horizontal normal: auto-align yaw from normal direction
+        float autoYaw = Mathf.Atan2(normal.x, normal.z) * Mathf.Rad2Deg;
+
+        // Auto-yaw rotates the object so its local Z (forward) faces the normal.
+        // Therefore depth along the normal is always extents.z (the local forward extent).
+        float halfDepth = extents.z;
+
+        Vector3 horizontalNormal = new Vector3(normal.x, 0f, normal.z).normalized;
+        Vector3 pos = new Vector3(
+            snapPos.x + horizontalNormal.x * halfDepth,
+            snapPos.y + halfHeight,
+            snapPos.z + horizontalNormal.z * halfDepth);
+
+        return (pos, Quaternion.Euler(0f, autoYaw, 0f));
+    }
+
+    /// <summary>
     /// Snaps a single axis value to grid. Thin axes (less than 1m) snap back face flush
     /// to nearest grid line. Wide axes snap center to grid aligned to footprint size.
     /// </summary>
