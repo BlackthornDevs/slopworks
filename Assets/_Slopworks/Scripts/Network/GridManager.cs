@@ -126,76 +126,6 @@ public class GridManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// World position for a 1x1 building (machine, storage) at the given cell and surface Y.
-    /// </summary>
-    public Vector3 GetPlacementPos(Vector2Int cell, float surfaceY, GameObject prefab)
-    {
-        float halfHeight = GetPrefabHalfHeight(prefab);
-        float x = cell.x * FactoryGrid.CellSize + FactoryGrid.CellSize * 0.5f;
-        float z = cell.y * FactoryGrid.CellSize + FactoryGrid.CellSize * 0.5f;
-        return new Vector3(x, surfaceY + halfHeight, z);
-    }
-
-    /// <summary>
-    /// World position for a foundation block at the given origin cell and surface Y.
-    /// </summary>
-    public Vector3 GetFoundationPlacementPos(Vector2Int origin, float surfaceY, GameObject prefab)
-    {
-        int fs = FactoryGrid.FoundationSize;
-        float halfBlock = fs * FactoryGrid.CellSize * 0.5f;
-        float halfHeight = GetPrefabHalfHeight(prefab);
-        return new Vector3(
-            origin.x * FactoryGrid.CellSize + halfBlock,
-            surfaceY + halfHeight,
-            origin.y * FactoryGrid.CellSize + halfBlock);
-    }
-
-    /// <summary>
-    /// World position and rotation for directional buildings (walls, ramps).
-    /// </summary>
-    public void GetDirectionalPlacement(Vector2Int cell, float surfaceY, Vector2Int direction,
-        GameObject prefab, BuildingCategory category, out Vector3 position, out Quaternion rotation)
-    {
-        float cs = FactoryGrid.CellSize;
-
-        if (category == BuildingCategory.Wall)
-        {
-            float wallHeight = FactoryGrid.WallHeight;
-            int fs = FactoryGrid.FoundationSize;
-            float halfBlock = fs * cs * 0.5f;
-            Vector3 blockCenter = new Vector3(
-                cell.x * cs + halfBlock, surfaceY, cell.y * cs + halfBlock);
-            position = blockCenter + new Vector3(
-                direction.x * halfBlock, wallHeight * 0.5f, direction.y * halfBlock);
-
-            rotation = (direction == Vector2Int.up || direction == Vector2Int.down)
-                ? Quaternion.identity
-                : Quaternion.Euler(0f, 90f, 0f);
-            return;
-        }
-
-        if (category == BuildingCategory.Ramp)
-        {
-            int fs = FactoryGrid.FoundationSize;
-            float halfBlock = fs * cs * 0.5f;
-            float halfHeight = GetPrefabHalfHeight(prefab);
-            position = new Vector3(
-                cell.x * cs + halfBlock, surfaceY + halfHeight, cell.y * cs + halfBlock);
-
-            float yAngle = 0f;
-            if (direction == Vector2Int.right) yAngle = 90f;
-            else if (direction == Vector2Int.down) yAngle = 180f;
-            else if (direction == Vector2Int.left) yAngle = 270f;
-            rotation = Quaternion.Euler(0f, yAngle, 0f);
-            return;
-        }
-
-        // Fallback for other categories
-        position = GetPlacementPos(cell, surfaceY, prefab);
-        rotation = Quaternion.identity;
-    }
-
-    /// <summary>
     /// Unified grid placement: snaps center-bottom of prefab to nearest grid-aligned
     /// position based on its footprint. Thin objects (depth less than 1m) snap back face
     /// flush to nearest grid line instead of centering.
@@ -326,18 +256,17 @@ public class GridManager : NetworkBehaviour
             return;
         }
 
-        Vector3 worldPos;
+        // Reconstruct a world hit point from cell coordinates for the unified formula
+        float cs = FactoryGrid.CellSize;
+        var worldHit = new Vector3(cell.x * cs + cs * 0.5f, surfaceY, cell.y * cs + cs * 0.5f);
+        Vector3 worldPos = GetGridPlacementPosition(worldHit, prefab, rotation).position;
+
         if (category == BuildingCategory.Foundation)
         {
             int fs = FactoryGrid.FoundationSize;
             var size = new Vector2Int(fs, fs);
             if (!_grid.CanPlace(cell, size, surfaceY)) return;
             _grid.Place(cell, size, surfaceY, new BuildingData("foundation", cell, size, 0, 0));
-            worldPos = GetFoundationPlacementPos(cell, surfaceY, prefab);
-        }
-        else
-        {
-            worldPos = GetPlacementPos(cell, surfaceY, prefab);
         }
 
         var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
@@ -379,8 +308,12 @@ public class GridManager : NetworkBehaviour
             return;
         }
 
-        GetDirectionalPlacement(cell, surfaceY, direction, prefab, category,
-            out var worldPos, out var rot);
+        // Reconstruct a world hit point from cell coordinates for the unified formula
+        float cs = FactoryGrid.CellSize;
+        var worldHit = new Vector3(cell.x * cs + cs * 0.5f, surfaceY, cell.y * cs + cs * 0.5f);
+        var placement = GetGridPlacementPosition(worldHit, prefab, 0);
+        var worldPos = placement.position;
+        var rot = placement.rotation;
         var go = Instantiate(prefab, worldPos, rot);
         var info = go.AddComponent<PlacementInfo>();
         info.Category = category;
@@ -407,8 +340,10 @@ public class GridManager : NetworkBehaviour
         var prefab = GetPrefab(BuildingCategory.Belt, variant);
         if (prefab == null) return;
 
-        Vector3 startPos = GetPlacementPos(fromCell, surfaceY, prefab);
-        Vector3 endPos = GetPlacementPos(toCell, surfaceY, prefab);
+        float cs = FactoryGrid.CellSize;
+        float beltHalfH = GetPrefabHalfHeight(prefab);
+        Vector3 startPos = new Vector3(fromCell.x * cs + cs * 0.5f, surfaceY + beltHalfH, fromCell.y * cs + cs * 0.5f);
+        Vector3 endPos = new Vector3(toCell.x * cs + cs * 0.5f, surfaceY + beltHalfH, toCell.y * cs + cs * 0.5f);
         int length = Mathf.Max(1, Mathf.Abs(toCell.x - fromCell.x) + Mathf.Abs(toCell.y - fromCell.y));
 
         var go = Instantiate(prefab, (startPos + endPos) * 0.5f, Quaternion.identity);
