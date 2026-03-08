@@ -10,8 +10,6 @@ public class GridManager : NetworkBehaviour
     private NetworkFactorySimulation _factorySimulation;
 
     private FactoryGrid _grid;
-    private SnapPointRegistry _snapRegistry;
-    private StructuralPlacementService _structuralService;
 
     private Dictionary<BuildingCategory, GameObject[]> _prefabArrays = new();
 
@@ -19,8 +17,6 @@ public class GridManager : NetworkBehaviour
         { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
     public FactoryGrid Grid => _grid;
-    public StructuralPlacementService StructuralService => _structuralService;
-    public SnapPointRegistry SnapRegistry => _snapRegistry;
 
     // ------------------------------------------------------------------
     // Prefab access
@@ -72,8 +68,6 @@ public class GridManager : NetworkBehaviour
     {
         Instance = this;
         _grid = new FactoryGrid();
-        _snapRegistry = new SnapPointRegistry();
-        _structuralService = new StructuralPlacementService(_grid, _snapRegistry);
         _factorySimulation = GetComponent<NetworkFactorySimulation>();
         LoadPrefabVariants();
     }

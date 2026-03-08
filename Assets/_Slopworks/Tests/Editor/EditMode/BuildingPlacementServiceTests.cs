@@ -10,12 +10,9 @@ public class BuildingPlacementServiceTests
     private FactorySimulation _simulation;
     private ConnectionResolver _connectionResolver;
     private BuildingPlacementService _service;
-    private StructuralPlacementService _structuralService;
-    private SnapPointRegistry _snapRegistry;
 
     private MachineDefinitionSO _machineDef;
     private StorageDefinitionSO _storageDef;
-    private FoundationDefinitionSO _foundationDef;
 
     [SetUp]
     public void SetUp()
@@ -25,9 +22,6 @@ public class BuildingPlacementServiceTests
         _simulation = new FactorySimulation(_ => null);
         _connectionResolver = new ConnectionResolver(_portRegistry, _simulation);
         _service = new BuildingPlacementService(_grid, _portRegistry, _connectionResolver, _simulation);
-
-        _snapRegistry = new SnapPointRegistry();
-        _structuralService = new StructuralPlacementService(_grid, _snapRegistry);
 
         _machineDef = ScriptableObject.CreateInstance<MachineDefinitionSO>();
         _machineDef.machineId = "smelter";
@@ -72,11 +66,6 @@ public class BuildingPlacementServiceTests
                 type = PortType.Output
             }
         };
-
-        _foundationDef = ScriptableObject.CreateInstance<FoundationDefinitionSO>();
-        _foundationDef.foundationId = "foundation_1x1";
-        _foundationDef.size = Vector2Int.one;
-        _foundationDef.generatesSnapPoints = true;
     }
 
     [TearDown]
@@ -84,20 +73,30 @@ public class BuildingPlacementServiceTests
     {
         Object.DestroyImmediate(_machineDef);
         Object.DestroyImmediate(_storageDef);
-        Object.DestroyImmediate(_foundationDef);
     }
 
     private void PlaceFoundationsAt(params Vector2Int[] cells)
     {
         foreach (var cell in cells)
-            _structuralService.PlaceFoundation(_foundationDef, cell, 0);
+        {
+            var data = new BuildingData("foundation", cell, Vector2Int.one, 0, 0);
+            data.IsStructural = true;
+            _grid.Place(cell, Vector2Int.one, 0, data);
+        }
     }
 
     private void PlaceFoundationRect(Vector2Int origin, Vector2Int size, int level = 0)
     {
         for (int x = origin.x; x < origin.x + size.x; x++)
+        {
             for (int y = origin.y; y < origin.y + size.y; y++)
-                _structuralService.PlaceFoundation(_foundationDef, new Vector2Int(x, y), level);
+            {
+                var cell = new Vector2Int(x, y);
+                var data = new BuildingData("foundation", cell, Vector2Int.one, 0, level);
+                data.IsStructural = true;
+                _grid.Place(cell, Vector2Int.one, level, data);
+            }
+        }
     }
 
     // -- Foundation requirement --
