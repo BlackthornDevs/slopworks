@@ -179,10 +179,8 @@ public class GridManager : NetworkBehaviour
             int fs = FactoryGrid.FoundationSize;
             float halfBlock = fs * cs * 0.5f;
             float halfHeight = GetPrefabHalfHeight(prefab);
-            Vector3 blockCenter = new Vector3(
-                cell.x * cs + halfBlock, surfaceY, cell.y * cs + halfBlock);
-            position = blockCenter + new Vector3(
-                direction.x * halfBlock, halfHeight, direction.y * halfBlock);
+            position = new Vector3(
+                cell.x * cs + halfBlock, surfaceY + halfHeight, cell.y * cs + halfBlock);
 
             float yAngle = 0f;
             if (direction == Vector2Int.right) yAngle = 90f;
@@ -195,6 +193,67 @@ public class GridManager : NetworkBehaviour
         // Fallback for other categories
         position = GetPlacementPos(cell, surfaceY, prefab);
         rotation = Quaternion.identity;
+    }
+
+    /// <summary>
+    /// Unified grid placement: snaps center-bottom of prefab to nearest grid-aligned
+    /// position based on its footprint. Thin objects (depth less than 1m) snap back face
+    /// flush to nearest grid line instead of centering.
+    /// </summary>
+    /// <param name="hitPoint">World-space point where the crosshair hit terrain</param>
+    /// <param name="prefab">The building prefab to place</param>
+    /// <param name="rotationDeg">Rotation in degrees (0, 90, 180, 270)</param>
+    /// <returns>World position (center of object) and rotation quaternion</returns>
+    public static (Vector3 position, Quaternion rotation) GetGridPlacementPosition(
+        Vector3 hitPoint, GameObject prefab, int rotationDeg)
+    {
+        // Get renderer bounds extents from prefab, fallback 0.5 if no renderer
+        Vector3 extents = Vector3.one * 0.5f;
+        if (prefab != null)
+        {
+            var renderer = prefab.GetComponentInChildren<Renderer>();
+            if (renderer != null)
+                extents = renderer.bounds.extents;
+        }
+
+        // Determine footprint after rotation: at 90/270, X and Z swap
+        float footprintX, footprintZ;
+        bool swapped = (rotationDeg == 90 || rotationDeg == 270);
+        if (swapped)
+        {
+            footprintX = extents.z * 2f;
+            footprintZ = extents.x * 2f;
+        }
+        else
+        {
+            footprintX = extents.x * 2f;
+            footprintZ = extents.z * 2f;
+        }
+
+        float posX = SnapAxis(hitPoint.x, footprintX, swapped ? extents.z : extents.x);
+        float posZ = SnapAxis(hitPoint.z, footprintZ, swapped ? extents.x : extents.z);
+        float posY = hitPoint.y + extents.y;
+
+        return (new Vector3(posX, posY, posZ), Quaternion.Euler(0f, rotationDeg, 0f));
+    }
+
+    /// <summary>
+    /// Snaps a single axis value to grid. Thin axes (less than 1m) snap back face flush
+    /// to nearest grid line. Wide axes snap center to grid aligned to footprint size.
+    /// </summary>
+    private static float SnapAxis(float hitValue, float footprint, float halfExtent)
+    {
+        if (footprint < 1f)
+        {
+            // Thin: snap back face flush to nearest grid line
+            float gridLine = Mathf.Round(hitValue);
+            return gridLine + halfExtent;
+        }
+
+        // Wide: snap center to the grid-aligned block the point falls in
+        float gridStep = footprint;
+        float origin = Mathf.Floor(hitValue / gridStep) * gridStep;
+        return origin + gridStep * 0.5f;
     }
 
     // ------------------------------------------------------------------
