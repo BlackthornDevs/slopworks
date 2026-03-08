@@ -37,7 +37,7 @@ Canonical catalog of every game element in Slopworks. Each file defines a schema
 | [systems/research-tree.md](systems/research-tree.md) | Tech nodes: prerequisites, costs, unlocks |
 | [systems/upgrades.md](systems/upgrades.md) | Tier progression for machines, weapons, buildings |
 | [systems/status-effects.md](systems/status-effects.md) | Corrosion, toxicity, bleeding, buffs, debuffs |
-| [systems/tower-contracts.md](systems/tower-contracts.md) | Contract board, tier progression, co-op drop-in, expedition structure |
+| [systems/tower-contracts.md](systems/tower-contracts.md) | 15 contracts (4 spine + 11 branch), tier progression, co-op drop-in, environmental hazards, SLOP intel |
 | [systems/wave-events.md](systems/wave-events.md) | Wave compositions, threat tiers, spawn configs |
 
 ### World (exploration and territory)

@@ -1,6 +1,6 @@
 # Tower contracts system design
 
-**Goal:** Define the full roster of 14 tower contracts (4 spine + 10 branches), their progression tree, and the contract definition format for the game bible and website.
+**Goal:** Define the full roster of 15 tower contracts (4 spine + 11 branches), their progression tree, and the contract definition format for the game bible and website.
 
 **Constraints:**
 - 4 BIM models available now (30 Rock, MetLife, Woolworth, One World Trade Center) from Kevin's Elite CAD work
@@ -50,7 +50,7 @@ One World (T2→3, required)    ──→  Woolworth: The crypt (T3)
                                     [Empire State: Antenna] (T3, future)
 ```
 
-**Total: 14 contracts** (11 using existing models, 3 requiring future models)
+**Total: 15 contracts** (12 using existing models, 3 requiring future models)
 
 ---
 

@@ -25,6 +25,7 @@ The game is split across three scene groups:
 
 - **Home base** -- persistent factory and fortress. Flat buildable terrain with a Satisfactory-style foundation grid for freeform factory building. Supports multi-story stacking, integrated defenses (turrets, walls, gates, landmines), and isometric + first-person camera toggle.
 - **Reclaimed buildings** -- BIM-sourced explorable levels. Each building is a separate scene with its own fauna, hazards, and MEP systems to restore. Fauna types and difficulty scale with distance from your hub.
+- **Tower contracts** -- vertical dungeon expeditions through real NYC skyscrapers (30 Rock, MetLife, Woolworth, One World Trade Center). 15 contracts total: 4 required spine contracts that drive the narrative, plus 11 optional branch contracts that reward mastery with specialized loot and lore. 3 future buildings planned (Empire State, Chrysler).
 - **Overworld map** -- isometric territory visualization showing supply lines, connected buildings, and threat levels. Used for scouting, logistics planning, and network management.
 
 ## Automation
@@ -162,6 +163,7 @@ Every implementation phase must produce a playtest scene that lets a human verif
 
 - [Game design document](docs/plans/2026-02-27-game-design.md)
 - [Vertical slice plan](docs/plans/2026-02-27-vertical-slice-plan.md)
+- [Tower contracts design](docs/plans/2026-03-08-tower-contracts-design.md) -- 15-contract system with progression tree, hazards, and SLOP intel
 
 ### Reference architecture
 

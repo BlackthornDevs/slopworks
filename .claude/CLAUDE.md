@@ -1,14 +1,5 @@
 # Slopworks — Claude rules
 
-## GitHub Actions suspended (account-wide)
-
-GitHub Actions are disabled on the entire `jamditis` GitHub account until further notice. This means:
-- **No CI/CD pipelines will run** — builds, tests, deploys all fail silently
-- **GitHub Pages deploys won't work** — even "legacy" static deploys that used Actions under the hood
-- **No automated workflows** — PR checks, scheduled jobs, release automation are all dead
-
-**For any project that previously deployed via GitHub Actions or GitHub Pages, you must use an alternative** (manual deploy, Cloudflare Pages, Firebase Hosting, direct FTP, etc.). Do not create or rely on `.github/workflows/` files.
-
 Post-apocalyptic co-op factory/survival game built in Unity + FishNet. Two-person team: Joe (jamditis) + Kevin (kamditis) at BlackthornDevs. Both developers run parallel builds from the same design doc and merge the best parts — so both Claude instances working in this repo must follow identical rules.
 
 ## Engineering principles
@@ -98,18 +89,6 @@ Load the `slopworks-architecture` skill for design decisions about where a syste
 
 ---
 
-## Reasoning principles
-
-Before taking action:
-
-- **Dependencies** — what must exist before this? Will this block something else?
-- **Risk** — what's the blast radius if this is wrong? Prefer reversible actions.
-- **Root cause** — find the actual bug, not the symptom. Don't paper over it.
-- **Adaptability** — if a result doesn't match expectations, update the plan before continuing.
-- **Persistence** — on transient errors, retry. On logic errors, change strategy. Don't give up.
-
----
-
 ## Bug-fixing workflow
 
 1. Write a failing test that reproduces the bug.
@@ -117,59 +96,6 @@ Before taking action:
 3. Verify the test passes. A passing test is the proof.
 
 Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoBehaviour dependencies — it's unusually testable. Use that.
-
----
-
-## Workflow orchestration
-
-### 1. Plan mode default
-- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
-- If something goes sideways, STOP and re-plan immediately — don't keep pushing
-- Use plan mode for verification steps, not just building
-- Write detailed specs upfront to reduce ambiguity
-
-### 2. Subagent strategy
-- Use subagents liberally to keep main context window clean
-- Offload research, exploration, and parallel analysis to subagents
-- For complex problems, throw more compute at it via subagents
-- One task per subagent for focused execution
-
-### 3. Self-improvement loop
-- After ANY correction from the user: update `tasks/lessons.md` with the pattern
-- Write rules for yourself that prevent the same mistake
-- Ruthlessly iterate on these lessons until mistake rate drops
-- Review lessons at session start for relevant project
-
-### 4. Verification before done
-- Never mark a task complete without proving it works
-- Diff your behavior between main and your changes when relevant
-- Ask yourself: "Would a staff engineer approve this?"
-- Run tests, check logs, demonstrate correctness
-
-### 5. Demand elegance (balanced)
-- For non-trivial changes: pause and ask "is there a more elegant way?"
-- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
-- Skip this for simple, obvious fixes — don't over-engineer
-- Challenge your own work before presenting it
-
-### 6. Autonomous bug fixing
-- When given a bug report: just fix it. Don't ask for hand-holding
-- Point at logs, errors, failing tests — then resolve them
-- Zero context switching required from the user
-- Go fix failing CI tests without being told how
-
-### 7. Task management
-1. **Plan first**: Write plan to `tasks/todo.md` with checkable items
-2. **Verify plan**: Check in before starting implementation
-3. **Track progress**: Mark items complete as you go
-4. **Explain changes**: High-level summary at each step
-5. **Document results**: Add review section to `tasks/todo.md`
-6. **Capture lessons**: Update `tasks/lessons.md` after corrections
-
-### Core principles
-- **Simplicity first**: Make every change as simple as possible. Impact minimal code.
-- **No laziness**: Find root causes. No temporary fixes. Senior developer standards.
-- **Minimal impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 
 ---
 
@@ -369,5 +295,5 @@ Reference implementation: turret system (J-013 through J-015). Files: `TurretCon
 - **Phase 3** (Combat): Complete — weapons, enemies, AI, waves
 - **Phase 4** (Turret Defenses): Complete — J-013, J-014, J-015
 - **Phase 5** (Core UI + Inventory): Complete (Kevin)
-- **Phase 7** (The Tower): Next for Joe — starts at J-016
+- **Phase 7** (The Tower): Next for Joe — starts at J-016. Tower contracts bible complete (15 contracts, 6 buildings). Website tower page updated with progression tree, contract cards, and environmental hazards.
 - **Phase 6** (Building Exploration): Next for Kevin
