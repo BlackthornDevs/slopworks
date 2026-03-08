@@ -46,6 +46,7 @@ Canonical catalog of every game element in Slopworks. Each file defines a schema
 |------|----------|
 | [world/biomes.md](world/biomes.md) | Wasteland, grassland, forest, swamp, ruins |
 | [world/reclaimed-buildings.md](world/reclaimed-buildings.md) | Power plant, foundry, warehouse, machine shop, etc. |
+| [world/tower-buildings.md](world/tower-buildings.md) | 6 NYC skyscrapers used as tower contract locations — 4 active models, 2 planned |
 | [world/environmental-hazards.md](world/environmental-hazards.md) | Toxic leaks, collapses, spore clouds, electrical |
 | [world/supply-lines.md](world/supply-lines.md) | Inter-building logistics: throughput, vulnerability |
 

@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 768" width="1376" height="768">
+  <defs>
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.7"/>
+    </radialGradient>
+    <linearGradient id="subBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#080B10"/>
+      <stop offset="100%" stop-color="#0A0E14"/>
+    </linearGradient>
+    <!-- EM distortion glow -->
+    <radialGradient id="emGlow1" cx="0.3" cy="0.5" r="0.25">
+      <stop offset="0%" stop-color="#5CCFE6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#5CCFE6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="emGlow2" cx="0.7" cy="0.4" r="0.2">
+      <stop offset="0%" stop-color="#5CCFE6" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#5CCFE6" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Server rack LED glow -->
+    <radialGradient id="rackGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#5CCFE6" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#5CCFE6" stop-opacity="0"/>
+    </radialGradient>
+    <!-- EM distortion filter -->
+    <filter id="emDistort">
+      <feTurbulence type="turbulence" baseFrequency="0.02 0.06" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="8"/>
+    </filter>
+    <filter id="emDistort2">
+      <feTurbulence type="turbulence" baseFrequency="0.03 0.08" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1376" height="768" fill="url(#subBg)"/>
+
+  <!-- Underground corridor structure -->
+  <!-- Ceiling with exposed pipes and conduit -->
+  <rect x="0" y="0" width="1376" height="120" fill="#080B10"/>
+  <rect x="0" y="110" width="1376" height="15" fill="#12171F"/>
+
+  <!-- Ceiling pipes -->
+  <rect x="0" y="40" width="1376" height="8" fill="#1A1F2B" rx="4"/>
+  <rect x="0" y="60" width="1376" height="6" fill="#151B24" rx="3"/>
+  <rect x="0" y="80" width="1376" height="10" fill="#1A1F2B" rx="5"/>
+  <!-- Pipe joints -->
+  <rect x="300" y="36" width="16" height="16" fill="#2A2A2A" rx="2"/>
+  <rect x="700" y="36" width="16" height="16" fill="#2A2A2A" rx="2"/>
+  <rect x="1050" y="36" width="16" height="16" fill="#2A2A2A" rx="2"/>
+
+  <!-- Floor -->
+  <rect x="0" y="620" width="1376" height="148" fill="#0C1018"/>
+  <line x1="0" y1="620" x2="1376" y2="620" stroke="#1A1F2B" stroke-width="2"/>
+
+  <!-- Server racks — row of them receding left -->
+  <!-- Rack 1 -->
+  <rect x="80" y="140" width="100" height="480" fill="#0D1118" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+  <g fill="#5CCFE6">
+    <rect x="95" y="170" width="3" height="3" opacity="0.8"/>
+    <rect x="95" y="185" width="3" height="3" opacity="0.5"/>
+    <rect x="95" y="200" width="3" height="3" opacity="0.9"/>
+    <rect x="95" y="215" width="3" height="3" opacity="0.3"/>
+    <rect x="95" y="230" width="3" height="3" opacity="0.7"/>
+    <rect x="95" y="260" width="3" height="3" opacity="0.6"/>
+    <rect x="95" y="275" width="3" height="3" opacity="0.4"/>
+    <rect x="95" y="290" width="3" height="3" opacity="0.8"/>
+    <rect x="95" y="320" width="3" height="3" opacity="0.5"/>
+    <rect x="95" y="350" width="3" height="3" opacity="0.9"/>
+    <rect x="95" y="380" width="3" height="3" opacity="0.3"/>
+    <rect x="95" y="410" width="3" height="3" opacity="0.7"/>
+    <rect x="95" y="440" width="3" height="3" opacity="0.6"/>
+    <rect x="95" y="470" width="3" height="3" opacity="0.4"/>
+    <rect x="95" y="500" width="3" height="3" opacity="0.8"/>
+    <rect x="95" y="530" width="3" height="3" opacity="0.5"/>
+    <rect x="95" y="560" width="3" height="3" opacity="0.9"/>
+  </g>
+  <line x1="90" y1="250" x2="170" y2="250" stroke="#1A1F2B" stroke-width="1"/>
+  <line x1="90" y1="340" x2="170" y2="340" stroke="#1A1F2B" stroke-width="1"/>
+  <line x1="90" y1="430" x2="170" y2="430" stroke="#1A1F2B" stroke-width="1"/>
+  <line x1="90" y1="520" x2="170" y2="520" stroke="#1A1F2B" stroke-width="1"/>
+
+  <!-- Rack 2 -->
+  <rect x="220" y="140" width="100" height="480" fill="#0D1118" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+  <g fill="#5CCFE6">
+    <rect x="235" y="170" width="3" height="3" opacity="0.6"/>
+    <rect x="235" y="200" width="3" height="3" opacity="0.8"/>
+    <rect x="235" y="230" width="3" height="3" opacity="0.4"/>
+    <rect x="235" y="275" width="3" height="3" opacity="0.9"/>
+    <rect x="235" y="320" width="3" height="3" opacity="0.5"/>
+    <rect x="235" y="365" width="3" height="3" opacity="0.7"/>
+    <rect x="235" y="410" width="3" height="3" opacity="0.3"/>
+    <rect x="235" y="455" width="3" height="3" opacity="0.8"/>
+    <rect x="235" y="500" width="3" height="3" opacity="0.6"/>
+    <rect x="235" y="545" width="3" height="3" opacity="0.9"/>
+  </g>
+
+  <!-- Rack 3 -->
+  <rect x="360" y="140" width="100" height="480" fill="#0D1118" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+  <g fill="#5CCFE6">
+    <rect x="375" y="180" width="3" height="3" opacity="0.7"/>
+    <rect x="375" y="220" width="3" height="3" opacity="0.4"/>
+    <rect x="375" y="260" width="3" height="3" opacity="0.9"/>
+    <rect x="375" y="310" width="3" height="3" opacity="0.5"/>
+    <rect x="375" y="360" width="3" height="3" opacity="0.8"/>
+    <rect x="375" y="410" width="3" height="3" opacity="0.3"/>
+    <rect x="375" y="460" width="3" height="3" opacity="0.6"/>
+    <rect x="375" y="510" width="3" height="3" opacity="0.9"/>
+    <rect x="375" y="560" width="3" height="3" opacity="0.4"/>
+  </g>
+
+  <!-- Right side racks -->
+  <rect x="900" y="140" width="100" height="480" fill="#0D1118" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+  <g fill="#5CCFE6">
+    <rect x="985" y="175" width="3" height="3" opacity="0.8"/>
+    <rect x="985" y="220" width="3" height="3" opacity="0.5"/>
+    <rect x="985" y="265" width="3" height="3" opacity="0.9"/>
+    <rect x="985" y="310" width="3" height="3" opacity="0.6"/>
+    <rect x="985" y="370" width="3" height="3" opacity="0.7"/>
+    <rect x="985" y="430" width="3" height="3" opacity="0.4"/>
+    <rect x="985" y="490" width="3" height="3" opacity="0.8"/>
+    <rect x="985" y="550" width="3" height="3" opacity="0.5"/>
+  </g>
+
+  <rect x="1040" y="140" width="100" height="480" fill="#0D1118" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+  <g fill="#5CCFE6">
+    <rect x="1125" y="185" width="3" height="3" opacity="0.6"/>
+    <rect x="1125" y="240" width="3" height="3" opacity="0.9"/>
+    <rect x="1125" y="295" width="3" height="3" opacity="0.4"/>
+    <rect x="1125" y="350" width="3" height="3" opacity="0.7"/>
+    <rect x="1125" y="420" width="3" height="3" opacity="0.8"/>
+    <rect x="1125" y="490" width="3" height="3" opacity="0.5"/>
+    <rect x="1125" y="560" width="3" height="3" opacity="0.9"/>
+  </g>
+
+  <rect x="1180" y="140" width="100" height="480" fill="#0D1118" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+
+  <!-- EM distortion visual effects — glitchy overlay strips -->
+  <rect x="0" y="280" width="1376" height="40" fill="#5CCFE6" opacity="0.03" filter="url(#emDistort)"/>
+  <rect x="0" y="400" width="1376" height="25" fill="#5CCFE6" opacity="0.04" filter="url(#emDistort2)"/>
+  <rect x="200" y="180" width="600" height="3" fill="#5CCFE6" opacity="0.1"/>
+  <rect x="500" y="350" width="400" height="2" fill="#5CCFE6" opacity="0.08"/>
+  <rect x="100" y="480" width="800" height="2" fill="#5CCFE6" opacity="0.06"/>
+
+  <!-- EM glow areas -->
+  <rect width="1376" height="768" fill="url(#emGlow1)"/>
+  <rect width="1376" height="768" fill="url(#emGlow2)"/>
+
+  <!-- Biomech hybrid silhouettes in the aisle between racks -->
+  <!-- Silhouette 1 — between left rack group -->
+  <g opacity="0.25">
+    <!-- Head — slightly elongated, mechanical -->
+    <ellipse cx="540" cy="280" rx="14" ry="10" fill="#060A10"/>
+    <!-- Body — asymmetric, part organic part angular -->
+    <rect x="528" y="290" width="24" height="80" rx="4" fill="#060A10"/>
+    <!-- Left arm — mechanical, angular -->
+    <path d="M528,300 L500,340 L490,380" stroke="#060A10" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <!-- Right arm — organic, curved -->
+    <path d="M552,310 L580,350 L600,360" stroke="#060A10" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <!-- Legs -->
+    <rect x="530" y="370" width="10" height="60" rx="3" fill="#060A10"/>
+    <rect x="544" y="370" width="10" height="65" rx="3" fill="#060A10"/>
+    <!-- Eyes — one teal (mechanical), one amber (organic) -->
+    <circle cx="534" cy="278" r="2.5" fill="#5CCFE6" opacity="0.7"/>
+    <circle cx="546" cy="278" r="2.5" fill="#E8A031" opacity="0.5"/>
+  </g>
+
+  <!-- Silhouette 2 — far background between right racks -->
+  <g opacity="0.15">
+    <ellipse cx="1010" cy="320" rx="10" ry="7" fill="#060A10"/>
+    <rect x="1002" y="327" width="16" height="55" rx="3" fill="#060A10"/>
+    <path d="M1002,335 L985,360 L978,380" stroke="#060A10" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <circle cx="1006" cy="318" r="2" fill="#5CCFE6" opacity="0.5"/>
+    <circle cx="1014" cy="318" r="2" fill="#E8A031" opacity="0.4"/>
+  </g>
+
+  <!-- Cable mess on floor -->
+  <path d="M80,620 Q200,640 320,625 Q450,610 500,635 Q550,660 600,630" stroke="#1A1F2B" stroke-width="3" fill="none"/>
+  <path d="M900,620 Q1000,645 1100,625 Q1200,610 1280,640" stroke="#1A1F2B" stroke-width="2" fill="none"/>
+
+  <!-- Vignette -->
+  <rect width="1376" height="768" fill="url(#vignette)"/>
+
+  <!-- Noise -->
+  <rect width="1376" height="768" filter="url(#noise)" opacity="0.5"/>
+</svg>

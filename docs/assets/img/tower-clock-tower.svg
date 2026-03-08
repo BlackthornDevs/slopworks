@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 768" width="1376" height="768">
+  <defs>
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.65"/>
+    </radialGradient>
+    <linearGradient id="towerBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0C1018"/>
+      <stop offset="50%" stop-color="#0A0E14"/>
+      <stop offset="100%" stop-color="#080B10"/>
+    </linearGradient>
+    <!-- Clock face glow -->
+    <radialGradient id="clockGlow" cx="0.5" cy="0.45" r="0.35">
+      <stop offset="0%" stop-color="#E8A031" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#E8A031" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#E8A031" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Spore web color -->
+    <linearGradient id="sporeWeb" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5CCFE6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#2A6B77" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1376" height="768" fill="url(#towerBg)"/>
+
+  <!-- Gothic arched walls -->
+  <!-- Left arch -->
+  <path d="M0,768 L0,200 Q0,50 200,50 L200,768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+  <!-- Right arch -->
+  <path d="M1376,768 L1376,200 Q1376,50 1176,50 L1176,768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+
+  <!-- Gothic window shapes in walls -->
+  <path d="M50,250 L50,500 L150,500 L150,250 Q100,180 50,250" fill="#060A10" stroke="#2A2A2A" stroke-width="1.5"/>
+  <path d="M1226,250 L1226,500 L1326,500 L1326,250 Q1276,180 1226,250" fill="#060A10" stroke="#2A2A2A" stroke-width="1.5"/>
+
+  <!-- Structural cracks in walls -->
+  <path d="M30,350 L60,380 L45,420 L70,480" stroke="#2A2A2A" stroke-width="2" fill="none"/>
+  <path d="M170,200 L155,260 L180,310" stroke="#2A2A2A" stroke-width="1.5" fill="none"/>
+  <path d="M1300,280 L1280,340 L1310,400 L1290,460" stroke="#2A2A2A" stroke-width="2" fill="none"/>
+  <path d="M1200,150 L1215,210 L1195,270" stroke="#2A2A2A" stroke-width="1.5" fill="none"/>
+
+  <!-- Central clock mechanism -->
+  <!-- Large clock face -->
+  <circle cx="688" cy="340" r="200" fill="#0D1118" stroke="#E8A031" stroke-width="3" opacity="0.6"/>
+  <circle cx="688" cy="340" r="190" fill="none" stroke="#2A2A2A" stroke-width="1"/>
+  <circle cx="688" cy="340" r="170" fill="none" stroke="#1A1F2B" stroke-width="1"/>
+
+  <!-- Hour markers -->
+  <g stroke="#E8A031" stroke-width="3" opacity="0.5">
+    <line x1="688" y1="155" x2="688" y2="175"/><!-- 12 -->
+    <line x1="780" y1="165" x2="775" y2="185"/><!-- 1 -->
+    <line x1="858" y1="230" x2="845" y2="245"/><!-- 2 -->
+    <line x1="873" y1="340" x2="853" y2="340"/><!-- 3 -->
+    <line x1="858" y1="450" x2="845" y2="435"/><!-- 4 -->
+    <line x1="780" y1="515" x2="775" y2="495"/><!-- 5 -->
+    <line x1="688" y1="525" x2="688" y2="505"/><!-- 6 -->
+    <line x1="596" y1="515" x2="601" y2="495"/><!-- 7 -->
+    <line x1="518" y1="450" x2="531" y2="435"/><!-- 8 -->
+    <line x1="503" y1="340" x2="523" y2="340"/><!-- 9 -->
+    <line x1="518" y1="230" x2="531" y2="245"/><!-- 10 -->
+    <line x1="596" y1="165" x2="601" y2="185"/><!-- 11 -->
+  </g>
+
+  <!-- Clock hands (frozen/broken) -->
+  <!-- Hour hand — stuck at roughly 3 -->
+  <line x1="688" y1="340" x2="810" y2="350" stroke="#E8A031" stroke-width="6" opacity="0.7" stroke-linecap="round"/>
+  <!-- Minute hand — snapped, dangling -->
+  <line x1="688" y1="340" x2="650" y2="190" stroke="#E8A031" stroke-width="4" opacity="0.5" stroke-linecap="round"/>
+  <line x1="650" y1="190" x2="660" y2="230" stroke="#E8A031" stroke-width="3" opacity="0.3" stroke-linecap="round"/>
+
+  <!-- Center hub -->
+  <circle cx="688" cy="340" r="12" fill="#2A2A2A" stroke="#E8A031" stroke-width="2" opacity="0.6"/>
+
+  <!-- Gear teeth around clock -->
+  <g fill="none" stroke="#1A1F2B" stroke-width="2">
+    <!-- Outer gear ring -->
+    <circle cx="688" cy="340" r="220" stroke-dasharray="15 10"/>
+    <!-- Inner gear details -->
+    <circle cx="688" cy="340" r="240" stroke-dasharray="8 20"/>
+  </g>
+
+  <!-- Mechanical gears behind clock -->
+  <!-- Large gear left -->
+  <circle cx="400" cy="380" r="80" fill="none" stroke="#1A1F2B" stroke-width="3"/>
+  <circle cx="400" cy="380" r="70" fill="none" stroke="#151B24" stroke-width="1" stroke-dasharray="12 8"/>
+  <circle cx="400" cy="380" r="15" fill="#151B24" stroke="#1A1F2B" stroke-width="2"/>
+  <!-- Gear teeth -->
+  <g stroke="#1A1F2B" stroke-width="4">
+    <line x1="400" y1="296" x2="400" y2="310"/>
+    <line x1="400" y1="450" x2="400" y2="464"/>
+    <line x1="316" y1="380" x2="330" y2="380"/>
+    <line x1="470" y1="380" x2="484" y2="380"/>
+    <line x1="344" y1="324" x2="354" y2="334"/>
+    <line x1="446" y1="426" x2="456" y2="436"/>
+    <line x1="344" y1="436" x2="354" y2="426"/>
+    <line x1="446" y1="334" x2="456" y2="324"/>
+  </g>
+
+  <!-- Small gear right -->
+  <circle cx="980" cy="300" r="55" fill="none" stroke="#1A1F2B" stroke-width="2"/>
+  <circle cx="980" cy="300" r="45" fill="none" stroke="#151B24" stroke-width="1" stroke-dasharray="8 6"/>
+  <circle cx="980" cy="300" r="10" fill="#151B24" stroke="#1A1F2B" stroke-width="2"/>
+
+  <!-- Medium gear upper right -->
+  <circle cx="1050" cy="180" r="40" fill="none" stroke="#1A1F2B" stroke-width="2"/>
+  <circle cx="1050" cy="180" r="30" fill="none" stroke="#151B24" stroke-width="1" stroke-dasharray="6 5"/>
+  <circle cx="1050" cy="180" r="8" fill="#151B24" stroke="#1A1F2B" stroke-width="1.5"/>
+
+  <!-- Spore crawler webs on the gears -->
+  <!-- Web strands connecting gears to walls -->
+  <path d="M200,200 Q350,250 400,300" stroke="url(#sporeWeb)" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M200,400 Q300,420 380,400" stroke="url(#sporeWeb)" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M100,300 Q250,280 350,310" stroke="url(#sporeWeb)" stroke-width="1" fill="none" opacity="0.4"/>
+  <path d="M480,380 Q600,350 580,300" stroke="url(#sporeWeb)" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <path d="M800,340 Q900,310 940,290" stroke="url(#sporeWeb)" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M1020,310 Q1100,350 1176,300" stroke="url(#sporeWeb)" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M1050,220 Q1150,180 1200,200" stroke="url(#sporeWeb)" stroke-width="1" fill="none" opacity="0.4"/>
+  <!-- Web clusters (small organic nodes) -->
+  <circle cx="350" cy="310" r="4" fill="#5CCFE6" opacity="0.1"/>
+  <circle cx="480" cy="380" r="5" fill="#5CCFE6" opacity="0.08"/>
+  <circle cx="940" cy="290" r="4" fill="#5CCFE6" opacity="0.1"/>
+  <circle cx="580" cy="300" r="3" fill="#5CCFE6" opacity="0.12"/>
+
+  <!-- Floor with rubble -->
+  <rect x="200" y="620" width="976" height="148" fill="#0C1018"/>
+  <!-- Fallen debris -->
+  <polygon points="350,620 380,620 370,640 340,635" fill="#1A1F2B"/>
+  <polygon points="600,620 640,620 630,650 590,640" fill="#1A1F2B"/>
+  <polygon points="850,620 890,620 880,635 845,630" fill="#1A1F2B"/>
+  <polygon points="1000,620 1030,620 1020,660 995,645" fill="#1A1F2B"/>
+
+  <!-- Clock glow -->
+  <rect width="1376" height="768" fill="url(#clockGlow)"/>
+
+  <!-- Vignette -->
+  <rect width="1376" height="768" fill="url(#vignette)"/>
+
+  <!-- Noise -->
+  <rect width="1376" height="768" filter="url(#noise)" opacity="0.5"/>
+</svg>

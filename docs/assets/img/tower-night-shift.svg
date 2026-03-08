@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 768" width="1376" height="768">
+  <defs>
+    <!-- Noise texture -->
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+    <!-- Flashlight cone -->
+    <radialGradient id="flashlight" cx="0.42" cy="0.55" r="0.35" fx="0.42" fy="0.55">
+      <stop offset="0%" stop-color="#E8A031" stop-opacity="0.25"/>
+      <stop offset="30%" stop-color="#E8A031" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#E8A031" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Dark corridor gradient -->
+    <linearGradient id="corridorBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#050810"/>
+      <stop offset="50%" stop-color="#0A0E14"/>
+      <stop offset="100%" stop-color="#080B10"/>
+    </linearGradient>
+    <!-- Vignette -->
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.7"/>
+    </radialGradient>
+    <!-- Flashlight beam shape -->
+    <linearGradient id="beamEdge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E8A031" stop-opacity="0"/>
+      <stop offset="40%" stop-color="#E8A031" stop-opacity="0.12"/>
+      <stop offset="60%" stop-color="#E8A031" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#E8A031" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1376" height="768" fill="url(#corridorBg)"/>
+
+  <!-- Corridor walls — perspective lines -->
+  <!-- Left wall -->
+  <polygon points="0,0 380,200 380,580 0,768" fill="#0D1118" stroke="#1A1F2B" stroke-width="1"/>
+  <!-- Right wall -->
+  <polygon points="1376,0 996,200 996,580 1376,768" fill="#0D1118" stroke="#1A1F2B" stroke-width="1"/>
+  <!-- Ceiling -->
+  <polygon points="0,0 1376,0 996,200 380,200" fill="#080C12" stroke="#1A1F2B" stroke-width="1"/>
+  <!-- Floor -->
+  <polygon points="0,768 1376,768 996,580 380,580" fill="#0C1018" stroke="#1A1F2B" stroke-width="1"/>
+
+  <!-- Floor tiles receding into distance -->
+  <line x1="140" y1="768" x2="480" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="280" y1="768" x2="540" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="420" y1="768" x2="600" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="560" y1="768" x2="660" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="700" y1="768" x2="688" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="840" y1="768" x2="730" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="980" y1="768" x2="800" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="1120" y1="768" x2="870" y2="580" stroke="#151B24" stroke-width="1"/>
+  <line x1="1260" y1="768" x2="940" y2="580" stroke="#151B24" stroke-width="1"/>
+
+  <!-- Door frames along walls -->
+  <rect x="100" y="200" width="80" height="180" fill="none" stroke="#1A1F2B" stroke-width="2" transform="skewY(12)"/>
+  <rect x="200" y="270" width="60" height="140" fill="none" stroke="#1A1F2B" stroke-width="2" transform="skewY(8)"/>
+  <rect x="1180" y="200" width="80" height="180" fill="none" stroke="#1A1F2B" stroke-width="2" transform="skewY(-12)"/>
+  <rect x="1100" y="270" width="60" height="140" fill="none" stroke="#1A1F2B" stroke-width="2" transform="skewY(-8)"/>
+
+  <!-- Pipes on ceiling -->
+  <line x1="420" y1="210" x2="956" y2="210" stroke="#1A1F2B" stroke-width="4"/>
+  <line x1="400" y1="220" x2="976" y2="220" stroke="#151B24" stroke-width="3"/>
+
+  <!-- Flashlight beam — cone shape -->
+  <polygon points="580,690 380,280 996,280" fill="url(#flashlight)" opacity="0.6"/>
+  <polygon points="580,690 480,380 850,380" fill="#E8A031" opacity="0.04"/>
+
+  <!-- Beam edge lines -->
+  <line x1="580" y1="690" x2="380" y2="280" stroke="#E8A031" stroke-width="1" opacity="0.15"/>
+  <line x1="580" y1="690" x2="996" y2="280" stroke="#E8A031" stroke-width="1" opacity="0.15"/>
+
+  <!-- Dust particles in the beam -->
+  <circle cx="520" cy="450" r="2" fill="#E8A031" opacity="0.4"/>
+  <circle cx="580" cy="380" r="1.5" fill="#E8A031" opacity="0.3"/>
+  <circle cx="640" cy="500" r="1" fill="#E8A031" opacity="0.5"/>
+  <circle cx="500" cy="520" r="1.5" fill="#E8A031" opacity="0.25"/>
+  <circle cx="700" cy="420" r="2" fill="#E8A031" opacity="0.2"/>
+  <circle cx="550" cy="340" r="1" fill="#E8A031" opacity="0.35"/>
+  <circle cx="620" cy="560" r="1.5" fill="#E8A031" opacity="0.3"/>
+  <circle cx="480" cy="600" r="2" fill="#E8A031" opacity="0.15"/>
+
+  <!-- Stalker silhouettes at edge of light — left side -->
+  <g opacity="0.25">
+    <!-- Tall hunched figure -->
+    <ellipse cx="350" cy="330" rx="12" ry="8" fill="#0A0E14"/>
+    <rect x="342" y="338" width="16" height="100" rx="4" fill="#0A0E14"/>
+    <rect x="338" y="420" width="10" height="50" rx="2" fill="#0A0E14" transform="rotate(-5 343 420)"/>
+    <rect x="352" y="420" width="10" height="55" rx="2" fill="#0A0E14" transform="rotate(3 357 420)"/>
+    <!-- Eyes -->
+    <circle cx="346" cy="335" r="2" fill="#E8A031" opacity="0.6"/>
+    <circle cx="354" cy="335" r="2" fill="#E8A031" opacity="0.6"/>
+  </g>
+
+  <!-- Stalker silhouette — right side, partially behind wall edge -->
+  <g opacity="0.2">
+    <ellipse cx="980" cy="360" rx="14" ry="9" fill="#0A0E14"/>
+    <rect x="970" y="369" width="20" height="90" rx="5" fill="#0A0E14"/>
+    <rect x="966" y="440" width="12" height="60" rx="2" fill="#0A0E14" transform="rotate(-3 972 440)"/>
+    <rect x="980" y="445" width="12" height="55" rx="2" fill="#0A0E14" transform="rotate(6 986 445)"/>
+    <circle cx="975" cy="365" r="2" fill="#E8A031" opacity="0.5"/>
+    <circle cx="984" cy="365" r="2" fill="#E8A031" opacity="0.5"/>
+  </g>
+
+  <!-- Third figure in the far distance -->
+  <g opacity="0.15">
+    <ellipse cx="688" cy="310" rx="8" ry="5" fill="#0A0E14"/>
+    <rect x="682" y="315" width="12" height="60" rx="3" fill="#0A0E14"/>
+    <circle cx="685" cy="313" r="1.5" fill="#E8A031" opacity="0.4"/>
+    <circle cx="691" cy="313" r="1.5" fill="#E8A031" opacity="0.4"/>
+  </g>
+
+  <!-- Vignette overlay -->
+  <rect width="1376" height="768" fill="url(#vignette)"/>
+
+  <!-- Noise texture -->
+  <rect width="1376" height="768" filter="url(#noise)" opacity="0.5"/>
+</svg>

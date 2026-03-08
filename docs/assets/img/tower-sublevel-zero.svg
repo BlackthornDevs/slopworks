@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 768" width="1376" height="768">
+  <defs>
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.75"/>
+    </radialGradient>
+    <linearGradient id="deepBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#060810"/>
+      <stop offset="100%" stop-color="#0A0E14"/>
+    </linearGradient>
+    <!-- EM distortion glows -->
+    <radialGradient id="emPulse1" cx="0.4" cy="0.6" r="0.2">
+      <stop offset="0%" stop-color="#5CCFE6" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#5CCFE6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="emPulse2" cx="0.65" cy="0.35" r="0.15">
+      <stop offset="0%" stop-color="#E8A031" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#E8A031" stop-opacity="0"/>
+    </radialGradient>
+    <!-- EM distortion filter -->
+    <filter id="emDistort">
+      <feTurbulence type="turbulence" baseFrequency="0.015 0.04" numOctaves="3" seed="42"/>
+      <feDisplacementMap in="SourceGraphic" scale="6"/>
+    </filter>
+    <!-- Ancient machinery glow -->
+    <radialGradient id="machineGlow" cx="0.5" cy="0.7" r="0.3">
+      <stop offset="0%" stop-color="#E8A031" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#E8A031" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1376" height="768" fill="url(#deepBg)"/>
+
+  <!-- Massive concrete pillars — deep foundation infrastructure -->
+  <!-- Pillar 1 — leftmost -->
+  <rect x="60" y="0" width="120" height="768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+  <!-- Pillar texture — horizontal pour lines -->
+  <g stroke="#151B24" stroke-width="1" opacity="0.4">
+    <line x1="62" y1="80" x2="178" y2="80"/>
+    <line x1="62" y1="200" x2="178" y2="200"/>
+    <line x1="62" y1="350" x2="178" y2="350"/>
+    <line x1="62" y1="500" x2="178" y2="500"/>
+    <line x1="62" y1="650" x2="178" y2="650"/>
+  </g>
+  <!-- Rebar exposure -->
+  <line x1="100" y1="300" x2="100" y2="420" stroke="#8B3A1A" stroke-width="3" opacity="0.4"/>
+  <line x1="140" y1="280" x2="140" y2="380" stroke="#8B3A1A" stroke-width="2" opacity="0.3"/>
+
+  <!-- Pillar 2 -->
+  <rect x="350" y="0" width="140" height="768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+  <g stroke="#151B24" stroke-width="1" opacity="0.4">
+    <line x1="352" y1="120" x2="488" y2="120"/>
+    <line x1="352" y1="280" x2="488" y2="280"/>
+    <line x1="352" y1="440" x2="488" y2="440"/>
+    <line x1="352" y1="600" x2="488" y2="600"/>
+  </g>
+
+  <!-- Pillar 3 — center, largest -->
+  <rect x="620" y="0" width="160" height="768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+  <g stroke="#151B24" stroke-width="1" opacity="0.4">
+    <line x1="622" y1="100" x2="778" y2="100"/>
+    <line x1="622" y1="250" x2="778" y2="250"/>
+    <line x1="622" y1="400" x2="778" y2="400"/>
+    <line x1="622" y1="550" x2="778" y2="550"/>
+    <line x1="622" y1="700" x2="778" y2="700"/>
+  </g>
+  <!-- Major crack through center pillar -->
+  <path d="M680,0 L690,80 L675,180 L695,300 L680,420 L700,550 L685,680 L695,768" stroke="#2A2A2A" stroke-width="3" fill="none" opacity="0.6"/>
+
+  <!-- Pillar 4 -->
+  <rect x="900" y="0" width="130" height="768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+  <g stroke="#151B24" stroke-width="1" opacity="0.4">
+    <line x1="902" y1="150" x2="1028" y2="150"/>
+    <line x1="902" y1="320" x2="1028" y2="320"/>
+    <line x1="902" y1="490" x2="1028" y2="490"/>
+    <line x1="902" y1="660" x2="1028" y2="660"/>
+  </g>
+
+  <!-- Pillar 5 — rightmost -->
+  <rect x="1180" y="0" width="120" height="768" fill="#0D1118" stroke="#1A1F2B" stroke-width="2"/>
+  <g stroke="#151B24" stroke-width="1" opacity="0.4">
+    <line x1="1182" y1="100" x2="1298" y2="100"/>
+    <line x1="1182" y1="240" x2="1298" y2="240"/>
+    <line x1="1182" y1="380" x2="1298" y2="380"/>
+    <line x1="1182" y1="520" x2="1298" y2="520"/>
+  </g>
+
+  <!-- Ceiling beams connecting pillars -->
+  <rect x="0" y="0" width="1376" height="50" fill="#080B10"/>
+  <rect x="0" y="42" width="1376" height="12" fill="#12171F"/>
+
+  <!-- Floor — raw foundation -->
+  <rect x="0" y="660" width="1376" height="108" fill="#0C1018"/>
+  <line x1="0" y1="660" x2="1376" y2="660" stroke="#1A1F2B" stroke-width="2"/>
+
+  <!-- Ancient pre-SLOP machinery — between pillars -->
+  <!-- Machine cluster 1 — between pillars 1 and 2 -->
+  <g opacity="0.7">
+    <!-- Large cylindrical tank -->
+    <ellipse cx="260" cy="600" rx="50" ry="60" fill="#12171F" stroke="#1A1F2B" stroke-width="2"/>
+    <ellipse cx="260" cy="540" rx="50" ry="15" fill="#151B24" stroke="#1A1F2B" stroke-width="1"/>
+    <!-- Pipes extending from tank -->
+    <line x1="260" y1="540" x2="260" y2="480" stroke="#1A1F2B" stroke-width="6"/>
+    <line x1="260" y1="480" x2="350" y2="480" stroke="#1A1F2B" stroke-width="6"/>
+    <line x1="210" y1="580" x2="180" y2="580" stroke="#1A1F2B" stroke-width="4"/>
+    <line x1="180" y1="580" x2="180" y2="660" stroke="#1A1F2B" stroke-width="4"/>
+    <!-- Gauge (dead) -->
+    <circle cx="260" cy="570" r="12" fill="#0D1118" stroke="#2A2A2A" stroke-width="1.5"/>
+    <line x1="260" y1="570" x2="268" y2="563" stroke="#E8A031" stroke-width="1" opacity="0.3"/>
+    <!-- Faint amber glow from gauge -->
+    <circle cx="260" cy="570" r="20" fill="#E8A031" opacity="0.03"/>
+  </g>
+
+  <!-- Machine cluster 2 — between pillars 3 and 4, larger -->
+  <g opacity="0.7">
+    <!-- Control panel -->
+    <rect x="810" y="500" width="80" height="160" fill="#12171F" stroke="#1A1F2B" stroke-width="2" rx="3"/>
+    <!-- Dead indicator lights -->
+    <circle cx="835" cy="530" r="4" fill="#1A1F2B" stroke="#2A2A2A" stroke-width="1"/>
+    <circle cx="855" cy="530" r="4" fill="#1A1F2B" stroke="#2A2A2A" stroke-width="1"/>
+    <circle cx="835" cy="555" r="4" fill="#E8A031" opacity="0.15" stroke="#2A2A2A" stroke-width="1"/>
+    <circle cx="855" cy="555" r="4" fill="#1A1F2B" stroke="#2A2A2A" stroke-width="1"/>
+    <!-- Switch array -->
+    <rect x="825" y="580" width="10" height="6" fill="#2A2A2A" rx="1"/>
+    <rect x="840" y="580" width="10" height="6" fill="#2A2A2A" rx="1"/>
+    <rect x="855" y="580" width="10" height="6" fill="#2A2A2A" rx="1"/>
+    <!-- Heavy conduit -->
+    <path d="M890,540 L960,540 L960,480 Q960,460 940,460 L900,460" stroke="#1A1F2B" stroke-width="8" fill="none"/>
+    <!-- Generator base -->
+    <rect x="790" y="620" width="120" height="40" fill="#12171F" stroke="#1A1F2B" stroke-width="2" rx="2"/>
+    <!-- Faint operational glow — this one still hums -->
+    <circle cx="835" cy="555" r="30" fill="#E8A031" opacity="0.02"/>
+  </g>
+
+  <!-- Machine cluster 3 — far right -->
+  <g opacity="0.5">
+    <rect x="1080" y="540" width="80" height="120" fill="#12171F" stroke="#1A1F2B" stroke-width="1.5" rx="2"/>
+    <line x1="1080" y1="580" x2="1160" y2="580" stroke="#1A1F2B" stroke-width="1"/>
+    <line x1="1080" y1="620" x2="1160" y2="620" stroke="#1A1F2B" stroke-width="1"/>
+    <circle cx="1100" cy="560" r="3" fill="#1A1F2B"/>
+    <circle cx="1120" cy="560" r="3" fill="#1A1F2B"/>
+    <circle cx="1140" cy="560" r="3" fill="#1A1F2B"/>
+  </g>
+
+  <!-- EM distortion artifacts -->
+  <!-- Horizontal scan lines -->
+  <rect x="0" y="300" width="1376" height="2" fill="#5CCFE6" opacity="0.06"/>
+  <rect x="200" y="420" width="800" height="1.5" fill="#5CCFE6" opacity="0.08"/>
+  <rect x="0" y="510" width="1376" height="2" fill="#5CCFE6" opacity="0.04"/>
+  <rect x="400" y="200" width="600" height="1" fill="#E8A031" opacity="0.05"/>
+
+  <!-- Distortion zones — glitchy rectangles -->
+  <rect x="500" y="280" width="100" height="60" fill="#5CCFE6" opacity="0.02" filter="url(#emDistort)"/>
+  <rect x="800" y="380" width="80" height="40" fill="#E8A031" opacity="0.02" filter="url(#emDistort)"/>
+
+  <!-- EM pulse glows -->
+  <rect width="1376" height="768" fill="url(#emPulse1)"/>
+  <rect width="1376" height="768" fill="url(#emPulse2)"/>
+
+  <!-- Standing water on floor — reflective patches -->
+  <g opacity="0.3">
+    <ellipse cx="280" cy="700" rx="80" ry="15" fill="#5CCFE6" opacity="0.04"/>
+    <ellipse cx="560" cy="710" rx="60" ry="12" fill="#5CCFE6" opacity="0.03"/>
+    <ellipse cx="850" cy="695" rx="70" ry="14" fill="#5CCFE6" opacity="0.04"/>
+    <ellipse cx="1120" cy="705" rx="50" ry="10" fill="#5CCFE6" opacity="0.03"/>
+  </g>
+
+  <!-- Machine glow -->
+  <rect width="1376" height="768" fill="url(#machineGlow)"/>
+
+  <!-- Vignette -->
+  <rect width="1376" height="768" fill="url(#vignette)"/>
+
+  <!-- Noise -->
+  <rect width="1376" height="768" filter="url(#noise)" opacity="0.5"/>
+</svg>

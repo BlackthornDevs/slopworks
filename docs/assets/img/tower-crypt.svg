@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 768" width="1376" height="768">
+  <defs>
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.75"/>
+    </radialGradient>
+    <linearGradient id="cryptBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#080B10"/>
+      <stop offset="100%" stop-color="#0A0E14"/>
+    </linearGradient>
+    <!-- Spore haze -->
+    <radialGradient id="sporeHaze1" cx="0.35" cy="0.6" r="0.4">
+      <stop offset="0%" stop-color="#5CCFE6" stop-opacity="0.08"/>
+      <stop offset="40%" stop-color="#2A6B77" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sporeHaze2" cx="0.7" cy="0.5" r="0.35">
+      <stop offset="0%" stop-color="#E8A031" stop-opacity="0.06"/>
+      <stop offset="50%" stop-color="#8B6320" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Organic growth texture -->
+    <filter id="organic">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="12"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.36  0 0 0 0 0.81  0 0 0 0 0.9  0 0 0 0.06 0"/>
+      <feBlend in="SourceGraphic" mode="screen"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1376" height="768" fill="url(#cryptBg)"/>
+
+  <!-- Stone walls — rough textured -->
+  <!-- Left wall -->
+  <rect x="0" y="0" width="250" height="768" fill="#0D1118"/>
+  <!-- Stone block lines -->
+  <g stroke="#1A1F2B" stroke-width="1" opacity="0.6">
+    <line x1="0" y1="80" x2="250" y2="80"/>
+    <line x1="0" y1="160" x2="250" y2="160"/>
+    <line x1="0" y1="240" x2="250" y2="240"/>
+    <line x1="0" y1="320" x2="250" y2="320"/>
+    <line x1="0" y1="400" x2="250" y2="400"/>
+    <line x1="0" y1="480" x2="250" y2="480"/>
+    <line x1="0" y1="560" x2="250" y2="560"/>
+    <line x1="0" y1="640" x2="250" y2="640"/>
+    <line x1="125" y1="0" x2="125" y2="80"/>
+    <line x1="60" y1="80" x2="60" y2="160"/>
+    <line x1="190" y1="80" x2="190" y2="160"/>
+    <line x1="125" y1="160" x2="125" y2="240"/>
+    <line x1="80" y1="240" x2="80" y2="320"/>
+    <line x1="180" y1="240" x2="180" y2="320"/>
+    <line x1="125" y1="320" x2="125" y2="400"/>
+    <line x1="50" y1="400" x2="50" y2="480"/>
+    <line x1="170" y1="400" x2="170" y2="480"/>
+    <line x1="125" y1="480" x2="125" y2="560"/>
+    <line x1="70" y1="560" x2="70" y2="640"/>
+    <line x1="200" y1="560" x2="200" y2="640"/>
+  </g>
+
+  <!-- Right wall -->
+  <rect x="1126" y="0" width="250" height="768" fill="#0D1118"/>
+  <g stroke="#1A1F2B" stroke-width="1" opacity="0.6">
+    <line x1="1126" y1="80" x2="1376" y2="80"/>
+    <line x1="1126" y1="160" x2="1376" y2="160"/>
+    <line x1="1126" y1="240" x2="1376" y2="240"/>
+    <line x1="1126" y1="320" x2="1376" y2="320"/>
+    <line x1="1126" y1="400" x2="1376" y2="400"/>
+    <line x1="1126" y1="480" x2="1376" y2="480"/>
+    <line x1="1126" y1="560" x2="1376" y2="560"/>
+    <line x1="1126" y1="640" x2="1376" y2="640"/>
+    <line x1="1251" y1="0" x2="1251" y2="80"/>
+    <line x1="1186" y1="80" x2="1186" y2="160"/>
+    <line x1="1316" y1="80" x2="1316" y2="160"/>
+    <line x1="1251" y1="160" x2="1251" y2="240"/>
+    <line x1="1196" y1="240" x2="1196" y2="320"/>
+    <line x1="1306" y1="240" x2="1306" y2="320"/>
+  </g>
+
+  <!-- Ceiling — low, oppressive -->
+  <rect x="250" y="0" width="876" height="80" fill="#0A0E14"/>
+  <rect x="250" y="72" width="876" height="12" fill="#12171F"/>
+
+  <!-- Gothic arch support columns -->
+  <rect x="240" y="0" width="20" height="768" fill="#12171F"/>
+  <rect x="1116" y="0" width="20" height="768" fill="#12171F"/>
+  <!-- Mid columns -->
+  <rect x="550" y="0" width="14" height="768" fill="#12171F" opacity="0.5"/>
+  <rect x="812" y="0" width="14" height="768" fill="#12171F" opacity="0.5"/>
+
+  <!-- Floor — rough stone -->
+  <rect x="250" y="640" width="876" height="128" fill="#0C1018"/>
+
+  <!-- Organic growth on walls — bioluminescent patches -->
+  <!-- Left wall growth -->
+  <g opacity="0.7">
+    <ellipse cx="100" cy="350" rx="60" ry="40" fill="#5CCFE6" opacity="0.04"/>
+    <ellipse cx="80" cy="340" rx="25" ry="15" fill="#5CCFE6" opacity="0.06"/>
+    <ellipse cx="130" cy="370" rx="20" ry="12" fill="#5CCFE6" opacity="0.05"/>
+    <!-- Tendrils -->
+    <path d="M120,330 Q160,310 200,320 Q230,330 250,340" stroke="#5CCFE6" stroke-width="2" fill="none" opacity="0.08"/>
+    <path d="M80,380 Q120,410 180,400 Q220,390 250,410" stroke="#5CCFE6" stroke-width="1.5" fill="none" opacity="0.06"/>
+    <path d="M60,320 Q40,280 70,240 Q100,220 120,250" stroke="#5CCFE6" stroke-width="1" fill="none" opacity="0.05"/>
+  </g>
+
+  <!-- Right wall growth -->
+  <g opacity="0.7">
+    <ellipse cx="1280" cy="280" rx="50" ry="35" fill="#5CCFE6" opacity="0.04"/>
+    <ellipse cx="1300" cy="270" rx="22" ry="14" fill="#5CCFE6" opacity="0.06"/>
+    <ellipse cx="1250" cy="300" rx="18" ry="10" fill="#5CCFE6" opacity="0.05"/>
+    <path d="M1250,260 Q1200,250 1160,270 Q1130,290 1126,310" stroke="#5CCFE6" stroke-width="2" fill="none" opacity="0.08"/>
+    <path d="M1300,310 Q1320,350 1280,380 Q1240,400 1200,390" stroke="#5CCFE6" stroke-width="1.5" fill="none" opacity="0.06"/>
+  </g>
+
+  <!-- Ceiling growth -->
+  <g opacity="0.5">
+    <ellipse cx="500" cy="85" rx="80" ry="20" fill="#5CCFE6" opacity="0.04"/>
+    <ellipse cx="800" cy="80" rx="60" ry="15" fill="#5CCFE6" opacity="0.03"/>
+    <path d="M460,85 Q440,120 460,160 Q480,200 500,180" stroke="#5CCFE6" stroke-width="1.5" fill="none" opacity="0.06"/>
+    <path d="M820,80 Q850,110 830,150" stroke="#5CCFE6" stroke-width="1" fill="none" opacity="0.05"/>
+  </g>
+
+  <!-- Spore clouds — green/amber haze -->
+  <rect width="1376" height="768" fill="url(#sporeHaze1)"/>
+  <rect width="1376" height="768" fill="url(#sporeHaze2)"/>
+
+  <!-- Floating spore particles -->
+  <g fill="#5CCFE6">
+    <circle cx="400" cy="300" r="2" opacity="0.2"/>
+    <circle cx="500" cy="250" r="1.5" opacity="0.15"/>
+    <circle cx="600" cy="400" r="2.5" opacity="0.12"/>
+    <circle cx="350" cy="500" r="1" opacity="0.25"/>
+    <circle cx="700" cy="350" r="2" opacity="0.18"/>
+    <circle cx="800" cy="450" r="1.5" opacity="0.2"/>
+    <circle cx="450" cy="550" r="1" opacity="0.15"/>
+    <circle cx="900" cy="300" r="2" opacity="0.1"/>
+    <circle cx="1000" cy="400" r="1.5" opacity="0.12"/>
+    <circle cx="550" cy="200" r="1" opacity="0.2"/>
+    <circle cx="750" cy="550" r="2" opacity="0.08"/>
+    <circle cx="650" cy="150" r="1.5" opacity="0.15"/>
+  </g>
+  <g fill="#E8A031">
+    <circle cx="480" cy="380" r="1.5" opacity="0.12"/>
+    <circle cx="720" cy="280" r="1" opacity="0.1"/>
+    <circle cx="850" cy="500" r="2" opacity="0.08"/>
+    <circle cx="380" cy="200" r="1" opacity="0.15"/>
+    <circle cx="950" cy="350" r="1.5" opacity="0.1"/>
+  </g>
+
+  <!-- Hive queen silhouette — massive, in the far background -->
+  <g opacity="0.18">
+    <!-- Large bulbous body -->
+    <ellipse cx="688" cy="420" rx="100" ry="140" fill="#060A10"/>
+    <!-- Head — smaller, angular -->
+    <ellipse cx="688" cy="250" rx="40" ry="30" fill="#060A10"/>
+    <!-- Neck -->
+    <rect x="668" y="275" width="40" height="30" rx="10" fill="#060A10"/>
+    <!-- Multiple limbs/appendages -->
+    <path d="M588,380 L480,350 L420,380" stroke="#060A10" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M788,380 L896,350 L956,380" stroke="#060A10" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M600,460 L500,500 L440,540" stroke="#060A10" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M776,460 L876,500 L936,540" stroke="#060A10" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Lower body extending to floor -->
+    <ellipse cx="688" cy="560" rx="80" ry="60" fill="#060A10"/>
+    <!-- Eyes — multiple, glowing -->
+    <circle cx="672" cy="245" r="4" fill="#5CCFE6" opacity="0.4"/>
+    <circle cx="704" cy="245" r="4" fill="#5CCFE6" opacity="0.4"/>
+    <circle cx="680" cy="235" r="2" fill="#5CCFE6" opacity="0.3"/>
+    <circle cx="696" cy="235" r="2" fill="#5CCFE6" opacity="0.3"/>
+    <circle cx="688" cy="255" r="3" fill="#E8A031" opacity="0.3"/>
+  </g>
+
+  <!-- Organic texture overlay -->
+  <rect x="250" y="0" width="876" height="768" filter="url(#organic)" opacity="0.3"/>
+
+  <!-- Vignette -->
+  <rect width="1376" height="768" fill="url(#vignette)"/>
+
+  <!-- Noise -->
+  <rect width="1376" height="768" filter="url(#noise)" opacity="0.5"/>
+</svg>

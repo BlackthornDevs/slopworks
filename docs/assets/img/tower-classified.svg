@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1376 768" width="1376" height="768">
+  <defs>
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.08"/>
+      </feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="overlay"/>
+    </filter>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.6"/>
+    </radialGradient>
+    <linearGradient id="classifiedBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A0E14"/>
+      <stop offset="100%" stop-color="#080B10"/>
+    </linearGradient>
+    <!-- Stamp glow -->
+    <filter id="stampGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1376" height="768" fill="url(#classifiedBg)"/>
+
+  <!-- Faint document/dossier lines — like a redacted document -->
+  <g stroke="#1A1F2B" stroke-width="1" opacity="0.3">
+    <!-- Text line placeholders -->
+    <line x1="200" y1="120" x2="1176" y2="120"/>
+    <line x1="200" y1="155" x2="900" y2="155"/>
+    <line x1="200" y1="190" x2="1050" y2="190"/>
+    <line x1="200" y1="225" x2="800" y2="225"/>
+    <line x1="200" y1="260" x2="1100" y2="260"/>
+    <line x1="200" y1="295" x2="950" y2="295"/>
+    <line x1="200" y1="330" x2="1176" y2="330"/>
+    <line x1="200" y1="365" x2="700" y2="365"/>
+    <line x1="200" y1="435" x2="1100" y2="435"/>
+    <line x1="200" y1="470" x2="850" y2="470"/>
+    <line x1="200" y1="505" x2="1000" y2="505"/>
+    <line x1="200" y1="540" x2="1176" y2="540"/>
+    <line x1="200" y1="575" x2="750" y2="575"/>
+    <line x1="200" y1="610" x2="1050" y2="610"/>
+    <line x1="200" y1="645" x2="900" y2="645"/>
+  </g>
+
+  <!-- Redaction bars — thick black rectangles over "text" -->
+  <g fill="#0A0E14" opacity="0.9">
+    <rect x="200" y="108" width="400" height="24" rx="2"/>
+    <rect x="700" y="108" width="200" height="24" rx="2"/>
+    <rect x="350" y="178" width="350" height="24" rx="2"/>
+    <rect x="200" y="248" width="500" height="24" rx="2"/>
+    <rect x="800" y="248" width="250" height="24" rx="2"/>
+    <rect x="200" y="318" width="300" height="24" rx="2"/>
+    <rect x="600" y="318" width="400" height="24" rx="2"/>
+    <rect x="200" y="353" width="200" height="24" rx="2"/>
+    <rect x="200" y="423" width="600" height="24" rx="2"/>
+    <rect x="200" y="493" width="450" height="24" rx="2"/>
+    <rect x="750" y="493" width="200" height="24" rx="2"/>
+    <rect x="200" y="528" width="700" height="24" rx="2"/>
+    <rect x="400" y="598" width="350" height="24" rx="2"/>
+    <rect x="200" y="633" width="250" height="24" rx="2"/>
+    <rect x="550" y="633" width="300" height="24" rx="2"/>
+  </g>
+
+  <!-- Slightly visible redaction bars (like ink didn't fully cover) -->
+  <g fill="#12171F" opacity="0.5">
+    <rect x="200" y="143" width="300" height="24" rx="2"/>
+    <rect x="200" y="213" width="250" height="24" rx="2"/>
+    <rect x="500" y="213" width="200" height="24" rx="2"/>
+    <rect x="200" y="283" width="180" height="24" rx="2"/>
+    <rect x="200" y="458" width="350" height="24" rx="2"/>
+    <rect x="200" y="563" width="280" height="24" rx="2"/>
+  </g>
+
+  <!-- CLASSIFIED stamp — rotated, amber -->
+  <!-- Glow behind stamp -->
+  <rect x="280" y="280" width="816" height="200" rx="10" fill="#E8A031" opacity="0.03" transform="rotate(-8 688 380)" filter="url(#stampGlow)"/>
+
+  <!-- Stamp border -->
+  <rect x="300" y="300" width="776" height="160" rx="8" fill="none" stroke="#E8A031" stroke-width="5" opacity="0.6" transform="rotate(-8 688 380)"/>
+  <rect x="310" y="310" width="756" height="140" rx="6" fill="none" stroke="#E8A031" stroke-width="2" opacity="0.3" transform="rotate(-8 688 380)"/>
+
+  <!-- CLASSIFIED text -->
+  <text x="688" y="395" font-family="'Oswald', 'Arial Black', sans-serif" font-size="100" font-weight="700" fill="#E8A031" opacity="0.55" text-anchor="middle" letter-spacing="0.15em" transform="rotate(-8 688 380)">CLASSIFIED</text>
+
+  <!-- Secondary smaller stamps -->
+  <!-- TOP SECRET -->
+  <rect x="850" y="80" width="280" height="60" rx="4" fill="none" stroke="#CC3333" stroke-width="3" opacity="0.3" transform="rotate(-3 990 110)"/>
+  <text x="990" y="120" font-family="'Oswald', 'Arial Black', sans-serif" font-size="36" font-weight="700" fill="#CC3333" opacity="0.25" text-anchor="middle" letter-spacing="0.1em" transform="rotate(-3 990 110)">TOP SECRET</text>
+
+  <!-- MANAGEMENT EYES ONLY -->
+  <rect x="150" y="660" width="400" height="50" rx="4" fill="none" stroke="#E8A031" stroke-width="2" opacity="0.2" transform="rotate(2 350 685)"/>
+  <text x="350" y="693" font-family="'Oswald', 'Arial Black', sans-serif" font-size="22" font-weight="700" fill="#E8A031" opacity="0.2" text-anchor="middle" letter-spacing="0.08em" transform="rotate(2 350 685)">MANAGEMENT EYES ONLY</text>
+
+  <!-- File reference number -->
+  <text x="1176" y="720" font-family="'Space Mono', monospace" font-size="14" fill="#2A2A2A" text-anchor="end">REF: SLOP-TC-[REDACTED]-0000</text>
+
+  <!-- Coffee ring stain (adds character) -->
+  <circle cx="1100" cy="200" r="45" fill="none" stroke="#3D1A0A" stroke-width="2" opacity="0.15"/>
+  <circle cx="1100" cy="200" r="42" fill="none" stroke="#3D1A0A" stroke-width="1" opacity="0.08"/>
+
+  <!-- Paper fold line -->
+  <line x1="688" y1="0" x2="688" y2="768" stroke="#1A1F2B" stroke-width="1" opacity="0.15"/>
+
+  <!-- Vignette -->
+  <rect width="1376" height="768" fill="url(#vignette)"/>
+
+  <!-- Noise -->
+  <rect width="1376" height="768" filter="url(#noise)" opacity="0.5"/>
+</svg>
