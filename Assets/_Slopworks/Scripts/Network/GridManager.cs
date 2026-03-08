@@ -271,6 +271,7 @@ public class GridManager : NetworkBehaviour
         info.SurfaceY = surfaceY;
         info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         ServerManager.Spawn(go);
+        BuildingSnapPoint.GenerateFromBounds(go);
 
         var record = new PlacedRecord
         {
@@ -312,6 +313,7 @@ public class GridManager : NetworkBehaviour
         info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         info.EdgeDirection = direction;
         ServerManager.Spawn(go);
+        BuildingSnapPoint.GenerateFromBounds(go);
 
         _placedRecords[key] = new PlacedRecord
         {
@@ -359,6 +361,7 @@ public class GridManager : NetworkBehaviour
         }
 
         ServerManager.Spawn(go);
+        BuildingSnapPoint.GenerateFromBounds(go);
 
         var visualizer = go.AddComponent<BeltItemVisualizer>();
         visualizer.Init(netBelt);
