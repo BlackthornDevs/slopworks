@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World — Slopworks</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+/* bible page styles */
+.bible-breadcrumb {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+.bible-breadcrumb a {
+    color: var(--text-dim);
+}
+.bible-breadcrumb a:hover {
+    color: var(--accent);
+}
+.bible-breadcrumb .sep {
+    margin: 0 0.5rem;
+    color: var(--border);
+}
+.bible-search {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.bible-search:focus {
+    border-color: var(--accent-dim);
+}
+.bible-search::placeholder {
+    color: var(--text-dim);
+}
+.section-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.3s, transform 0.2s;
+}
+.entry-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+.entry-card .entry-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    object-fit: cover;
+    object-position: center;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+.entry-card .entry-card-info {
+    min-width: 0;
+}
+.entry-card .entry-card-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.entry-card .entry-card-id {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+.entry-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.entry-icon {
+    width: 200px;
+    height: 200px;
+    border-radius: 4px;
+    border: 1px solid var(--border-rust);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+}
+.entry-meta {
+    flex: 1;
+    min-width: 250px;
+}
+.entry-meta h1 {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 0.25rem;
+}
+.entry-meta .entry-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+}
+.entry-meta .entry-desc {
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+.tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--teal);
+    border: 1px solid var(--teal-dim);
+    border-radius: 2px;
+    padding: 0.15rem 0.5rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+    text-transform: lowercase;
+}
+.rarity-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+}
+.rarity-badge.common {
+    color: #aaa;
+    border: 1px solid #555;
+    background: rgba(170, 170, 170, 0.08);
+}
+.rarity-badge.uncommon {
+    color: #4CAF50;
+    border: 1px solid #2E7D32;
+    background: rgba(76, 175, 80, 0.08);
+}
+.rarity-badge.rare {
+    color: #42A5F5;
+    border: 1px solid #1565C0;
+    background: rgba(66, 165, 245, 0.08);
+}
+.rarity-badge.epic {
+    color: #AB47BC;
+    border: 1px solid #7B1FA2;
+    background: rgba(171, 71, 188, 0.08);
+}
+.rarity-badge.legendary {
+    color: #FFB300;
+    border: 1px solid #FF8F00;
+    background: rgba(255, 179, 0, 0.12);
+}
+.slop-callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(232, 160, 49, 0.05);
+    padding: 1.5rem 1.5rem 1rem;
+    margin: 2.5rem 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1.6;
+    position: relative;
+}
+.slop-callout::before {
+    content: 'S.L.O.P.://';
+    font-size: 0.7rem;
+    color: var(--accent-dim);
+    position: absolute;
+    top: -1.2rem;
+    left: 0;
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+}
+.stats-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.stats-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+}
+.stats-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+.stats-table .field-name {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--teal);
+    white-space: nowrap;
+    width: 200px;
+}
+.obtained-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.obtained-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.obtained-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+.img-pending {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.bible-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--teal);
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 768px) {
+    .entry-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .entry-icon {
+        width: 150px;
+        height: 150px;
+    }
+    .entry-meta {
+        min-width: unset;
+    }
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-table .field-name {
+        width: auto;
+    }
+}
+</style>
+</head>
+<body>
+    <div id="nav" data-root="../../"></div>
+
+
+    <div class="caution-divider"></div>
+    <section class="section" style="opacity:1;transform:none;">
+        <div class="container">
+            <div class="bible-breadcrumb"><a href="../index.html">Bible</a><span class="sep">/</span>World</div>
+            <h1>World</h1>
+            <p class="text-dim">Exploration and territory: biomes, buildings, hazards, supply lines</p>
+            <div class="bible-count">25 entries</div>
+
+            <input type="text" class="bible-search" placeholder="Search world by name or ID...">
+
+            <div data-section="biomes"><div class="section-label">Biomes (6)</div><div class="category-grid"><a href="../Grassland/index.html" class="entry-card" data-search="Grassland Grassland" data-section-id="biomes"><img src="../../assets/img/bible/Grassland.png" alt="Grassland" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Grassland</div><div class="entry-card-id">Grassland</div></div></a><a href="../Forest/index.html" class="entry-card" data-search="Forest Forest" data-section-id="biomes"><img src="../../assets/img/bible/Forest.png" alt="Forest" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Forest</div><div class="entry-card-id">Forest</div></div></a><a href="../Wasteland/index.html" class="entry-card" data-search="Wasteland Wasteland" data-section-id="biomes"><img src="../../assets/img/bible/Wasteland.png" alt="Wasteland" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Wasteland</div><div class="entry-card-id">Wasteland</div></div></a><a href="../Swamp/index.html" class="entry-card" data-search="Swamp Swamp" data-section-id="biomes"><img src="../../assets/img/bible/Swamp.png" alt="Swamp" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Swamp</div><div class="entry-card-id">Swamp</div></div></a><a href="../Ruins/index.html" class="entry-card" data-search="Ruins Ruins" data-section-id="biomes"><img src="../../assets/img/bible/Ruins.png" alt="Ruins" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Ruins</div><div class="entry-card-id">Ruins</div></div></a><a href="../OvergrownRuins/index.html" class="entry-card" data-search="Overgrown ruins OvergrownRuins" data-section-id="biomes"><img src="../../assets/img/bible/OvergrownRuins.png" alt="Overgrown ruins" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Overgrown ruins</div><div class="entry-card-id">OvergrownRuins</div></div></a></div></div><div data-section="environmental-hazards"><div class="section-label">Environmental hazards (7)</div><div class="category-grid"><a href="../toxic_leak_hazard/index.html" class="entry-card" data-search="Toxic leak toxic_leak_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/toxic_leak_hazard.png" alt="Toxic leak" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Toxic leak</div><div class="entry-card-id">toxic_leak_hazard</div></div></a><a href="../structural_collapse_hazard/index.html" class="entry-card" data-search="Structural collapse structural_collapse_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/structural_collapse_hazard.png" alt="Structural collapse" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Structural collapse</div><div class="entry-card-id">structural_collapse_hazard</div></div></a><a href="../spore_cloud_hazard/index.html" class="entry-card" data-search="Spore cloud spore_cloud_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/spore_cloud_hazard.png" alt="Spore cloud" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Spore cloud</div><div class="entry-card-id">spore_cloud_hazard</div></div></a><a href="../electrical_hazard/index.html" class="entry-card" data-search="Live electrical discharge electrical_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/electrical_hazard.png" alt="Live electrical discharge" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Live electrical discharge</div><div class="entry-card-id">electrical_hazard</div></div></a><a href="../radiation_hazard/index.html" class="entry-card" data-search="Radiation zone radiation_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/radiation_hazard.png" alt="Radiation zone" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Radiation zone</div><div class="entry-card-id">radiation_hazard</div></div></a><a href="../flooding_hazard/index.html" class="entry-card" data-search="Flash flood zone flooding_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/flooding_hazard.png" alt="Flash flood zone" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Flash flood zone</div><div class="entry-card-id">flooding_hazard</div></div></a><a href="../gas_pocket_hazard/index.html" class="entry-card" data-search="Volatile gas pocket gas_pocket_hazard" data-section-id="environmental-hazards"><img src="../../assets/img/bible/gas_pocket_hazard.png" alt="Volatile gas pocket" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Volatile gas pocket</div><div class="entry-card-id">gas_pocket_hazard</div></div></a></div></div><div data-section="reclaimed-buildings"><div class="section-label">Reclaimed buildings (8)</div><div class="category-grid"><a href="../power_plant_alpha/index.html" class="entry-card" data-search="Power plant alpha power_plant_alpha" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/power_plant_alpha.png" alt="Power plant alpha" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Power plant alpha</div><div class="entry-card-id">power_plant_alpha</div></div></a><a href="../foundry_central/index.html" class="entry-card" data-search="Central foundry foundry_central" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/foundry_central.png" alt="Central foundry" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Central foundry</div><div class="entry-card-id">foundry_central</div></div></a><a href="../warehouse_complex/index.html" class="entry-card" data-search="Warehouse complex warehouse_complex" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/warehouse_complex.png" alt="Warehouse complex" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Warehouse complex</div><div class="entry-card-id">warehouse_complex</div></div></a><a href="../machine_shop_east/index.html" class="entry-card" data-search="East machine shop machine_shop_east" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/machine_shop_east.png" alt="East machine shop" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">East machine shop</div><div class="entry-card-id">machine_shop_east</div></div></a><a href="../water_treatment_south/index.html" class="entry-card" data-search="South water treatment facility water_treatment_south" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/water_treatment_south.png" alt="South water treatment facility" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">South water treatment facility</div><div class="entry-card-id">water_treatment_south</div></div></a><a href="../electronics_lab_north/index.html" class="entry-card" data-search="North electronics laboratory electronics_lab_north" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/electronics_lab_north.png" alt="North electronics laboratory" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">North electronics laboratory</div><div class="entry-card-id">electronics_lab_north</div></div></a><a href="../hospital_wing/index.html" class="entry-card" data-search="Hospital wing hospital_wing" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/hospital_wing.png" alt="Hospital wing" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Hospital wing</div><div class="entry-card-id">hospital_wing</div></div></a><a href="../admin_office_central/index.html" class="entry-card" data-search="Central administration office admin_office_central" data-section-id="reclaimed-buildings"><img src="../../assets/img/bible/admin_office_central.png" alt="Central administration office" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Central administration office</div><div class="entry-card-id">admin_office_central</div></div></a></div></div><div data-section="supply-lines"><div class="section-label">Supply lines (4)</div><div class="category-grid"><a href="../basic_supply_line/index.html" class="entry-card" data-search="Basic supply line basic_supply_line" data-section-id="supply-lines"><img src="../../assets/img/bible/basic_supply_line.png" alt="Basic supply line" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Basic supply line</div><div class="entry-card-id">basic_supply_line</div></div></a><a href="../reinforced_supply_line/index.html" class="entry-card" data-search="Reinforced supply line reinforced_supply_line" data-section-id="supply-lines"><img src="../../assets/img/bible/reinforced_supply_line.png" alt="Reinforced supply line" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Reinforced supply line</div><div class="entry-card-id">reinforced_supply_line</div></div></a><a href="../express_supply_line/index.html" class="entry-card" data-search="Express supply line express_supply_line" data-section-id="supply-lines"><img src="../../assets/img/bible/express_supply_line.png" alt="Express supply line" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Express supply line</div><div class="entry-card-id">express_supply_line</div></div></a><a href="../underground_supply_line/index.html" class="entry-card" data-search="Underground supply line underground_supply_line" data-section-id="supply-lines"><img src="../../assets/img/bible/underground_supply_line.png" alt="Underground supply line" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Underground supply line</div><div class="entry-card-id">underground_supply_line</div></div></a></div></div>
+        </div>
+    </section>
+
+<script>
+(function() {
+    var input = document.querySelector('.bible-search');
+    if (!input) return;
+    var cards = document.querySelectorAll('[data-search]');
+    var sections = document.querySelectorAll('[data-section]');
+    input.addEventListener('input', function() {
+        var q = this.value.toLowerCase().trim();
+        var visibleSections = {};
+        cards.forEach(function(card) {
+            var text = card.getAttribute('data-search').toLowerCase();
+            var match = !q || text.indexOf(q) !== -1;
+            card.style.display = match ? '' : 'none';
+            if (match && card.getAttribute('data-section-id')) {
+                visibleSections[card.getAttribute('data-section-id')] = true;
+            }
+        });
+        if (sections.length) {
+            sections.forEach(function(sec) {
+                var id = sec.getAttribute('data-section');
+                sec.style.display = (!q || visibleSections[id]) ? '' : 'none';
+            });
+        }
+    });
+})();
+</script>
+
+
+    <div id="footer"></div>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

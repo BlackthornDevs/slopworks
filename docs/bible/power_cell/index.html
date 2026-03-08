@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Cell — Slopworks</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+/* bible page styles */
+.bible-breadcrumb {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+.bible-breadcrumb a {
+    color: var(--text-dim);
+}
+.bible-breadcrumb a:hover {
+    color: var(--accent);
+}
+.bible-breadcrumb .sep {
+    margin: 0 0.5rem;
+    color: var(--border);
+}
+.bible-search {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.bible-search:focus {
+    border-color: var(--accent-dim);
+}
+.bible-search::placeholder {
+    color: var(--text-dim);
+}
+.section-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.3s, transform 0.2s;
+}
+.entry-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+.entry-card .entry-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    object-fit: cover;
+    object-position: center;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+.entry-card .entry-card-info {
+    min-width: 0;
+}
+.entry-card .entry-card-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.entry-card .entry-card-id {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+.entry-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.entry-icon {
+    width: 200px;
+    height: 200px;
+    border-radius: 4px;
+    border: 1px solid var(--border-rust);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+}
+.entry-meta {
+    flex: 1;
+    min-width: 250px;
+}
+.entry-meta h1 {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 0.25rem;
+}
+.entry-meta .entry-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+}
+.entry-meta .entry-desc {
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+.tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--teal);
+    border: 1px solid var(--teal-dim);
+    border-radius: 2px;
+    padding: 0.15rem 0.5rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+    text-transform: lowercase;
+}
+.rarity-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+}
+.rarity-badge.common {
+    color: #aaa;
+    border: 1px solid #555;
+    background: rgba(170, 170, 170, 0.08);
+}
+.rarity-badge.uncommon {
+    color: #4CAF50;
+    border: 1px solid #2E7D32;
+    background: rgba(76, 175, 80, 0.08);
+}
+.rarity-badge.rare {
+    color: #42A5F5;
+    border: 1px solid #1565C0;
+    background: rgba(66, 165, 245, 0.08);
+}
+.rarity-badge.epic {
+    color: #AB47BC;
+    border: 1px solid #7B1FA2;
+    background: rgba(171, 71, 188, 0.08);
+}
+.rarity-badge.legendary {
+    color: #FFB300;
+    border: 1px solid #FF8F00;
+    background: rgba(255, 179, 0, 0.12);
+}
+.slop-callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(232, 160, 49, 0.05);
+    padding: 1.5rem 1.5rem 1rem;
+    margin: 2.5rem 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1.6;
+    position: relative;
+}
+.slop-callout::before {
+    content: 'S.L.O.P.://';
+    font-size: 0.7rem;
+    color: var(--accent-dim);
+    position: absolute;
+    top: -1.2rem;
+    left: 0;
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+}
+.stats-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.stats-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+}
+.stats-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+.stats-table .field-name {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--teal);
+    white-space: nowrap;
+    width: 200px;
+}
+.obtained-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.obtained-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.obtained-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+.img-pending {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.bible-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--teal);
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 768px) {
+    .entry-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .entry-icon {
+        width: 150px;
+        height: 150px;
+    }
+    .entry-meta {
+        min-width: unset;
+    }
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-table .field-name {
+        width: auto;
+    }
+}
+</style>
+</head>
+<body>
+    <div id="nav" data-root="../../"></div>
+
+
+    <div class="caution-divider"></div>
+    <section class="section" style="opacity:1;transform:none;">
+        <div class="container">
+            <div class="bible-breadcrumb"><a href="../index.html">Bible</a><span class="sep">/</span><a href="../items/index.html">Items</a><span class="sep">/</span>Tower loot</div>
+            
+    <div class="entry-header">
+        <img src="../../assets/img/bible/power_cell.png" alt="Power Cell" class="entry-icon" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);">
+        <div class="entry-meta">
+            <h1>Power Cell</h1>
+            <div class="entry-id">power_cell</div>
+            <span class="rarity-badge uncommon">Uncommon</span><br>
+            <p class="entry-desc">A compact pre-collapse energy storage unit still holding a partial charge. Powers advanced equipment and serves as a crafting component for electrical devices. Whatever technology produced these, nobody alive knows how to replicate it.</p>
+            <div style="margin-top:0.5rem;"><span class="tag">electrical</span><span class="tag">power</span><span class="tag">crafting_component</span><span class="tag">high_value</span></div>
+        </div>
+    </div>
+            <div class="slop-callout">A functional power cell! SLOP estimates this unit retains approximately 23% of its original charge, which SLOP considers &#x27;fully operational&#x27; by current standards. Please do not puncture, crush, or expose to temperatures above 40 degrees. SLOP is not responsible for exothermic events.</div>
+            
+    <h2 style="margin-top:2rem;">Stats</h2>
+    <table class="stats-table">
+        <thead><tr><th>Field</th><th>Value</th></tr></thead>
+        <tbody><tr><td class="field-name">itemId</td><td><a href="../power_cell/index.html">power_cell</a></td></tr><tr><td class="field-name">category</td><td>Component</td></tr><tr><td class="field-name">isStackable</td><td>true</td></tr><tr><td class="field-name">maxStackSize</td><td>16</td></tr><tr><td class="field-name">dropWeight</td><td>8.0</td></tr><tr><td class="field-name">minAmount</td><td>1</td></tr><tr><td class="field-name">maxAmount</td><td>2</td></tr><tr><td class="field-name">minFloorElevation</td><td>0</td></tr><tr><td class="field-name">maxFloorElevation</td><td>0</td></tr><tr><td class="field-name">tierRequirement</td><td>0</td></tr><tr><td class="field-name">towerExclusive</td><td>true</td></tr><tr><td class="field-name">lostOnDeath</td><td>true</td></tr></tbody>
+    </table>
+            
+        </div>
+    </section>
+
+    <div id="footer"></div>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

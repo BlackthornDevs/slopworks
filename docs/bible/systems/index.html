@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systems — Slopworks</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+/* bible page styles */
+.bible-breadcrumb {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+.bible-breadcrumb a {
+    color: var(--text-dim);
+}
+.bible-breadcrumb a:hover {
+    color: var(--accent);
+}
+.bible-breadcrumb .sep {
+    margin: 0 0.5rem;
+    color: var(--border);
+}
+.bible-search {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.bible-search:focus {
+    border-color: var(--accent-dim);
+}
+.bible-search::placeholder {
+    color: var(--text-dim);
+}
+.section-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.3s, transform 0.2s;
+}
+.entry-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+.entry-card .entry-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    object-fit: cover;
+    object-position: center;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+.entry-card .entry-card-info {
+    min-width: 0;
+}
+.entry-card .entry-card-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.entry-card .entry-card-id {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+.entry-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.entry-icon {
+    width: 200px;
+    height: 200px;
+    border-radius: 4px;
+    border: 1px solid var(--border-rust);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+}
+.entry-meta {
+    flex: 1;
+    min-width: 250px;
+}
+.entry-meta h1 {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 0.25rem;
+}
+.entry-meta .entry-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+}
+.entry-meta .entry-desc {
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+.tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--teal);
+    border: 1px solid var(--teal-dim);
+    border-radius: 2px;
+    padding: 0.15rem 0.5rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+    text-transform: lowercase;
+}
+.rarity-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+}
+.rarity-badge.common {
+    color: #aaa;
+    border: 1px solid #555;
+    background: rgba(170, 170, 170, 0.08);
+}
+.rarity-badge.uncommon {
+    color: #4CAF50;
+    border: 1px solid #2E7D32;
+    background: rgba(76, 175, 80, 0.08);
+}
+.rarity-badge.rare {
+    color: #42A5F5;
+    border: 1px solid #1565C0;
+    background: rgba(66, 165, 245, 0.08);
+}
+.rarity-badge.epic {
+    color: #AB47BC;
+    border: 1px solid #7B1FA2;
+    background: rgba(171, 71, 188, 0.08);
+}
+.rarity-badge.legendary {
+    color: #FFB300;
+    border: 1px solid #FF8F00;
+    background: rgba(255, 179, 0, 0.12);
+}
+.slop-callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(232, 160, 49, 0.05);
+    padding: 1.5rem 1.5rem 1rem;
+    margin: 2.5rem 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1.6;
+    position: relative;
+}
+.slop-callout::before {
+    content: 'S.L.O.P.://';
+    font-size: 0.7rem;
+    color: var(--accent-dim);
+    position: absolute;
+    top: -1.2rem;
+    left: 0;
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+}
+.stats-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.stats-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+}
+.stats-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+.stats-table .field-name {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--teal);
+    white-space: nowrap;
+    width: 200px;
+}
+.obtained-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.obtained-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.obtained-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+.img-pending {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.bible-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--teal);
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 768px) {
+    .entry-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .entry-icon {
+        width: 150px;
+        height: 150px;
+    }
+    .entry-meta {
+        min-width: unset;
+    }
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-table .field-name {
+        width: auto;
+    }
+}
+</style>
+</head>
+<body>
+    <div id="nav" data-root="../../"></div>
+
+
+    <div class="caution-divider"></div>
+    <section class="section" style="opacity:1;transform:none;">
+        <div class="container">
+            <div class="bible-breadcrumb"><a href="../index.html">Bible</a><span class="sep">/</span>Systems</div>
+            <h1>Systems</h1>
+            <p class="text-dim">Rules and progression: recipes, research, upgrades, effects, waves</p>
+            <div class="bible-count">42 entries</div>
+
+            <input type="text" class="bible-search" placeholder="Search systems by name or ID...">
+
+            <div data-section="recipes"><div class="section-label">Recipes (11)</div><div class="category-grid"><a href="../smelt_iron/index.html" class="entry-card" data-search="Smelt iron smelt_iron" data-section-id="recipes"><img src="../../assets/img/bible/smelt_iron.png" alt="Smelt iron" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Smelt iron</div><div class="entry-card-id">smelt_iron</div></div></a><a href="../smelt_copper/index.html" class="entry-card" data-search="Smelt copper smelt_copper" data-section-id="recipes"><img src="../../assets/img/bible/smelt_copper.png" alt="Smelt copper" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Smelt copper</div><div class="entry-card-id">smelt_copper</div></div></a><a href="../smelt_steel/index.html" class="entry-card" data-search="Smelt steel smelt_steel" data-section-id="recipes"><img src="../../assets/img/bible/smelt_steel.png" alt="Smelt steel" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Smelt steel</div><div class="entry-card-id">smelt_steel</div></div></a><a href="../craft_iron_plate/index.html" class="entry-card" data-search="Craft iron plate craft_iron_plate" data-section-id="recipes"><img src="../../assets/img/bible/craft_iron_plate.png" alt="Craft iron plate" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft iron plate</div><div class="entry-card-id">craft_iron_plate</div></div></a><a href="../craft_mechanical_component/index.html" class="entry-card" data-search="Craft mechanical component craft_mechanical_component" data-section-id="recipes"><img src="../../assets/img/bible/craft_mechanical_component.png" alt="Craft mechanical component" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft mechanical component</div><div class="entry-card-id">craft_mechanical_component</div></div></a><a href="../craft_circuit_board/index.html" class="entry-card" data-search="Craft circuit board craft_circuit_board" data-section-id="recipes"><img src="../../assets/img/bible/craft_circuit_board.png" alt="Craft circuit board" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft circuit board</div><div class="entry-card-id">craft_circuit_board</div></div></a><a href="../craft_med_kit/index.html" class="entry-card" data-search="Craft med kit craft_med_kit" data-section-id="recipes"><img src="../../assets/img/bible/craft_med_kit.png" alt="Craft med kit" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft med kit</div><div class="entry-card-id">craft_med_kit</div></div></a><a href="../craft_turret_ammo/index.html" class="entry-card" data-search="Craft turret ammo craft_turret_ammo" data-section-id="recipes"><img src="../../assets/img/bible/craft_turret_ammo.png" alt="Craft turret ammo" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft turret ammo</div><div class="entry-card-id">craft_turret_ammo</div></div></a><a href="../craft_foundation/index.html" class="entry-card" data-search="Craft foundation craft_foundation" data-section-id="recipes"><img src="../../assets/img/bible/craft_foundation.png" alt="Craft foundation" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft foundation</div><div class="entry-card-id">craft_foundation</div></div></a><a href="../craft_wall/index.html" class="entry-card" data-search="Craft wall craft_wall" data-section-id="recipes"><img src="../../assets/img/bible/craft_wall.png" alt="Craft wall" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft wall</div><div class="entry-card-id">craft_wall</div></div></a><a href="../craft_rifle/index.html" class="entry-card" data-search="Craft rifle craft_rifle" data-section-id="recipes"><img src="../../assets/img/bible/craft_rifle.png" alt="Craft rifle" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Craft rifle</div><div class="entry-card-id">craft_rifle</div></div></a></div></div><div data-section="research-tree"><div class="section-label">Research tree (11)</div><div class="category-grid"><a href="../basic_smelting/index.html" class="entry-card" data-search="Basic smelting basic_smelting" data-section-id="research-tree"><img src="../../assets/img/bible/basic_smelting.png" alt="Basic smelting" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Basic smelting</div><div class="entry-card-id">basic_smelting</div></div></a><a href="../basic_electronics/index.html" class="entry-card" data-search="Basic electronics basic_electronics" data-section-id="research-tree"><img src="../../assets/img/bible/basic_electronics.png" alt="Basic electronics" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Basic electronics</div><div class="entry-card-id">basic_electronics</div></div></a><a href="../advanced_metallurgy/index.html" class="entry-card" data-search="Advanced metallurgy advanced_metallurgy" data-section-id="research-tree"><img src="../../assets/img/bible/advanced_metallurgy.png" alt="Advanced metallurgy" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Advanced metallurgy</div><div class="entry-card-id">advanced_metallurgy</div></div></a><a href="../weapons_research/index.html" class="entry-card" data-search="Weapons research weapons_research" data-section-id="research-tree"><img src="../../assets/img/bible/weapons_research.png" alt="Weapons research" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Weapons research</div><div class="entry-card-id">weapons_research</div></div></a><a href="../defensive_systems/index.html" class="entry-card" data-search="Defensive systems defensive_systems" data-section-id="research-tree"><img src="../../assets/img/bible/defensive_systems.png" alt="Defensive systems" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Defensive systems</div><div class="entry-card-id">defensive_systems</div></div></a><a href="../factory_efficiency/index.html" class="entry-card" data-search="Factory efficiency factory_efficiency" data-section-id="research-tree"><img src="../../assets/img/bible/factory_efficiency.png" alt="Factory efficiency" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Factory efficiency</div><div class="entry-card-id">factory_efficiency</div></div></a><a href="../advanced_defense/index.html" class="entry-card" data-search="Advanced defense advanced_defense" data-section-id="research-tree"><img src="../../assets/img/bible/advanced_defense.png" alt="Advanced defense" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Advanced defense</div><div class="entry-card-id">advanced_defense</div></div></a><a href="../field_medicine/index.html" class="entry-card" data-search="Field medicine field_medicine" data-section-id="research-tree"><img src="../../assets/img/bible/field_medicine.png" alt="Field medicine" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Field medicine</div><div class="entry-card-id">field_medicine</div></div></a><a href="../research_reinforced_logistics/index.html" class="entry-card" data-search="Reinforced logistics research_reinforced_logistics" data-section-id="research-tree"><img src="../../assets/img/bible/research_reinforced_logistics.png" alt="Reinforced logistics" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Reinforced logistics</div><div class="entry-card-id">research_reinforced_logistics</div></div></a><a href="../research_express_logistics/index.html" class="entry-card" data-search="Express logistics research_express_logistics" data-section-id="research-tree"><img src="../../assets/img/bible/research_express_logistics.png" alt="Express logistics" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Express logistics</div><div class="entry-card-id">research_express_logistics</div></div></a><a href="../research_underground_logistics/index.html" class="entry-card" data-search="Underground logistics research_underground_logistics" data-section-id="research-tree"><img src="../../assets/img/bible/research_underground_logistics.png" alt="Underground logistics" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Underground logistics</div><div class="entry-card-id">research_underground_logistics</div></div></a></div></div><div data-section="status-effects"><div class="section-label">Status effects (8)</div><div class="category-grid"><a href="../corrosion/index.html" class="entry-card" data-search="Corrosion corrosion" data-section-id="status-effects"><img src="../../assets/img/bible/corrosion.png" alt="Corrosion" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Corrosion</div><div class="entry-card-id">corrosion</div></div></a><a href="../toxicity/index.html" class="entry-card" data-search="Toxicity toxicity" data-section-id="status-effects"><img src="../../assets/img/bible/toxicity.png" alt="Toxicity" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Toxicity</div><div class="entry-card-id">toxicity</div></div></a><a href="../bleeding/index.html" class="entry-card" data-search="Bleeding bleeding" data-section-id="status-effects"><img src="../../assets/img/bible/bleeding.png" alt="Bleeding" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Bleeding</div><div class="entry-card-id">bleeding</div></div></a><a href="../stimmed/index.html" class="entry-card" data-search="Stimmed stimmed" data-section-id="status-effects"><img src="../../assets/img/bible/stimmed.png" alt="Stimmed" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Stimmed</div><div class="entry-card-id">stimmed</div></div></a><a href="../armored/index.html" class="entry-card" data-search="Armored armored" data-section-id="status-effects"><img src="../../assets/img/bible/armored.png" alt="Armored" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Armored</div><div class="entry-card-id">armored</div></div></a><a href="../stunned/index.html" class="entry-card" data-search="Stunned stunned" data-section-id="status-effects"><img src="../../assets/img/bible/stunned.png" alt="Stunned" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Stunned</div><div class="entry-card-id">stunned</div></div></a><a href="../burning/index.html" class="entry-card" data-search="Burning burning" data-section-id="status-effects"><img src="../../assets/img/bible/burning.png" alt="Burning" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Burning</div><div class="entry-card-id">burning</div></div></a><a href="../regeneration/index.html" class="entry-card" data-search="Regeneration regeneration" data-section-id="status-effects"><img src="../../assets/img/bible/regeneration.png" alt="Regeneration" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Regeneration</div><div class="entry-card-id">regeneration</div></div></a></div></div><div data-section="upgrades"><div class="section-label">Upgrades (6)</div><div class="category-grid"><a href="../overclock_module/index.html" class="entry-card" data-search="Overclock module overclock_module" data-section-id="upgrades"><img src="../../assets/img/bible/overclock_module.png" alt="Overclock module" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Overclock module</div><div class="entry-card-id">overclock_module</div></div></a><a href="../reinforced_barrel/index.html" class="entry-card" data-search="Reinforced barrel reinforced_barrel" data-section-id="upgrades"><img src="../../assets/img/bible/reinforced_barrel.png" alt="Reinforced barrel" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Reinforced barrel</div><div class="entry-card-id">reinforced_barrel</div></div></a><a href="../extended_magazine/index.html" class="entry-card" data-search="Extended magazine extended_magazine" data-section-id="upgrades"><img src="../../assets/img/bible/extended_magazine.png" alt="Extended magazine" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Extended magazine</div><div class="entry-card-id">extended_magazine</div></div></a><a href="../turret_tracking_upgrade/index.html" class="entry-card" data-search="Turret tracking upgrade turret_tracking_upgrade" data-section-id="upgrades"><img src="../../assets/img/bible/turret_tracking_upgrade.png" alt="Turret tracking upgrade" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Turret tracking upgrade</div><div class="entry-card-id">turret_tracking_upgrade</div></div></a><a href="../supply_line_armor/index.html" class="entry-card" data-search="Supply line armor supply_line_armor" data-section-id="upgrades"><img src="../../assets/img/bible/supply_line_armor.png" alt="Supply line armor" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Supply line armor</div><div class="entry-card-id">supply_line_armor</div></div></a><a href="../insulated_casing/index.html" class="entry-card" data-search="Insulated casing insulated_casing" data-section-id="upgrades"><img src="../../assets/img/bible/insulated_casing.png" alt="Insulated casing" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Insulated casing</div><div class="entry-card-id">insulated_casing</div></div></a></div></div><div data-section="wave-events"><div class="section-label">Wave events (6)</div><div class="category-grid"><a href="../scout_probe/index.html" class="entry-card" data-search="Scout probe scout_probe" data-section-id="wave-events"><img src="../../assets/img/bible/scout_probe.png" alt="Scout probe" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Scout probe</div><div class="entry-card-id">scout_probe</div></div></a><a href="../raiding_party/index.html" class="entry-card" data-search="Raiding party raiding_party" data-section-id="wave-events"><img src="../../assets/img/bible/raiding_party.png" alt="Raiding party" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Raiding party</div><div class="entry-card-id">raiding_party</div></div></a><a href="../coordinated_assault/index.html" class="entry-card" data-search="Coordinated assault coordinated_assault" data-section-id="wave-events"><img src="../../assets/img/bible/coordinated_assault.png" alt="Coordinated assault" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Coordinated assault</div><div class="entry-card-id">coordinated_assault</div></div></a><a href="../swarm/index.html" class="entry-card" data-search="Swarm swarm" data-section-id="wave-events"><img src="../../assets/img/bible/swarm.png" alt="Swarm" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Swarm</div><div class="entry-card-id">swarm</div></div></a><a href="../siege/index.html" class="entry-card" data-search="Siege siege" data-section-id="wave-events"><img src="../../assets/img/bible/siege.png" alt="Siege" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Siege</div><div class="entry-card-id">siege</div></div></a><a href="../apex_emergence/index.html" class="entry-card" data-search="Apex emergence apex_emergence" data-section-id="wave-events"><img src="../../assets/img/bible/apex_emergence.png" alt="Apex emergence" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Apex emergence</div><div class="entry-card-id">apex_emergence</div></div></a></div></div>
+        </div>
+    </section>
+
+<script>
+(function() {
+    var input = document.querySelector('.bible-search');
+    if (!input) return;
+    var cards = document.querySelectorAll('[data-search]');
+    var sections = document.querySelectorAll('[data-section]');
+    input.addEventListener('input', function() {
+        var q = this.value.toLowerCase().trim();
+        var visibleSections = {};
+        cards.forEach(function(card) {
+            var text = card.getAttribute('data-search').toLowerCase();
+            var match = !q || text.indexOf(q) !== -1;
+            card.style.display = match ? '' : 'none';
+            if (match && card.getAttribute('data-section-id')) {
+                visibleSections[card.getAttribute('data-section-id')] = true;
+            }
+        });
+        if (sections.length) {
+            sections.forEach(function(sec) {
+                var id = sec.getAttribute('data-section');
+                sec.style.display = (!q || visibleSections[id]) ? '' : 'none';
+            });
+        }
+    });
+})();
+</script>
+
+
+    <div id="footer"></div>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

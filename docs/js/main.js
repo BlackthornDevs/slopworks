@@ -11,20 +11,25 @@
         { href: 'build.html', label: 'Build', id: 'build' },
         { href: 'explore.html', label: 'Explore', id: 'explore' },
         { href: 'slop.html', label: 'S.L.O.P.', id: 'slop' },
+        { href: 'bible/', label: 'Bible', id: 'bible' },
     ];
 
     function buildNav() {
         var container = document.getElementById('nav');
         if (!container) return;
 
+        // data-root allows bible subpages to prefix links back to docs root
+        var rootPrefix = container.dataset.root || '';
         var currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        // Detect bible pages for active state
+        var isBiblePage = window.location.pathname.indexOf('/bible') !== -1;
 
         var nav = document.createElement('nav');
         nav.className = 'site-nav';
 
         // Brand link
         var brand = document.createElement('a');
-        brand.href = 'index.html';
+        brand.href = rootPrefix + 'index.html';
         brand.className = 'nav-brand';
         brand.textContent = 'SLOPWORKS';
         nav.appendChild(brand);
@@ -44,9 +49,11 @@
         NAV_PAGES.forEach(function (p) {
             var li = document.createElement('li');
             var a = document.createElement('a');
-            a.href = p.href;
+            a.href = rootPrefix + p.href;
             a.textContent = p.label;
-            if (currentPage === p.href || (currentPage === '' && p.id === 'index')) {
+            var isActive = currentPage === p.href || (currentPage === '' && p.id === 'index');
+            if (p.id === 'bible' && isBiblePage) isActive = true;
+            if (isActive) {
                 a.classList.add('active');
             }
             li.appendChild(a);

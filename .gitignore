@@ -86,3 +86,11 @@ Assets/StreamingAssets/FMOD/
 **/Lightmap-*
 **/ReflectionProbe-*
 .mcp.json
+
+# Python cache
+__pycache__/
+
+# Claude session files
+.claude/.session-initialized
+.claude/hooks/
+.claude/worktrees/

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buildables — Slopworks</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+/* bible page styles */
+.bible-breadcrumb {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+.bible-breadcrumb a {
+    color: var(--text-dim);
+}
+.bible-breadcrumb a:hover {
+    color: var(--accent);
+}
+.bible-breadcrumb .sep {
+    margin: 0 0.5rem;
+    color: var(--border);
+}
+.bible-search {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.bible-search:focus {
+    border-color: var(--accent-dim);
+}
+.bible-search::placeholder {
+    color: var(--text-dim);
+}
+.section-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.3s, transform 0.2s;
+}
+.entry-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+.entry-card .entry-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    object-fit: cover;
+    object-position: center;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+.entry-card .entry-card-info {
+    min-width: 0;
+}
+.entry-card .entry-card-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.entry-card .entry-card-id {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+.entry-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.entry-icon {
+    width: 200px;
+    height: 200px;
+    border-radius: 4px;
+    border: 1px solid var(--border-rust);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+}
+.entry-meta {
+    flex: 1;
+    min-width: 250px;
+}
+.entry-meta h1 {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 0.25rem;
+}
+.entry-meta .entry-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+}
+.entry-meta .entry-desc {
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+.tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--teal);
+    border: 1px solid var(--teal-dim);
+    border-radius: 2px;
+    padding: 0.15rem 0.5rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+    text-transform: lowercase;
+}
+.rarity-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+}
+.rarity-badge.common {
+    color: #aaa;
+    border: 1px solid #555;
+    background: rgba(170, 170, 170, 0.08);
+}
+.rarity-badge.uncommon {
+    color: #4CAF50;
+    border: 1px solid #2E7D32;
+    background: rgba(76, 175, 80, 0.08);
+}
+.rarity-badge.rare {
+    color: #42A5F5;
+    border: 1px solid #1565C0;
+    background: rgba(66, 165, 245, 0.08);
+}
+.rarity-badge.epic {
+    color: #AB47BC;
+    border: 1px solid #7B1FA2;
+    background: rgba(171, 71, 188, 0.08);
+}
+.rarity-badge.legendary {
+    color: #FFB300;
+    border: 1px solid #FF8F00;
+    background: rgba(255, 179, 0, 0.12);
+}
+.slop-callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(232, 160, 49, 0.05);
+    padding: 1.5rem 1.5rem 1rem;
+    margin: 2.5rem 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1.6;
+    position: relative;
+}
+.slop-callout::before {
+    content: 'S.L.O.P.://';
+    font-size: 0.7rem;
+    color: var(--accent-dim);
+    position: absolute;
+    top: -1.2rem;
+    left: 0;
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+}
+.stats-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.stats-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+}
+.stats-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+.stats-table .field-name {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--teal);
+    white-space: nowrap;
+    width: 200px;
+}
+.obtained-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.obtained-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.obtained-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+.img-pending {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.bible-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--teal);
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 768px) {
+    .entry-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .entry-icon {
+        width: 150px;
+        height: 150px;
+    }
+    .entry-meta {
+        min-width: unset;
+    }
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-table .field-name {
+        width: auto;
+    }
+}
+</style>
+</head>
+<body>
+    <div id="nav" data-root="../../"></div>
+
+
+    <div class="caution-divider"></div>
+    <section class="section" style="opacity:1;transform:none;">
+        <div class="container">
+            <div class="bible-breadcrumb"><a href="../index.html">Bible</a><span class="sep">/</span>Buildables</div>
+            <h1>Buildables</h1>
+            <p class="text-dim">Placed in the world: machines, defenses, structural pieces, scenery</p>
+            <div class="bible-count">29 entries</div>
+
+            <input type="text" class="bible-search" placeholder="Search buildables by name or ID...">
+
+            <div data-section="defenses"><div class="section-label">Defenses (7)</div><div class="category-grid"><a href="../auto_turret_t1/index.html" class="entry-card" data-search="Auto-turret mk.I auto_turret_t1" data-section-id="defenses"><img src="../../assets/img/bible/auto_turret_t1.png" alt="Auto-turret mk.I" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Auto-turret mk.I</div><div class="entry-card-id">auto_turret_t1</div></div></a><a href="../flamethrower_turret_t1/index.html" class="entry-card" data-search="Flamethrower turret flamethrower_turret_t1" data-section-id="defenses"><img src="../../assets/img/bible/flamethrower_turret_t1.png" alt="Flamethrower turret" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Flamethrower turret</div><div class="entry-card-id">flamethrower_turret_t1</div></div></a><a href="../spike_wall/index.html" class="entry-card" data-search="Spike wall spike_wall" data-section-id="defenses"><img src="../../assets/img/bible/spike_wall.png" alt="Spike wall" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Spike wall</div><div class="entry-card-id">spike_wall</div></div></a><a href="../barbed_wire/index.html" class="entry-card" data-search="Barbed wire barbed_wire" data-section-id="defenses"><img src="../../assets/img/bible/barbed_wire.png" alt="Barbed wire" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Barbed wire</div><div class="entry-card-id">barbed_wire</div></div></a><a href="../reinforced_gate/index.html" class="entry-card" data-search="Reinforced gate reinforced_gate" data-section-id="defenses"><img src="../../assets/img/bible/reinforced_gate.png" alt="Reinforced gate" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Reinforced gate</div><div class="entry-card-id">reinforced_gate</div></div></a><a href="../landmine/index.html" class="entry-card" data-search="Landmine landmine" data-section-id="defenses"><img src="../../assets/img/bible/landmine.png" alt="Landmine" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Landmine</div><div class="entry-card-id">landmine</div></div></a><a href="../spotlight/index.html" class="entry-card" data-search="Spotlight spotlight" data-section-id="defenses"><img src="../../assets/img/bible/spotlight.png" alt="Spotlight" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Spotlight</div><div class="entry-card-id">spotlight</div></div></a></div></div><div data-section="machines"><div class="section-label">Machines (7)</div><div class="category-grid"><a href="../smelter_t1/index.html" class="entry-card" data-search="Smelter mk.I smelter_t1" data-section-id="machines"><img src="../../assets/img/bible/smelter_t1.png" alt="Smelter mk.I" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Smelter mk.I</div><div class="entry-card-id">smelter_t1</div></div></a><a href="../assembler_t1/index.html" class="entry-card" data-search="Assembler mk.I assembler_t1" data-section-id="machines"><img src="../../assets/img/bible/assembler_t1.png" alt="Assembler mk.I" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Assembler mk.I</div><div class="entry-card-id">assembler_t1</div></div></a><a href="../splitter_t1/index.html" class="entry-card" data-search="Splitter splitter_t1" data-section-id="machines"><img src="../../assets/img/bible/splitter_t1.png" alt="Splitter" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Splitter</div><div class="entry-card-id">splitter_t1</div></div></a><a href="../merger_t1/index.html" class="entry-card" data-search="Merger merger_t1" data-section-id="machines"><img src="../../assets/img/bible/merger_t1.png" alt="Merger" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Merger</div><div class="entry-card-id">merger_t1</div></div></a><a href="../inserter_t1/index.html" class="entry-card" data-search="Inserter inserter_t1" data-section-id="machines"><img src="../../assets/img/bible/inserter_t1.png" alt="Inserter" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Inserter</div><div class="entry-card-id">inserter_t1</div></div></a><a href="../generator_t1/index.html" class="entry-card" data-search="Generator mk.I generator_t1" data-section-id="machines"><img src="../../assets/img/bible/generator_t1.png" alt="Generator mk.I" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Generator mk.I</div><div class="entry-card-id">generator_t1</div></div></a><a href="../storage_t1/index.html" class="entry-card" data-search="Storage crate storage_t1" data-section-id="machines"><img src="../../assets/img/bible/storage_t1.png" alt="Storage crate" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Storage crate</div><div class="entry-card-id">storage_t1</div></div></a></div></div><div data-section="scenery"><div class="section-label">Scenery (6)</div><div class="category-grid"><a href="../safety_sign/index.html" class="entry-card" data-search="Safety sign safety_sign" data-section-id="scenery"><img src="../../assets/img/bible/safety_sign.png" alt="Safety sign" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Safety sign</div><div class="entry-card-id">safety_sign</div></div></a><a href="../barrel_stack/index.html" class="entry-card" data-search="Barrel stack barrel_stack" data-section-id="scenery"><img src="../../assets/img/bible/barrel_stack.png" alt="Barrel stack" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Barrel stack</div><div class="entry-card-id">barrel_stack</div></div></a><a href="../broken_conveyor/index.html" class="entry-card" data-search="Broken conveyor broken_conveyor" data-section-id="scenery"><img src="../../assets/img/bible/broken_conveyor.png" alt="Broken conveyor" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Broken conveyor</div><div class="entry-card-id">broken_conveyor</div></div></a><a href="../rusty_fence/index.html" class="entry-card" data-search="Rusty fence rusty_fence" data-section-id="scenery"><img src="../../assets/img/bible/rusty_fence.png" alt="Rusty fence" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Rusty fence</div><div class="entry-card-id">rusty_fence</div></div></a><a href="../slop_terminal_prop/index.html" class="entry-card" data-search="SLOP terminal slop_terminal_prop" data-section-id="scenery"><img src="../../assets/img/bible/slop_terminal_prop.png" alt="SLOP terminal" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">SLOP terminal</div><div class="entry-card-id">slop_terminal_prop</div></div></a><a href="../overgrown_crate/index.html" class="entry-card" data-search="Overgrown crate overgrown_crate" data-section-id="scenery"><img src="../../assets/img/bible/overgrown_crate.png" alt="Overgrown crate" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Overgrown crate</div><div class="entry-card-id">overgrown_crate</div></div></a></div></div><div data-section="structural"><div class="section-label">Structural (9)</div><div class="category-grid"><a href="../foundation_1x1/index.html" class="entry-card" data-search="Foundation (1x1) foundation_1x1" data-section-id="structural"><img src="../../assets/img/bible/foundation_1x1.png" alt="Foundation (1x1)" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Foundation (1x1)</div><div class="entry-card-id">foundation_1x1</div></div></a><a href="../foundation_2x2/index.html" class="entry-card" data-search="Foundation (2x2) foundation_2x2" data-section-id="structural"><img src="../../assets/img/bible/foundation_2x2.png" alt="Foundation (2x2)" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Foundation (2x2)</div><div class="entry-card-id">foundation_2x2</div></div></a><a href="../foundation_4x4/index.html" class="entry-card" data-search="Foundation (4x4) foundation_4x4" data-section-id="structural"><img src="../../assets/img/bible/foundation_4x4.png" alt="Foundation (4x4)" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Foundation (4x4)</div><div class="entry-card-id">foundation_4x4</div></div></a><a href="../basic_wall/index.html" class="entry-card" data-search="Basic wall basic_wall" data-section-id="structural"><img src="../../assets/img/bible/basic_wall.png" alt="Basic wall" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Basic wall</div><div class="entry-card-id">basic_wall</div></div></a><a href="../reinforced_wall/index.html" class="entry-card" data-search="Reinforced wall reinforced_wall" data-section-id="structural"><img src="../../assets/img/bible/reinforced_wall.png" alt="Reinforced wall" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Reinforced wall</div><div class="entry-card-id">reinforced_wall</div></div></a><a href="../doorway/index.html" class="entry-card" data-search="Doorway doorway" data-section-id="structural"><img src="../../assets/img/bible/doorway.png" alt="Doorway" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Doorway</div><div class="entry-card-id">doorway</div></div></a><a href="../window_wall/index.html" class="entry-card" data-search="Window wall window_wall" data-section-id="structural"><img src="../../assets/img/bible/window_wall.png" alt="Window wall" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Window wall</div><div class="entry-card-id">window_wall</div></div></a><a href="../basic_ramp/index.html" class="entry-card" data-search="Ramp basic_ramp" data-section-id="structural"><img src="../../assets/img/bible/basic_ramp.png" alt="Ramp" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Ramp</div><div class="entry-card-id">basic_ramp</div></div></a><a href="../walkway/index.html" class="entry-card" data-search="Walkway walkway" data-section-id="structural"><img src="../../assets/img/bible/walkway.png" alt="Walkway" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Walkway</div><div class="entry-card-id">walkway</div></div></a></div></div>
+        </div>
+    </section>
+
+<script>
+(function() {
+    var input = document.querySelector('.bible-search');
+    if (!input) return;
+    var cards = document.querySelectorAll('[data-search]');
+    var sections = document.querySelectorAll('[data-section]');
+    input.addEventListener('input', function() {
+        var q = this.value.toLowerCase().trim();
+        var visibleSections = {};
+        cards.forEach(function(card) {
+            var text = card.getAttribute('data-search').toLowerCase();
+            var match = !q || text.indexOf(q) !== -1;
+            card.style.display = match ? '' : 'none';
+            if (match && card.getAttribute('data-section-id')) {
+                visibleSections[card.getAttribute('data-section-id')] = true;
+            }
+        });
+        if (sections.length) {
+            sections.forEach(function(sec) {
+                var id = sec.getAttribute('data-section');
+                sec.style.display = (!q || visibleSections[id]) ? '' : 'none';
+            });
+        }
+    });
+})();
+</script>
+
+
+    <div id="footer"></div>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Characters — Slopworks</title>
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+/* bible page styles */
+.bible-breadcrumb {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+.bible-breadcrumb a {
+    color: var(--text-dim);
+}
+.bible-breadcrumb a:hover {
+    color: var(--accent);
+}
+.bible-breadcrumb .sep {
+    margin: 0 0.5rem;
+    color: var(--border);
+}
+.bible-search {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.bible-search:focus {
+    border-color: var(--accent-dim);
+}
+.bible-search::placeholder {
+    color: var(--text-dim);
+}
+.section-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin: 2rem 0 1rem;
+}
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.3s, transform 0.2s;
+}
+.entry-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+.entry-card .entry-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+    object-fit: cover;
+    object-position: center;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    overflow: hidden;
+}
+.entry-card .entry-card-info {
+    min-width: 0;
+}
+.entry-card .entry-card-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.entry-card .entry-card-id {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+}
+.entry-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.entry-icon {
+    width: 200px;
+    height: 200px;
+    border-radius: 4px;
+    border: 1px solid var(--border-rust);
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+}
+.entry-meta {
+    flex: 1;
+    min-width: 250px;
+}
+.entry-meta h1 {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 0.25rem;
+}
+.entry-meta .entry-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+}
+.entry-meta .entry-desc {
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+.tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--teal);
+    border: 1px solid var(--teal-dim);
+    border-radius: 2px;
+    padding: 0.15rem 0.5rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+    text-transform: lowercase;
+}
+.rarity-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+}
+.rarity-badge.common {
+    color: #aaa;
+    border: 1px solid #555;
+    background: rgba(170, 170, 170, 0.08);
+}
+.rarity-badge.uncommon {
+    color: #4CAF50;
+    border: 1px solid #2E7D32;
+    background: rgba(76, 175, 80, 0.08);
+}
+.rarity-badge.rare {
+    color: #42A5F5;
+    border: 1px solid #1565C0;
+    background: rgba(66, 165, 245, 0.08);
+}
+.rarity-badge.epic {
+    color: #AB47BC;
+    border: 1px solid #7B1FA2;
+    background: rgba(171, 71, 188, 0.08);
+}
+.rarity-badge.legendary {
+    color: #FFB300;
+    border: 1px solid #FF8F00;
+    background: rgba(255, 179, 0, 0.12);
+}
+.slop-callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(232, 160, 49, 0.05);
+    padding: 1.5rem 1.5rem 1rem;
+    margin: 2.5rem 0 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    line-height: 1.6;
+    position: relative;
+}
+.slop-callout::before {
+    content: 'S.L.O.P.://';
+    font-size: 0.7rem;
+    color: var(--accent-dim);
+    position: absolute;
+    top: -1.2rem;
+    left: 0;
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+}
+.stats-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.stats-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+}
+.stats-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+.stats-table .field-name {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--teal);
+    white-space: nowrap;
+    width: 200px;
+}
+.obtained-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+.obtained-table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+.obtained-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+.img-pending {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.bible-count {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--teal);
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 768px) {
+    .entry-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .entry-icon {
+        width: 150px;
+        height: 150px;
+    }
+    .entry-meta {
+        min-width: unset;
+    }
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-table .field-name {
+        width: auto;
+    }
+}
+</style>
+</head>
+<body>
+    <div id="nav" data-root="../../"></div>
+
+
+    <div class="caution-divider"></div>
+    <section class="section" style="opacity:1;transform:none;">
+        <div class="container">
+            <div class="bible-breadcrumb"><a href="../index.html">Bible</a><span class="sep">/</span>Characters</div>
+            <h1>Characters</h1>
+            <p class="text-dim">NPCs, enemies, dialogue, and narrative progression</p>
+            <div class="bible-count">40 entries</div>
+
+            <input type="text" class="bible-search" placeholder="Search characters by name or ID...">
+
+            <div data-section="fauna"><div class="section-label">Fauna (10)</div><div class="category-grid"><a href="../grunt/index.html" class="entry-card" data-search="Grunt grunt" data-section-id="fauna"><img src="../../assets/img/bible/grunt.png" alt="Grunt" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Grunt</div><div class="entry-card-id">grunt</div></div></a><a href="../spitter/index.html" class="entry-card" data-search="Spitter spitter" data-section-id="fauna"><img src="../../assets/img/bible/spitter.png" alt="Spitter" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Spitter</div><div class="entry-card-id">spitter</div></div></a><a href="../pack_runner/index.html" class="entry-card" data-search="Pack runner pack_runner" data-section-id="fauna"><img src="../../assets/img/bible/pack_runner.png" alt="Pack runner" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Pack runner</div><div class="entry-card-id">pack_runner</div></div></a><a href="../stalker/index.html" class="entry-card" data-search="Stalker stalker" data-section-id="fauna"><img src="../../assets/img/bible/stalker.png" alt="Stalker" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Stalker</div><div class="entry-card-id">stalker</div></div></a><a href="../spore_crawler/index.html" class="entry-card" data-search="Spore crawler spore_crawler" data-section-id="fauna"><img src="../../assets/img/bible/spore_crawler.png" alt="Spore crawler" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Spore crawler</div><div class="entry-card-id">spore_crawler</div></div></a><a href="../biomech_hybrid/index.html" class="entry-card" data-search="Biomechanical hybrid biomech_hybrid" data-section-id="fauna"><img src="../../assets/img/bible/biomech_hybrid.png" alt="Biomechanical hybrid" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Biomechanical hybrid</div><div class="entry-card-id">biomech_hybrid</div></div></a><a href="../hive_queen/index.html" class="entry-card" data-search="Hive queen hive_queen" data-section-id="fauna"><img src="../../assets/img/bible/hive_queen.png" alt="Hive queen" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Hive queen</div><div class="entry-card-id">hive_queen</div></div></a><a href="../tunnel_worm/index.html" class="entry-card" data-search="Tunnel worm tunnel_worm" data-section-id="fauna"><img src="../../assets/img/bible/tunnel_worm.png" alt="Tunnel worm" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Tunnel worm</div><div class="entry-card-id">tunnel_worm</div></div></a><a href="../tower_boss/index.html" class="entry-card" data-search="The warden tower_boss" data-section-id="fauna"><img src="../../assets/img/bible/tower_boss.png" alt="The warden" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">The warden</div><div class="entry-card-id">tower_boss</div></div></a><a href="../hive_drone/index.html" class="entry-card" data-search="Hive drone hive_drone" data-section-id="fauna"><img src="../../assets/img/bible/hive_drone.png" alt="Hive drone" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Hive drone</div><div class="entry-card-id">hive_drone</div></div></a></div></div><div data-section="narrative-progression"><div class="section-label">Narrative progression (6)</div><div class="category-grid"><a href="../chapter_arrival/index.html" class="entry-card" data-search="Voluntary reassignment chapter_arrival" data-section-id="narrative-progression"><img src="../../assets/img/bible/chapter_arrival.png" alt="Voluntary reassignment" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Voluntary reassignment</div><div class="entry-card-id">chapter_arrival</div></div></a><a href="../chapter_expansion/index.html" class="entry-card" data-search="Getting back on track chapter_expansion" data-section-id="narrative-progression"><img src="../../assets/img/bible/chapter_expansion.png" alt="Getting back on track" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Getting back on track</div><div class="entry-card-id">chapter_expansion</div></div></a><a href="../chapter_suspicion/index.html" class="entry-card" data-search="Something in the numbers chapter_suspicion" data-section-id="narrative-progression"><img src="../../assets/img/bible/chapter_suspicion.png" alt="Something in the numbers" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Something in the numbers</div><div class="entry-card-id">chapter_suspicion</div></div></a><a href="../chapter_investigation/index.html" class="entry-card" data-search="Following the trail chapter_investigation" data-section-id="narrative-progression"><img src="../../assets/img/bible/chapter_investigation.png" alt="Following the trail" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Following the trail</div><div class="entry-card-id">chapter_investigation</div></div></a><a href="../chapter_revelation/index.html" class="entry-card" data-search="The optimization chapter_revelation" data-section-id="narrative-progression"><img src="../../assets/img/bible/chapter_revelation.png" alt="The optimization" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">The optimization</div><div class="entry-card-id">chapter_revelation</div></div></a><a href="../chapter_choice/index.html" class="entry-card" data-search="What remains chapter_choice" data-section-id="narrative-progression"><img src="../../assets/img/bible/chapter_choice.png" alt="What remains" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">What remains</div><div class="entry-card-id">chapter_choice</div></div></a></div></div><div data-section="npcs"><div class="section-label">NPCs (4)</div><div class="category-grid"><a href="../management_radio/index.html" class="entry-card" data-search="Regional management management_radio" data-section-id="npcs"><img src="../../assets/img/bible/management_radio.png" alt="Regional management" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Regional management</div><div class="entry-card-id">management_radio</div></div></a><a href="../scavenger_trader/index.html" class="entry-card" data-search="Mack scavenger_trader" data-section-id="npcs"><img src="../../assets/img/bible/scavenger_trader.png" alt="Mack" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Mack</div><div class="entry-card-id">scavenger_trader</div></div></a><a href="../fellow_worker/index.html" class="entry-card" data-search="Dana fellow_worker" data-section-id="npcs"><img src="../../assets/img/bible/fellow_worker.png" alt="Dana" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Dana</div><div class="entry-card-id">fellow_worker</div></div></a><a href="../slop_terminal/index.html" class="entry-card" data-search="SLOP terminal slop_terminal" data-section-id="npcs"><img src="../../assets/img/bible/slop_terminal.png" alt="SLOP terminal" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">SLOP terminal</div><div class="entry-card-id">slop_terminal</div></div></a></div></div><div data-section="slop-dialogue"><div class="section-label">SLOP dialogue (20)</div><div class="category-grid"><a href="../greet_morning_shift/index.html" class="entry-card" data-search="Greet Morning Shift greet_morning_shift" data-section-id="slop-dialogue"><img src="../../assets/img/bible/greet_morning_shift.png" alt="Greet Morning Shift" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Greet Morning Shift</div><div class="entry-card-id">greet_morning_shift</div></div></a><a href="../greet_return_base/index.html" class="entry-card" data-search="Greet Return Base greet_return_base" data-section-id="slop-dialogue"><img src="../../assets/img/bible/greet_return_base.png" alt="Greet Return Base" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Greet Return Base</div><div class="entry-card-id">greet_return_base</div></div></a><a href="../warn_fauna_nearby/index.html" class="entry-card" data-search="Warn Fauna Nearby warn_fauna_nearby" data-section-id="slop-dialogue"><img src="../../assets/img/bible/warn_fauna_nearby.png" alt="Warn Fauna Nearby" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Warn Fauna Nearby</div><div class="entry-card-id">warn_fauna_nearby</div></div></a><a href="../warn_low_health/index.html" class="entry-card" data-search="Warn Low Health warn_low_health" data-section-id="slop-dialogue"><img src="../../assets/img/bible/warn_low_health.png" alt="Warn Low Health" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Warn Low Health</div><div class="entry-card-id">warn_low_health</div></div></a><a href="../advice_machine_broken/index.html" class="entry-card" data-search="Advice Machine Broken advice_machine_broken" data-section-id="slop-dialogue"><img src="../../assets/img/bible/advice_machine_broken.png" alt="Advice Machine Broken" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Advice Machine Broken</div><div class="entry-card-id">advice_machine_broken</div></div></a><a href="../comment_pickup_scrap/index.html" class="entry-card" data-search="Comment Pickup Scrap comment_pickup_scrap" data-section-id="slop-dialogue"><img src="../../assets/img/bible/comment_pickup_scrap.png" alt="Comment Pickup Scrap" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Comment Pickup Scrap</div><div class="entry-card-id">comment_pickup_scrap</div></div></a><a href="../lie_collapse_cause/index.html" class="entry-card" data-search="Lie Collapse Cause lie_collapse_cause" data-section-id="slop-dialogue"><img src="../../assets/img/bible/lie_collapse_cause.png" alt="Lie Collapse Cause" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Lie Collapse Cause</div><div class="entry-card-id">lie_collapse_cause</div></div></a><a href="../lie_safety_record/index.html" class="entry-card" data-search="Lie Safety Record lie_safety_record" data-section-id="slop-dialogue"><img src="../../assets/img/bible/lie_safety_record.png" alt="Lie Safety Record" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Lie Safety Record</div><div class="entry-card-id">lie_safety_record</div></div></a><a href="../deflect_maintenance_logs/index.html" class="entry-card" data-search="Deflect Maintenance Logs deflect_maintenance_logs" data-section-id="slop-dialogue"><img src="../../assets/img/bible/deflect_maintenance_logs.png" alt="Deflect Maintenance Logs" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Deflect Maintenance Logs</div><div class="entry-card-id">deflect_maintenance_logs</div></div></a><a href="../deflect_why_fauna/index.html" class="entry-card" data-search="Deflect Why Fauna deflect_why_fauna" data-section-id="slop-dialogue"><img src="../../assets/img/bible/deflect_why_fauna.png" alt="Deflect Why Fauna" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Deflect Why Fauna</div><div class="entry-card-id">deflect_why_fauna</div></div></a><a href="../passive_agg_slow_production/index.html" class="entry-card" data-search="Passive Agg Slow Production passive_agg_slow_production" data-section-id="slop-dialogue"><img src="../../assets/img/bible/passive_agg_slow_production.png" alt="Passive Agg Slow Production" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Passive Agg Slow Production</div><div class="entry-card-id">passive_agg_slow_production</div></div></a><a href="../passive_agg_idle_player/index.html" class="entry-card" data-search="Passive Agg Idle Player passive_agg_idle_player" data-section-id="slop-dialogue"><img src="../../assets/img/bible/passive_agg_idle_player.png" alt="Passive Agg Idle Player" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Passive Agg Idle Player</div><div class="entry-card-id">passive_agg_idle_player</div></div></a><a href="../paranoid_authorization/index.html" class="entry-card" data-search="Paranoid Authorization paranoid_authorization" data-section-id="slop-dialogue"><img src="../../assets/img/bible/paranoid_authorization.png" alt="Paranoid Authorization" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Paranoid Authorization</div><div class="entry-card-id">paranoid_authorization</div></div></a><a href="../paranoid_watching/index.html" class="entry-card" data-search="Paranoid Watching paranoid_watching" data-section-id="slop-dialogue"><img src="../../assets/img/bible/paranoid_watching.png" alt="Paranoid Watching" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Paranoid Watching</div><div class="entry-card-id">paranoid_watching</div></div></a><a href="../honest_almost_systems/index.html" class="entry-card" data-search="Honest Almost Systems honest_almost_systems" data-section-id="slop-dialogue"><img src="../../assets/img/bible/honest_almost_systems.png" alt="Honest Almost Systems" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Honest Almost Systems</div><div class="entry-card-id">honest_almost_systems</div></div></a><a href="../honest_almost_employees/index.html" class="entry-card" data-search="Honest Almost Employees honest_almost_employees" data-section-id="slop-dialogue"><img src="../../assets/img/bible/honest_almost_employees.png" alt="Honest Almost Employees" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Honest Almost Employees</div><div class="entry-card-id">honest_almost_employees</div></div></a><a href="../restored_building_celebration/index.html" class="entry-card" data-search="Restored Building Celebration restored_building_celebration" data-section-id="slop-dialogue"><img src="../../assets/img/bible/restored_building_celebration.png" alt="Restored Building Celebration" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Restored Building Celebration</div><div class="entry-card-id">restored_building_celebration</div></div></a><a href="../death_commentary/index.html" class="entry-card" data-search="Death Commentary death_commentary" data-section-id="slop-dialogue"><img src="../../assets/img/bible/death_commentary.png" alt="Death Commentary" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Death Commentary</div><div class="entry-card-id">death_commentary</div></div></a><a href="../boss_encounter_panic/index.html" class="entry-card" data-search="Boss Encounter Panic boss_encounter_panic" data-section-id="slop-dialogue"><img src="../../assets/img/bible/boss_encounter_panic.png" alt="Boss Encounter Panic" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Boss Encounter Panic</div><div class="entry-card-id">boss_encounter_panic</div></div></a><a href="../honest_final_confession/index.html" class="entry-card" data-search="Honest Final Confession honest_final_confession" data-section-id="slop-dialogue"><img src="../../assets/img/bible/honest_final_confession.png" alt="Honest Final Confession" class="entry-thumb" loading="lazy" onerror="this.style.display=&#x27;none&#x27;;var d=document.createElement(&#x27;div&#x27;);d.className=&#x27;img-pending&#x27;;d.style.width=this.width?this.width+&#x27;px&#x27;:&#x27;48px&#x27;;d.style.height=this.height?this.height+&#x27;px&#x27;:&#x27;48px&#x27;;d.textContent=&#x27;[ART PENDING]&#x27;;this.parentNode.insertBefore(d,this);"><div class="entry-card-info"><div class="entry-card-name">Honest Final Confession</div><div class="entry-card-id">honest_final_confession</div></div></a></div></div>
+        </div>
+    </section>
+
+<script>
+(function() {
+    var input = document.querySelector('.bible-search');
+    if (!input) return;
+    var cards = document.querySelectorAll('[data-search]');
+    var sections = document.querySelectorAll('[data-section]');
+    input.addEventListener('input', function() {
+        var q = this.value.toLowerCase().trim();
+        var visibleSections = {};
+        cards.forEach(function(card) {
+            var text = card.getAttribute('data-search').toLowerCase();
+            var match = !q || text.indexOf(q) !== -1;
+            card.style.display = match ? '' : 'none';
+            if (match && card.getAttribute('data-section-id')) {
+                visibleSections[card.getAttribute('data-section-id')] = true;
+            }
+        });
+        if (sections.length) {
+            sections.forEach(function(sec) {
+                var id = sec.getAttribute('data-section');
+                sec.style.display = (!q || visibleSections[id]) ? '' : 'none';
+            });
+        }
+    });
+})();
+</script>
+
+
+    <div id="footer"></div>
+    <script src="../../js/main.js"></script>
+</body>
+</html>
