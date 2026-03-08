@@ -28,7 +28,7 @@ KNOWN_ID_FIELDS = {
     "itemId", "weaponId", "machineId", "turretId", "foundationId", "wallId",
     "rampId", "recipeId", "faunaId", "buildingId", "sceneryId", "npcId",
     "lineId", "lineTypeId", "waveId", "nodeId", "upgradeId", "effectId",
-    "hazardId", "chapterId", "biomeId", "defenseId", "id",
+    "hazardId", "chapterId", "biomeId", "defenseId", "contractId", "id",
 }
 
 # --- Category metadata ---
@@ -60,10 +60,12 @@ SUBCATEGORY_NAMES = {
     "research-tree": "Research tree",
     "upgrades": "Upgrades",
     "status-effects": "Status effects",
+    "tower-contracts": "Tower contracts",
     "wave-events": "Wave events",
     # world
     "biomes": "Biomes",
     "reclaimed-buildings": "Reclaimed buildings",
+    "tower-buildings": "Tower buildings",
     "environmental-hazards": "Environmental hazards",
     "supply-lines": "Supply lines",
     # characters
