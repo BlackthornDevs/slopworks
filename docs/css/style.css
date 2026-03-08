@@ -438,21 +438,19 @@ a:hover {
   border-left: 3px solid var(--accent);
   background: rgba(232, 160, 49, 0.05);
   padding: 1rem 1.5rem;
-  margin: 2.5rem 0 1.5rem;
+  margin: 1.5rem 0;
   font-family: var(--font-mono);
   font-size: 0.85rem;
   color: var(--accent);
   line-height: 1.6;
-  position: relative;
 }
 
 .slop-says::before {
   content: 'S.L.O.P.://';
+  display: block;
   font-size: 0.7rem;
   color: var(--accent-dim);
-  position: absolute;
-  top: -0.8rem;
-  left: 0;
+  margin-bottom: 0.5rem;
 }
 
 .slop-interjection {

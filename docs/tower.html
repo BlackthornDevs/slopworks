@@ -23,17 +23,15 @@
     <div id="nav"></div>
 
     <!-- Page header -->
-    <section class="section" style="opacity:1;transform:none;">
+    <section class="section" style="opacity:1;transform:none;padding-bottom:0;">
         <div class="container">
             <h1>The tower</h1>
             <p class="text-dim">Every building is a contract. Every contract has a ceiling.</p>
         </div>
     </section>
 
-    <div class="caution-divider"></div>
-
     <!-- NYC skyline establishing shot -->
-    <section class="section">
+    <section class="section" style="padding-top:1rem;">
         <div class="container">
             <div class="art-frame">
                 <img src="assets/img/tower-skyline.png"
@@ -42,6 +40,8 @@
             </div>
         </div>
     </section>
+
+    <div class="caution-divider"></div>
 
     <!-- Contract board system -->
     <section class="section">
@@ -57,7 +57,7 @@
                 <div class="split-text">
                     <h2>The contract board</h2>
                     <p>Management provides a contract progression tree — not random missions, but a structured climb through increasingly dangerous buildings. Each contract shows intel: threat level, suspected fauna, guaranteed loot, recommended squad size. You choose which to take, but you can't skip tiers.</p>
-                    <div class="slop-says mt-sm">
+                    <div class="slop-says">
                         Management has assigned you a routine vertical asset recovery operation. SLOP has reviewed the building's pre-collapse tenant records and can confirm that none of the current occupants have valid leases. Proceed with confidence.
                     </div>
                 </div>
@@ -142,7 +142,7 @@
                 <div class="split-text">
                     <h2>The elevator</h2>
                     <p>Every tower uses the same elevator checkpoint framework. Clear floor milestones to unlock checkpoints. When a friend joins mid-contract, they spawn at floor 1 and ride the elevator up to your checkpoint — a brief solo gauntlet that orients them before arrival. No special rejoin logic. The elevator is the mechanic.</p>
-                    <div class="slop-says mt-sm">
+                    <div class="slop-says">
                         SLOP detects incoming personnel in the elevator shaft. Their life signs are stable. SLOP will continue monitoring from a safe distance. A very safe distance.
                     </div>
                 </div>
@@ -150,16 +150,7 @@
         </div>
     </section>
 
-    <!-- Elevator shaft atmospheric break -->
-    <section class="section">
-        <div class="container">
-            <div class="art-frame">
-                <img src="assets/img/tower-elevator.png"
-                     alt="First-person view looking up inside a dark elevator shaft with steel cables, floor numbers, and bioluminescent fungal growth"
-                     loading="lazy">
-            </div>
-        </div>
-    </section>
+    <div class="caution-divider"></div>
 
     <!-- Three-pillar loop -->
     <section class="section">
@@ -175,13 +166,18 @@
                 <div class="split-text">
                     <h2>The loop</h2>
                     <p>The tower is the unlock gate. Alternate factory recipes, building blueprints, weapon upgrade components, and narrative fragments — all from tower loot. You can't build a better factory without it. You can't survive harder waves without factory gear. The three pillars form a closed loop.</p>
-                    <div class="slop-says mt-sm">
+                    <div class="slop-says">
                         SLOP has calculated the optimal risk-reward ratio for your upcoming contract. The reward is significant. The risk is also significant. SLOP recommends not thinking about the risk.
                     </div>
-                    <pre class="mt-sm" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--teal); line-height: 1.8; overflow-x: auto;">Tower contracts --> loot --> Factory upgrades --> better gear --> Harder tower tiers
-                                                         --> wave defense --> territory expansion</pre>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Loop diagram (full width, canvas) -->
+    <section class="section" style="padding-top:0;">
+        <div class="container">
+            <canvas id="loop-canvas" style="display:block;margin:0 auto;" aria-label="Three-pillar progression loop diagram"></canvas>
         </div>
     </section>
 
@@ -189,5 +185,6 @@
 
     <script src="js/main.js"></script>
     <script src="js/scene-contracts.js"></script>
+    <script src="js/scene-loop.js"></script>
 </body>
 </html>
