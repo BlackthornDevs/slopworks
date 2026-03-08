@@ -219,21 +219,11 @@
         </div>
     </section>
 
-    <!-- Loop diagram (inline SVG, SMIL animation) -->
+    <!-- Loop diagram (inline SVG, JS-driven animation) -->
     <section class="section" style="padding-top:0;">
         <div class="container">
             <div class="loop-diagram-wrap">
-                <svg viewBox="0 0 780 310" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-pillar progression loop: tower contracts produce loot, which feeds factory upgrades, producing better gear for harder tower tiers and wave defense">
-
-                    <!-- Path definitions for animateMotion (not rendered) -->
-                    <defs>
-                        <path id="p1" d="M160,40 L220,40"/>
-                        <path id="p2" d="M310,40 L380,40"/>
-                        <path id="p3" d="M540,40 L600,40"/>
-                        <path id="p4" d="M680,66 L680,120 L640,155"/>
-                        <path id="p5" d="M460,66 L460,170 L420,250"/>
-                        <path id="p6" d="M540,181 L85,181 L85,66"/>
-                    </defs>
+                <svg id="loop-svg" viewBox="0 0 780 310" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-pillar progression loop: tower contracts produce loot, which feeds factory upgrades, producing better gear for harder tower tiers and wave defense">
 
                     <!-- Connector guide lines -->
                     <line x1="160" y1="40" x2="220" y2="40" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
@@ -277,106 +267,124 @@
                         <text x="420" y="280" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Wave defense + territory</text>
                     </g>
 
-                    <!-- ═══ Traveling dots (SMIL animateMotion along paths) ═══ -->
-                    <g class="traveling-dots">
-
-                        <!-- d1: Tower → Loot (amber) -->
-                        <circle r="8" fill="#E8A031" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="0s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p1"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="0s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="0s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p1"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="0s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d2: Loot → Factory (amber) -->
-                        <circle r="8" fill="#E8A031" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="0.7s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p2"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="0.7s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="0.7s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p2"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="0.7s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d3: Factory → Gear (teal) -->
-                        <circle r="8" fill="#5CCFE6" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="1.4s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p3"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="1.4s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="1.4s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p3"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="1.4s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d4: Gear → Harder towers (amber, L-shape down) -->
-                        <circle r="8" fill="#E8A031" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="2.1s" calcMode="linear" keyTimes="0;0.03;0.20;1" keyPoints="0;0;1;1"><mpath href="#p4"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="2.1s" keyTimes="0;0.02;0.04;0.18;0.22;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="2.1s" calcMode="linear" keyTimes="0;0.03;0.20;1" keyPoints="0;0;1;1"><mpath href="#p4"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="2.1s" keyTimes="0;0.02;0.04;0.18;0.22;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d5: Factory → Wave defense (teal, L-shape down) -->
-                        <circle r="8" fill="#5CCFE6" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="1.4s" calcMode="linear" keyTimes="0;0.03;0.28;1" keyPoints="0;0;1;1"><mpath href="#p5"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="1.4s" keyTimes="0;0.02;0.04;0.26;0.30;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="1.4s" calcMode="linear" keyTimes="0;0.03;0.28;1" keyPoints="0;0;1;1"><mpath href="#p5"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="1.4s" keyTimes="0;0.02;0.04;0.26;0.30;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d6: Return — Harder towers → Tower (amber, L-shape left+up) -->
-                        <circle r="8" fill="#E8A031" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="2.8s" calcMode="linear" keyTimes="0;0.03;0.40;1" keyPoints="0;0;1;1"><mpath href="#p6"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="2.8s" keyTimes="0;0.02;0.04;0.38;0.42;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="2.8s" calcMode="linear" keyTimes="0;0.03;0.40;1" keyPoints="0;0;1;1"><mpath href="#p6"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="2.8s" keyTimes="0;0.02;0.04;0.38;0.42;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- ── Second wave (offset +2.5s) for continuous flow ── -->
-
-                        <!-- d1b: Tower → Loot -->
-                        <circle r="8" fill="#E8A031" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="2.5s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p1"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="2.5s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="2.5s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p1"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="2.5s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d2b: Loot → Factory -->
-                        <circle r="8" fill="#E8A031" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="3.2s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p2"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="3.2s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="3.2s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p2"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="3.2s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                        <!-- d3b: Factory → Gear -->
-                        <circle r="8" fill="#5CCFE6" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="3.9s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p3"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="3.9s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.5;0.5;0;0"/>
-                        </circle>
-                        <circle r="3.5" fill="#fff" opacity="0">
-                            <animateMotion dur="5s" repeatCount="indefinite" begin="3.9s" calcMode="linear" keyTimes="0;0.03;0.15;1" keyPoints="0;0;1;1"><mpath href="#p3"/></animateMotion>
-                            <animate attributeName="opacity" dur="5s" repeatCount="indefinite" begin="3.9s" keyTimes="0;0.02;0.04;0.13;0.17;1" values="0;0;0.95;0.95;0;0"/>
-                        </circle>
-
-                    </g><!-- /traveling-dots -->
                 </svg>
             </div>
         </div>
     </section>
+
+    <!-- Loop diagram animation (JS — guaranteed cross-browser) -->
+    <script>
+    (function () {
+        'use strict';
+        var svg = document.getElementById('loop-svg');
+        if (!svg) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        var NS = 'http://www.w3.org/2000/svg';
+        var PATHS = [
+            { pts: [[160,40],[220,40]], color: '#E8A031' },
+            { pts: [[310,40],[380,40]], color: '#E8A031' },
+            { pts: [[540,40],[600,40]], color: '#5CCFE6' },
+            { pts: [[680,66],[680,120],[640,155]], color: '#E8A031' },
+            { pts: [[460,66],[460,170],[420,250]], color: '#5CCFE6' },
+            { pts: [[540,181],[85,181],[85,66]], color: '#E8A031' }
+        ];
+
+        function pLen(pts) {
+            var l = 0;
+            for (var i = 1; i < pts.length; i++) {
+                var dx = pts[i][0] - pts[i-1][0], dy = pts[i][1] - pts[i-1][1];
+                l += Math.sqrt(dx * dx + dy * dy);
+            }
+            return l;
+        }
+
+        function pAt(pts, t) {
+            var total = pLen(pts), target = t * total, w = 0;
+            for (var i = 1; i < pts.length; i++) {
+                var dx = pts[i][0] - pts[i-1][0], dy = pts[i][1] - pts[i-1][1];
+                var s = Math.sqrt(dx * dx + dy * dy);
+                if (w + s >= target) {
+                    var f = (target - w) / s;
+                    return [pts[i-1][0] + dx * f, pts[i-1][1] + dy * f];
+                }
+                w += s;
+            }
+            return pts[pts.length - 1];
+        }
+
+        var dotsG = document.createElementNS(NS, 'g');
+        dotsG.setAttribute('class', 'traveling-dots');
+        svg.appendChild(dotsG);
+
+        function mkC(r, fill) {
+            var c = document.createElementNS(NS, 'circle');
+            c.setAttribute('r', r);
+            c.setAttribute('fill', fill);
+            c.setAttribute('opacity', '0');
+            dotsG.appendChild(c);
+            return c;
+        }
+
+        // Dot schedule: pathIndex, begin offset (s), travel start/end as fraction of cycle
+        var DEFS = [
+            { p:0, b:0.0, s:0.03, e:0.16 },
+            { p:1, b:0.7, s:0.03, e:0.16 },
+            { p:2, b:1.4, s:0.03, e:0.16 },
+            { p:3, b:2.1, s:0.03, e:0.22 },
+            { p:4, b:1.4, s:0.03, e:0.30 },
+            { p:5, b:2.8, s:0.03, e:0.42 },
+            // Second wave for top row
+            { p:0, b:2.5, s:0.03, e:0.16 },
+            { p:1, b:3.2, s:0.03, e:0.16 },
+            { p:2, b:3.9, s:0.03, e:0.16 }
+        ];
+
+        var CYC = 5; // seconds per full cycle
+        var dots = [];
+        for (var i = 0; i < DEFS.length; i++) {
+            var d = DEFS[i], path = PATHS[d.p];
+            dots.push({ def: d, glow: mkC(8, path.color), core: mkC(3.5, '#fff') });
+        }
+
+        function tick(ts) {
+            var sec = ts * 0.001;
+            for (var i = 0; i < dots.length; i++) {
+                var d = dots[i].def;
+                var t = ((sec - d.b) % CYC) / CYC;
+                if (t < 0) t += 1;
+
+                var prog, opa;
+                if (t < d.s) {
+                    prog = 0; opa = 0;
+                } else if (t < d.e) {
+                    prog = (t - d.s) / (d.e - d.s);
+                    opa = 1;
+                    if (prog < 0.12) opa = prog / 0.12; // fade in
+                    if (prog > 0.88) opa = (1 - prog) / 0.12; // fade out
+                } else {
+                    prog = 1; opa = 0;
+                }
+
+                if (opa > 0.005) {
+                    var pos = pAt(PATHS[d.p].pts, prog);
+                    dots[i].glow.setAttribute('cx', pos[0]);
+                    dots[i].glow.setAttribute('cy', pos[1]);
+                    dots[i].glow.setAttribute('opacity', opa * 0.5);
+                    dots[i].core.setAttribute('cx', pos[0]);
+                    dots[i].core.setAttribute('cy', pos[1]);
+                    dots[i].core.setAttribute('opacity', opa * 0.95);
+                } else {
+                    dots[i].glow.setAttribute('opacity', '0');
+                    dots[i].core.setAttribute('opacity', '0');
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        requestAnimationFrame(tick);
+    })();
+    </script>
 
     <div id="footer"></div>
 
