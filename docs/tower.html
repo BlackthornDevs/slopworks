@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower — Slopworks</title>
+    <meta name="description" content="Real NYC skyscrapers repurposed as vertical dungeons. Take contracts, clear floors, hit elevator checkpoints, extract loot. 1-4 player co-op scaling.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <meta property="og:title" content="Tower — Slopworks">
+    <meta property="og:description" content="Real NYC skyscrapers as vertical dungeons. Take contracts, clear floors, extract loot.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://blackthorndevs.com/slopworks/tower.html">
+    <meta property="og:image" content="https://blackthorndevs.com/slopworks/assets/img/tower-skyline.png">
+    <meta property="og:image:width" content="1376">
+    <meta property="og:image:height" content="768">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tower — Slopworks">
+    <meta name="twitter:description" content="Real NYC skyscrapers as vertical dungeons.">
+    <meta name="twitter:image" content="https://blackthorndevs.com/slopworks/assets/img/tower-skyline.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="nav"></div>
+
+    <!-- Page header -->
+    <section class="section" style="opacity:1;transform:none;">
+        <div class="container">
+            <h1>The tower</h1>
+            <p class="text-dim">Every building is a contract. Every contract has a ceiling.</p>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Scene 1: NYC skyline -->
+    <section class="section">
+        <div class="container">
+            <div class="scene-container" id="nyc-skyline">
+                <div class="scene-label">S.L.O.P.://NYC_SECTOR [SCANNING]</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contract board system -->
+    <section class="section">
+        <div class="container">
+            <div class="content-split">
+                <div class="split-image">
+                    <div class="art-frame">
+                        <img src="assets/img/tower-contract-board.png"
+                             alt="A physical bulletin board in a dimly lit bunker with pinned building contracts, photographs, and red string connecting intel"
+                             loading="lazy">
+                    </div>
+                </div>
+                <div class="split-text">
+                    <h2>The contract board</h2>
+                    <p>Management provides a contract progression tree — not random missions, but a structured climb through increasingly dangerous buildings. Each contract shows intel: threat level, suspected fauna, guaranteed loot, recommended squad size. You choose which to take, but you can't skip tiers.</p>
+                    <div class="slop-says mt-sm">
+                        Management has assigned you a routine vertical asset recovery operation. SLOP has reviewed the building's pre-collapse tenant records and can confirm that none of the current occupants have valid leases. Proceed with confidence.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Scene 2: Contract board CRT terminal -->
+    <section class="section">
+        <div class="container">
+            <div class="terminal" id="contract-terminal">
+                <div class="terminal-header">S.L.O.P.://CONTRACT_BOARD [ACTIVE CONTRACTS]</div>
+                <div class="terminal-output" id="contract-output"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Building cards -->
+    <section class="section" data-slop-interjection="S.L.O.P. has conducted a remote structural assessment of all four buildings. Results: structurally sound. Methodology: optimism.">
+        <div class="container">
+            <h2 class="text-accent" style="text-align:center; margin-bottom: 2rem;">Active contracts</h2>
+            <div class="fauna-grid">
+                <div class="fauna-card">
+                    <img src="assets/img/tower-skyline.png"
+                         alt="30 Rockefeller Plaza silhouette against the night sky"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">30 Rockefeller Plaza</div>
+                        <div class="fauna-biome">Tier 1 // Threat: Low // 8 floors</div>
+                        <p class="fauna-desc">"...none of the current occupants have valid leases."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-skyline.png"
+                         alt="MetLife Building silhouette against the night sky"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">MetLife Building</div>
+                        <div class="fauna-biome">Tier 1 // Threat: Moderate // 12 floors</div>
+                        <p class="fauna-desc">"...a more direct approach to hostile takeovers."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-elevator.png"
+                         alt="Woolworth Building interior elevator shaft"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Woolworth Building</div>
+                        <div class="fauna-biome">Tier 2 // Threat: High // 15 floors</div>
+                        <p class="fauna-desc">"Concern is not within my operational parameters."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-boss-rooftop.png"
+                         alt="One World Trade Center rooftop boss encounter"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">One World Trade Center</div>
+                        <div class="fauna-biome">Tier 2 // Threat: Extreme // 20 floors</div>
+                        <p class="fauna-desc">"Hazard compensation has never been collected."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Elevator + co-op system -->
+    <section class="section">
+        <div class="container">
+            <div class="content-split reverse">
+                <div class="split-image">
+                    <div class="art-frame">
+                        <img src="assets/img/tower-elevator.png"
+                             alt="First-person view looking up inside a dark industrial elevator shaft with steel cables and bioluminescent growth"
+                             loading="lazy">
+                    </div>
+                </div>
+                <div class="split-text">
+                    <h2>The elevator</h2>
+                    <p>Every tower uses the same elevator checkpoint framework. Clear floor milestones to unlock checkpoints. When a friend joins mid-contract, they spawn at floor 1 and ride the elevator up to your checkpoint — a brief solo gauntlet that orients them before arrival. No special rejoin logic. The elevator is the mechanic.</p>
+                    <div class="slop-says mt-sm">
+                        SLOP detects incoming personnel in the elevator shaft. Their life signs are stable. SLOP will continue monitoring from a safe distance. A very safe distance.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scene 3: Elevator shaft -->
+    <section class="section">
+        <div class="container">
+            <div class="scene-container" id="elevator-shaft">
+                <div class="scene-label">S.L.O.P.://ELEVATOR_CAM [ASCENDING]</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Three-pillar loop -->
+    <section class="section">
+        <div class="container">
+            <div class="content-split">
+                <div class="split-image">
+                    <div class="art-frame">
+                        <img src="assets/img/tower-boss-rooftop.png"
+                             alt="Squad of workers in industrial gear facing a biomechanical creature on a skyscraper rooftop with NYC skyline behind"
+                             loading="lazy">
+                    </div>
+                </div>
+                <div class="split-text">
+                    <h2>The loop</h2>
+                    <p>The tower is the unlock gate. Alternate factory recipes, building blueprints, weapon upgrade components, and narrative fragments — all from tower loot. You can't build a better factory without it. You can't survive harder waves without factory gear. The three pillars form a closed loop.</p>
+                    <div class="slop-says mt-sm">
+                        SLOP has calculated the optimal risk-reward ratio for your upcoming contract. The reward is significant. The risk is also significant. SLOP recommends not thinking about the risk.
+                    </div>
+                    <pre class="mt-sm" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--teal); line-height: 1.8; overflow-x: auto;">Tower contracts --> loot --> Factory upgrades --> better gear --> Harder tower tiers
+                                                         --> wave defense --> territory expansion</pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="footer"></div>
+
+    <script src="js/main.js"></script>
+    <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+    <script type="module" src="js/scene-skyline.js"></script>
+    <script type="module" src="js/scene-elevator.js"></script>
+    <script src="js/scene-contracts.js"></script>
+</body>
+</html>
