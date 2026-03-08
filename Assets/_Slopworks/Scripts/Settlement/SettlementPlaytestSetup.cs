@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Self-contained settlement playtest bootstrapper. Drop on a GameObject, hit Play.
@@ -43,6 +46,17 @@ public class SettlementPlaytestSetup : MonoBehaviour
     private const float LookSensitivity = 2f;
     private const float MoveSpeed = 12f;
 
+    // -- model asset paths (building id -> FBX path) --
+    private static readonly Dictionary<string, string> ModelPaths = new()
+    {
+        { "factory_yard", "Assets/_Slopworks/Art/Models/Settlement/FactoryYard_ConcreteWarehouse.fbx" },
+        { "farmstead", "Assets/_Slopworks/Art/Models/Settlement/Farmstead_StoneRuin.fbx" },
+        { "watchtower", "Assets/_Slopworks/Art/Models/Settlement/Watchtower_RuinTower.fbx" },
+        { "workshop", "Assets/_Slopworks/Art/Models/Settlement/Workshop_BrickBuilding.fbx" },
+        { "market", "Assets/_Slopworks/Art/Models/Settlement/Market_TropicalShop.fbx" },
+        { "barracks", "Assets/_Slopworks/Art/Models/Settlement/Barracks_ConcreteBuilding.fbx" },
+    };
+
     private void Start()
     {
         CreateGround();
@@ -68,14 +82,14 @@ public class SettlementPlaytestSetup : MonoBehaviour
         _groundPlane.layer = PhysicsLayers.Terrain;
         _groundPlane.isStatic = true;
         _groundPlane.transform.position = new Vector3(0f, -0.25f, 0f);
-        _groundPlane.transform.localScale = new Vector3(600f, 0.5f, 600f);
+        _groundPlane.transform.localScale = new Vector3(400f, 0.5f, 400f);
 
         var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         mat.color = new Color(0.35f, 0.25f, 0.18f);
         mat.SetFloat("_Smoothness", 0.1f);
         _groundPlane.GetComponent<Renderer>().material = mat;
 
-        Debug.Log("settlement playtest: ground plane created (600x600)");
+        Debug.Log("settlement playtest: ground plane created (400x400)");
     }
 
     // ========== manager ==========
@@ -91,41 +105,42 @@ public class SettlementPlaytestSetup : MonoBehaviour
 
     private void CreateBuildings()
     {
-        // factory yard: hub, 0 repair stages, pre-claimed
+        // dense settlement cluster — buildings close together with street-width gaps
+        // factory yard: hub at center, long axis east-west
         CreateBuilding("factory_yard", "Factory yard", SettlementBuildingType.Depot,
-            Vector3.zero, 0, null, 30f, 200f, 4);
+            Vector3.zero, 0f, 0, null, 30f, 100f, 4);
 
-        // farmstead: 3 repair stages, produces raw_food
+        // farmstead: northeast of hub, angled
         CreateBuilding("farmstead", "Farmstead", SettlementBuildingType.Farmstead,
-            new Vector3(50f, 0f, 100f), 3,
+            new Vector3(50f, 0f, 35f), 40f, 3,
             new ProductionDefinition { producedItemId = "raw_food", producedAmount = 1, productionInterval = 10f },
             20f, 100f, 2);
 
-        // watchtower: 2 repair stages, 60m territory, no production
-        CreateBuilding("watchtower", "Watchtower", SettlementBuildingType.Watchtower,
-            new Vector3(0f, 0f, -80f), 2, null, 60f, 100f, 1);
-
-        // workshop: 3 repair stages, produces repair_kit
+        // workshop: northwest of hub
         CreateBuilding("workshop", "Workshop", SettlementBuildingType.Workshop,
-            new Vector3(100f, 0f, 30f), 3,
+            new Vector3(-40f, 0f, 30f), -15f, 3,
             new ProductionDefinition { producedItemId = "repair_kit", producedAmount = 1, productionInterval = 15f },
             20f, 100f, 2);
 
-        // market: 2 repair stages, produces trade_token
+        // market: southeast of hub
         CreateBuilding("market", "Market", SettlementBuildingType.Market,
-            new Vector3(-100f, 0f, 0f), 2,
+            new Vector3(45f, 0f, -40f), 25f, 2,
             new ProductionDefinition { producedItemId = "trade_token", producedAmount = 1, productionInterval = 20f },
             20f, 100f, 2);
 
-        // barracks: 2 repair stages, 40m territory, no production
+        // barracks: southwest of hub
         CreateBuilding("barracks", "Barracks", SettlementBuildingType.Barracks,
-            new Vector3(80f, 0f, 90f), 2, null, 40f, 100f, 3);
+            new Vector3(-40f, 0f, -45f), -30f, 2, null, 40f, 100f, 3);
+
+        // watchtower: south approach, guarding the settlement perimeter
+        CreateBuilding("watchtower", "Watchtower", SettlementBuildingType.Watchtower,
+            new Vector3(0f, 0f, -90f), 10f, 2, null, 60f, 100f, 1);
 
         Debug.Log($"settlement playtest: {_buildingBehaviours.Count} buildings created");
     }
 
     private void CreateBuilding(string id, string displayName, SettlementBuildingType type,
-        Vector3 position, int repairStageCount, ProductionDefinition production,
+        Vector3 position, float yRotation, int repairStageCount, ProductionDefinition production,
         float territoryRadius, float connectionRange, int workerSlots)
     {
         // create definition SO at runtime
@@ -171,31 +186,60 @@ public class SettlementPlaytestSetup : MonoBehaviour
         building.OnProduced += (bId, itemId, amount) =>
             Debug.Log($"settlement playtest: {displayName} produced {amount}x {itemId}");
 
-        // create visual: cube ruin shell
+        // create visual: load FBX model or fall back to cube
         var visualObj = new GameObject($"Building_{id}");
         visualObj.transform.position = position;
+        visualObj.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
 
-        var shell = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        shell.name = "RuinShell";
-        shell.transform.SetParent(visualObj.transform);
-        shell.transform.localPosition = new Vector3(0f, 2f, 0f);
-        shell.transform.localScale = new Vector3(6f, 4f, 6f);
-        shell.layer = PhysicsLayers.Structures;
+        GameObject shell = null;
+        float labelHeight = 5.5f;
+#if UNITY_EDITOR
+        if (ModelPaths.TryGetValue(id, out var modelPath) && !string.IsNullOrEmpty(modelPath))
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            if (prefab != null)
+            {
+                shell = Instantiate(prefab, visualObj.transform);
+                shell.name = "Model";
+                shell.transform.localPosition = Vector3.zero;
+                // set all child renderers to Structures layer
+                foreach (var r in shell.GetComponentsInChildren<Renderer>())
+                    r.gameObject.layer = PhysicsLayers.Structures;
+                // remove any imported colliders (we use our own sphere trigger)
+                foreach (var col in shell.GetComponentsInChildren<Collider>())
+                    Destroy(col);
+                // place label above the model bounds
+                var bounds = new Bounds(shell.transform.position, Vector3.zero);
+                foreach (var r in shell.GetComponentsInChildren<Renderer>())
+                    bounds.Encapsulate(r.bounds);
+                labelHeight = bounds.max.y - position.y + 2f;
+                Debug.Log($"settlement playtest: loaded model for {id} from {modelPath}");
+            }
+        }
+#endif
+        if (shell == null)
+        {
+            // fallback: cube primitive
+            shell = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            shell.name = "RuinShell";
+            shell.transform.SetParent(visualObj.transform);
+            shell.transform.localPosition = new Vector3(0f, 2f, 0f);
+            shell.transform.localScale = new Vector3(6f, 4f, 6f);
+            shell.layer = PhysicsLayers.Structures;
 
-        // weathered brown material
-        var shellMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        shellMat.color = new Color(0.4f, 0.3f, 0.2f);
-        shellMat.SetFloat("_Smoothness", 0.15f);
-        shell.GetComponent<Renderer>().material = shellMat;
+            var shellMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            shellMat.color = new Color(0.4f, 0.3f, 0.2f);
+            shellMat.SetFloat("_Smoothness", 0.15f);
+            shell.GetComponent<Renderer>().material = shellMat;
 
-        // remove shell's default collider (we add a sphere trigger on the parent)
-        var shellCollider = shell.GetComponent<Collider>();
-        if (shellCollider != null) Destroy(shellCollider);
+            var shellCollider = shell.GetComponent<Collider>();
+            if (shellCollider != null) Destroy(shellCollider);
+        }
 
         // text label above building
         var labelObj = new GameObject("Label");
         labelObj.transform.SetParent(visualObj.transform);
-        labelObj.transform.localPosition = new Vector3(0f, 5.5f, 0f);
+        labelObj.transform.localPosition = new Vector3(0f, labelHeight, 0f);
         var textMesh = labelObj.AddComponent<TextMesh>();
         textMesh.text = displayName;
         textMesh.fontSize = 32;
@@ -206,7 +250,7 @@ public class SettlementPlaytestSetup : MonoBehaviour
 
         // sphere collider trigger + kinematic rigidbody for interaction
         var sphereCol = visualObj.AddComponent<SphereCollider>();
-        sphereCol.radius = 5f;
+        sphereCol.radius = 15f;
         sphereCol.isTrigger = true;
         var rb = visualObj.AddComponent<Rigidbody>();
         rb.isKinematic = true;
@@ -250,8 +294,8 @@ public class SettlementPlaytestSetup : MonoBehaviour
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.35f, 0.28f, 0.2f);
-        RenderSettings.fogStartDistance = 50f;
-        RenderSettings.fogEndDistance = 300f;
+        RenderSettings.fogStartDistance = 80f;
+        RenderSettings.fogEndDistance = 250f;
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.15f, 0.12f, 0.1f);
@@ -266,7 +310,7 @@ public class SettlementPlaytestSetup : MonoBehaviour
         _explorer = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         _explorer.name = "Explorer";
         _explorer.layer = PhysicsLayers.Player;
-        _explorer.transform.position = new Vector3(0f, 1f, -5f);
+        _explorer.transform.position = new Vector3(0f, 1f, -15f);
 
         // remove default capsule collider and add character controller-friendly one
         var defaultCol = _explorer.GetComponent<Collider>();
@@ -294,7 +338,7 @@ public class SettlementPlaytestSetup : MonoBehaviour
         _yaw = _explorer.transform.eulerAngles.y;
         _pitch = 0f;
 
-        Debug.Log("settlement playtest: explorer spawned at (0, 1, -5)");
+        Debug.Log("settlement playtest: explorer spawned at (0, 1, -15)");
     }
 
     // ========== update ==========
