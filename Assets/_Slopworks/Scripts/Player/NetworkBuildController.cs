@@ -231,7 +231,16 @@ public class NetworkBuildController : NetworkBehaviour
         if (mouse.leftButton.wasPressedThisFrame && valid)
         {
             int rotDeg = Mathf.RoundToInt(ghostRot.eulerAngles.y);
-            GridManager.Instance.CmdPlace(cell, _surfaceY, rotDeg, CurrentVariant, category);
+
+            if (category == BuildingCategory.Wall || category == BuildingCategory.Ramp)
+            {
+                var dir = RotationToDirection(rotDeg);
+                GridManager.Instance.CmdPlaceDirectional(cell, _surfaceY, dir, CurrentVariant, category, ghostPos, ghostRot);
+            }
+            else
+            {
+                GridManager.Instance.CmdPlace(cell, _surfaceY, rotDeg, CurrentVariant, category, ghostPos);
+            }
             Debug.Log($"build: placed {category} at ({cell.x},{cell.y}) y={_surfaceY:F1}");
         }
 
@@ -435,6 +444,18 @@ public class NetworkBuildController : NetworkBehaviour
             BuildTool.Storage => BuildingCategory.Storage,
             BuildTool.Belt => BuildingCategory.Belt,
             _ => BuildingCategory.Foundation
+        };
+    }
+
+    private static Vector2Int RotationToDirection(int rotDeg)
+    {
+        return rotDeg switch
+        {
+            0 => Vector2Int.up,
+            90 => Vector2Int.right,
+            180 => Vector2Int.down,
+            270 => Vector2Int.left,
+            _ => Vector2Int.up
         };
     }
 

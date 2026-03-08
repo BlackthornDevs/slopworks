@@ -34,9 +34,13 @@ public class BuildingSnapPoint : MonoBehaviour
         var renderer = go.GetComponentInChildren<Renderer>();
         if (renderer == null) return;
 
-        var bounds = renderer.bounds;
-        var center = bounds.center;
-        var extents = bounds.extents;
+        var lb = renderer.localBounds;
+        var s = renderer.transform.lossyScale;
+        var extents = new Vector3(
+            lb.extents.x * Mathf.Abs(s.x),
+            lb.extents.y * Mathf.Abs(s.y),
+            lb.extents.z * Mathf.Abs(s.z));
+        var center = renderer.transform.TransformPoint(lb.center);
 
         // Local-space center offset (bounds.center is world-space)
         var localCenter = go.transform.InverseTransformPoint(center);

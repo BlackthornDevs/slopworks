@@ -114,15 +114,29 @@ public class GridManager : NetworkBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>
+    /// Returns the scaled extents of a prefab's renderer in world units.
+    /// Uses localBounds (valid on uninstantiated prefabs) scaled by lossyScale.
+    /// </summary>
+    public static Vector3 GetPrefabExtents(GameObject prefab)
+    {
+        if (prefab == null) return Vector3.one * 0.5f;
+        var renderer = prefab.GetComponentInChildren<Renderer>();
+        if (renderer == null) return Vector3.one * 0.5f;
+        var lb = renderer.localBounds;
+        var s = renderer.transform.lossyScale;
+        return new Vector3(
+            lb.extents.x * Mathf.Abs(s.x),
+            lb.extents.y * Mathf.Abs(s.y),
+            lb.extents.z * Mathf.Abs(s.z));
+    }
+
+    /// <summary>
     /// Returns the Y extent (half-height) of a prefab's renderer bounds.
     /// Used to place objects so their bottom sits on the surface.
     /// </summary>
     public static float GetPrefabHalfHeight(GameObject prefab)
     {
-        if (prefab == null) return 0.5f;
-        var renderer = prefab.GetComponentInChildren<Renderer>();
-        if (renderer == null) return 0.5f;
-        return renderer.bounds.extents.y;
+        return GetPrefabExtents(prefab).y;
     }
 
     /// <summary>
@@ -137,14 +151,7 @@ public class GridManager : NetworkBehaviour
     public static (Vector3 position, Quaternion rotation) GetGridPlacementPosition(
         Vector3 hitPoint, GameObject prefab, int rotationDeg)
     {
-        // Get renderer bounds extents from prefab, fallback 0.5 if no renderer
-        Vector3 extents = Vector3.one * 0.5f;
-        if (prefab != null)
-        {
-            var renderer = prefab.GetComponentInChildren<Renderer>();
-            if (renderer != null)
-                extents = renderer.bounds.extents;
-        }
+        Vector3 extents = GetPrefabExtents(prefab);
 
         // Determine footprint after rotation: at 90/270, X and Z swap
         float footprintX, footprintZ;
@@ -175,14 +182,7 @@ public class GridManager : NetworkBehaviour
     public static (Vector3 position, Quaternion rotation) GetSnapPlacementPosition(
         BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg)
     {
-        // Get renderer extents from prefab, fallback 0.5
-        Vector3 extents = Vector3.one * 0.5f;
-        if (prefab != null)
-        {
-            var renderer = prefab.GetComponentInChildren<Renderer>();
-            if (renderer != null)
-                extents = renderer.bounds.extents;
-        }
+        Vector3 extents = GetPrefabExtents(prefab);
 
         Vector3 snapPos = snapPoint.transform.position;
         Vector3 normal = snapPoint.Normal;
@@ -238,7 +238,7 @@ public class GridManager : NetworkBehaviour
 
     [ServerRpc(RequireOwnership = false)]
     public void CmdPlace(Vector2Int cell, float surfaceY, int rotation, int variant,
-        BuildingCategory category, NetworkConnection sender = null)
+        BuildingCategory category, Vector3 worldPos, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -255,11 +255,6 @@ public class GridManager : NetworkBehaviour
             Debug.Log($"grid: {category} rejected -- cell occupied at ({cell.x},{cell.y}) y={surfaceY:F1}");
             return;
         }
-
-        // Reconstruct a world hit point from cell coordinates for the unified formula
-        float cs = FactoryGrid.CellSize;
-        var worldHit = new Vector3(cell.x * cs + cs * 0.5f, surfaceY, cell.y * cs + cs * 0.5f);
-        Vector3 worldPos = GetGridPlacementPosition(worldHit, prefab, rotation).position;
 
         if (category == BuildingCategory.Foundation)
         {
@@ -294,7 +289,8 @@ public class GridManager : NetworkBehaviour
 
     [ServerRpc(RequireOwnership = false)]
     public void CmdPlaceDirectional(Vector2Int cell, float surfaceY, Vector2Int direction,
-        int variant, BuildingCategory category, NetworkConnection sender = null)
+        int variant, BuildingCategory category, Vector3 worldPos, Quaternion worldRot,
+        NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
@@ -308,13 +304,7 @@ public class GridManager : NetworkBehaviour
             return;
         }
 
-        // Reconstruct a world hit point from cell coordinates for the unified formula
-        float cs = FactoryGrid.CellSize;
-        var worldHit = new Vector3(cell.x * cs + cs * 0.5f, surfaceY, cell.y * cs + cs * 0.5f);
-        var placement = GetGridPlacementPosition(worldHit, prefab, 0);
-        var worldPos = placement.position;
-        var rot = placement.rotation;
-        var go = Instantiate(prefab, worldPos, rot);
+        var go = Instantiate(prefab, worldPos, worldRot);
         var info = go.AddComponent<PlacementInfo>();
         info.Category = category;
         info.Cell = cell;
