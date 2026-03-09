@@ -82,7 +82,8 @@ public class GridManager : NetworkBehaviour
             { BuildingCategory.Ramp, "Prefabs/Buildings/Ramps" },
             { BuildingCategory.Machine, "Prefabs/Buildings/Machines" },
             { BuildingCategory.Storage, "Prefabs/Buildings/Storage" },
-            { BuildingCategory.Belt, "Prefabs/Buildings/Belts" }
+            { BuildingCategory.Belt, "Prefabs/Buildings/Belts" },
+            { BuildingCategory.Support, "Prefabs/Buildings/Supports" }
         };
 
         foreach (var kvp in folders)
@@ -438,6 +439,44 @@ public class GridManager : NetworkBehaviour
 
         AutoWire(record, fromCell);
         Debug.Log($"grid: belt placed from ({fromCell.x},{fromCell.y}) to ({toCell.x},{toCell.y}) y={surfaceY:F1} by {sender?.ClientId}");
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdPlaceSupport(Vector3 position, Quaternion rotation,
+        int variant = 0, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var prefab = GetPrefab(BuildingCategory.Support, variant);
+        if (prefab == null)
+        {
+            // Runtime fallback: create a simple pole with snap anchor
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.transform.position = position;
+            go.transform.rotation = rotation;
+            go.transform.localScale = new Vector3(0.15f, 1f, 0.15f);
+            go.GetComponent<Renderer>().material.color = new Color(0.4f, 0.4f, 0.45f);
+
+            var anchorChild = new GameObject("SnapAnchor");
+            anchorChild.transform.SetParent(go.transform);
+            anchorChild.transform.localPosition = new Vector3(0, 1f, 0);
+            anchorChild.transform.localRotation = Quaternion.identity;
+            anchorChild.AddComponent<BeltSnapAnchor>();
+            anchorChild.layer = PhysicsLayers.SnapPoints;
+            var col = anchorChild.AddComponent<SphereCollider>();
+            col.radius = 0.2f;
+            col.isTrigger = true;
+
+            go.AddComponent<NetworkObject>();
+            ServerManager.Spawn(go);
+
+            Debug.Log($"grid: support placed at {position} by {sender?.ClientId}");
+            return;
+        }
+
+        var instance = Instantiate(prefab, position, rotation);
+        ServerManager.Spawn(instance);
+        Debug.Log($"grid: support placed at {position} by {sender?.ClientId}");
     }
 
     // ------------------------------------------------------------------

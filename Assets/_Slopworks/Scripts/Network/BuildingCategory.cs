@@ -5,5 +5,6 @@ public enum BuildingCategory
     Ramp,
     Machine,
     Storage,
-    Belt
+    Belt,
+    Support
 }
