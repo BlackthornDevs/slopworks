@@ -226,10 +226,13 @@ public class GridManager : NetworkBehaviour
         // Standard matching: opposite normal + tier pairing
         Vector3 desiredLocal = Quaternion.Inverse(ghostRot) * (-targetNormal);
 
+        bool peerSnap = ghostIsMachine
+            && (targetCategory == BuildingCategory.Machine || targetCategory == BuildingCategory.Storage);
+
         string wantTier;
         if (targetSnapName.Contains("HighEdge")) wantTier = "LowEdge";
         else if (targetSnapName.Contains("LowEdge")) wantTier = "HighEdge";
-        else if (targetSnapName.Contains("_Bot")) wantTier = "_Bot"; // machine-to-machine: Bot pairs with Bot
+        else if (targetSnapName.Contains("_Bot")) wantTier = peerSnap ? "_Bot" : "_Top";
         else if (targetSnapName.Contains("_Top")) wantTier = "_Bot";
         else wantTier = "_Mid";
 
