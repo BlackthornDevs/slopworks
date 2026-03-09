@@ -63,7 +63,9 @@ public class BuildingSnapPoint : MonoBehaviour
 
             if (isRamp)
             {
-                AddPoint(go, $"{name}_Mid", localCenter + offset, dir, faceSize);
+                // Ramps: bottom edge only per cardinal (skip South -- slope ends use HighEdge/LowEdge)
+                if (name != "South")
+                    AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
             }
             else
             {
@@ -73,11 +75,22 @@ public class BuildingSnapPoint : MonoBehaviour
             }
         }
 
-        var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
-        AddPoint(go, "Top_Center", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
-
-        if (!isRamp)
+        if (isRamp)
+        {
+            // HighEdge at top of slope (forward), LowEdge at bottom (back), Bot_Center underneath
+            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+            AddPoint(go, "HighEdge", localCenter + new Vector3(0, ext.y, ext.z), Vector3.forward,
+                new Vector2(worldExtents.x * 2, 0.1f));
+            AddPoint(go, "LowEdge", localCenter + new Vector3(0, -ext.y, -ext.z), Vector3.back,
+                new Vector2(worldExtents.x * 2, 0.1f));
             AddPoint(go, "Bot_Center", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+        }
+        else
+        {
+            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+            AddPoint(go, "Top_Center", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
+            AddPoint(go, "Bot_Center", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+        }
     }
 
     private static void AddPoint(GameObject parent, string name, Vector3 localPos, Vector3 normal, Vector2 size)

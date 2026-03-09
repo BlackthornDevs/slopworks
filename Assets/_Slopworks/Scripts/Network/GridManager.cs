@@ -206,9 +206,11 @@ public class GridManager : NetworkBehaviour
         // Ghost snap's rotated normal should oppose the target normal
         Vector3 desiredLocal = Quaternion.Inverse(ghostRot) * (-targetNormal);
 
-        // Opposite height tier
+        // Opposite height tier / slope edge pairing
         string wantTier;
-        if (targetSnapName.Contains("_Bot")) wantTier = "_Top";
+        if (targetSnapName.Contains("HighEdge")) wantTier = "LowEdge";
+        else if (targetSnapName.Contains("LowEdge")) wantTier = "HighEdge";
+        else if (targetSnapName.Contains("_Bot")) wantTier = "_Top";
         else if (targetSnapName.Contains("_Top")) wantTier = "_Bot";
         else wantTier = "_Mid";
         // Center snaps (Top_Center, Bot_Center) have vertical normals --

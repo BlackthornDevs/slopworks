@@ -79,8 +79,10 @@ public static class SnapPointPrefabSetup
 
                 if (isRamp)
                 {
-                    // Ramps: mid only per face to avoid collider clutter
-                    AddSnapPoint(root, $"SnapPoint_{name}_Mid", center + offset, dir, faceSize);
+                    // Ramps: bottom edge only per cardinal (no mid/top -- slope blocks them)
+                    // Skip South face -- HighEdge/LowEdge handle the slope ends
+                    if (name != "South")
+                        AddSnapPoint(root, $"SnapPoint_{name}_Bot", center + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
                 }
                 else
                 {
@@ -90,15 +92,18 @@ public static class SnapPointPrefabSetup
                 }
             }
 
-            // Top face center (all types). Bottom only for non-ramps.
+            // Top/Bottom face centers (non-ramp only -- ramps add Bot_Center in their own block)
             var topBotSize = new Vector2(ext.x * 2, ext.z * 2);
-            AddSnapPoint(root, "SnapPoint_Top_Center", center + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
             if (!isRamp)
+            {
+                AddSnapPoint(root, "SnapPoint_Top_Center", center + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
                 AddSnapPoint(root, "SnapPoint_Bot_Center", center + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+            }
 
             if (isRamp)
             {
                 // Slope snaps: HighEdge and LowEdge at actual mesh heights
+                // Bot_Center on bottom face
                 var (highY, lowY) = GetRampEdgeHeights(renderer);
                 AddSnapPoint(root, "SnapPoint_HighEdge",
                     new Vector3(center.x, highY, center.z + ext.z), Vector3.forward,
@@ -106,8 +111,10 @@ public static class SnapPointPrefabSetup
                 AddSnapPoint(root, "SnapPoint_LowEdge",
                     new Vector3(center.x, lowY, center.z - ext.z), Vector3.back,
                     new Vector2(ext.x * 2, 0.1f));
-                total += 7; // 4 mid + top + high + low
-                Debug.Log($"snap setup: added 7 snap points to {prefab.name} (highY={highY:F2}, lowY={lowY:F2})");
+                AddSnapPoint(root, "SnapPoint_Bot_Center",
+                    center + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+                total += 6; // 3 cardinal bot + high + low + bot_center
+                Debug.Log($"snap setup: added 6 snap points to {prefab.name} (highY={highY:F2}, lowY={lowY:F2})");
             }
             else
             {

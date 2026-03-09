@@ -37,6 +37,8 @@ public class NetworkBuildController : NetworkBehaviour
     private bool _zoopMode;
     private bool _zoopStartSet;
     private Vector2Int _zoopStartCell;
+    private Vector3 _zoopStartPos;
+    private Quaternion _zoopStartRot;
     private float _zoopStartSurfaceY;
     private readonly List<GameObject> _ghostPool = new();
     private readonly List<GameObject> _zoopGhosts = new();
@@ -60,6 +62,8 @@ public class NetworkBuildController : NetworkBehaviour
 
     private static readonly int StructuralMask =
         (1 << PhysicsLayers.Terrain) | (1 << PhysicsLayers.Structures) | (1 << PhysicsLayers.SnapPoints);
+    private static readonly int DeleteMask =
+        (1 << PhysicsLayers.Structures);
 
     private static readonly Color ValidColor = new(0f, 1f, 0f, 0.5f);
     private static readonly Color InvalidColor = new(1f, 0f, 0f, 0.5f);
@@ -198,6 +202,28 @@ public class NetworkBuildController : NetworkBehaviour
 
     private void HandleBuildInput(Mouse mouse)
     {
+        // Zoop after start: ray-plane intersection at anchor height.
+        // MaxZoopCount in GetZoopCells prevents runaway ghost creation.
+        if (_zoopMode && _zoopStartSet)
+        {
+            var ray = new Ray(_camera.transform.position, _camera.transform.forward);
+            var plane = new Plane(Vector3.up, _zoopStartPos);
+            Vector3 planePoint;
+            if (plane.Raycast(ray, out float enter) && enter < _placementRange)
+            {
+                planePoint = ray.GetPoint(enter);
+            }
+            else
+            {
+                planePoint = _zoopStartPos + Vector3.ProjectOnPlane(_camera.transform.forward, Vector3.up).normalized * _placementRange;
+            }
+
+            var endCell = GridManager.Instance.Grid.WorldToCell(
+                new Vector3(Mathf.Round(planePoint.x), _zoopStartPos.y, Mathf.Round(planePoint.z)));
+            HandleZoopInput(mouse, _zoopStartPos, _zoopStartRot, endCell);
+            return;
+        }
+
         if (!RaycastPlacement(out var hit))
         {
             HideGhost();
@@ -259,9 +285,9 @@ public class NetworkBuildController : NetworkBehaviour
             ghostRot = result.rotation;
         }
 
-        // Zoop: grid-mode batch placement
+        // Zoop first click: uses whatever placement mode is active (grid or snap)
         var cell = GridManager.Instance.Grid.WorldToCell(ghostPos);
-        if (_zoopMode && _placementMode == PlacementMode.Grid)
+        if (_zoopMode)
         {
             HandleZoopInput(mouse, ghostPos, ghostRot, cell);
             return;
@@ -323,9 +349,9 @@ public class NetworkBuildController : NetworkBehaviour
             return;
         }
 
-        // Raycast against all placed objects (terrain + structures + interactable)
+        // Raycast against placed buildings only (not snap points or terrain)
         var ray = new Ray(_camera.transform.position, _camera.transform.forward);
-        if (!Physics.Raycast(ray, out var hit, _placementRange))
+        if (!Physics.Raycast(ray, out var hit, _placementRange, DeleteMask))
         {
             ClearDeleteHighlight();
             return;
@@ -577,8 +603,10 @@ public class NetworkBuildController : NetworkBehaviour
             {
                 _zoopStartSet = true;
                 _zoopStartCell = currentCell;
+                _zoopStartPos = currentPos;
+                _zoopStartRot = currentRot;
                 _zoopStartSurfaceY = EffectiveY;
-                Debug.Log($"build: zoop start ({currentCell.x},{currentCell.y})");
+                Debug.Log($"build: zoop start ({currentCell.x},{currentCell.y}) pos={currentPos}");
             }
             return;
         }
@@ -595,26 +623,107 @@ public class NetworkBuildController : NetworkBehaviour
             CancelZoop();
     }
 
+    /// <summary>
+    /// Snap-based zoop: chain ghosts by snapping each to the previous one's
+    /// snap point along the zoop direction. No cell math or footprint calculations.
+    /// </summary>
     private void UpdateZoopPreview(Vector2Int endCell, Quaternion rot)
     {
         var prefab = GetSelectedPrefab();
         if (prefab == null) return;
 
-        var cells = GetZoopCells(_zoopStartCell, endCell);
+        // Determine zoop direction from mouse movement (plane intersection delta)
+        Vector3 delta = new Vector3(endCell.x - _zoopStartCell.x, 0f, endCell.y - _zoopStartCell.y);
+        if (delta.sqrMagnitude < 0.01f)
+        {
+            // No movement -- show just the anchor ghost
+            while (_zoopGhosts.Count < 1)
+                _zoopGhosts.Add(CreateGhostFromPrefab(prefab));
+            _zoopGhosts[0].transform.position = _zoopStartPos;
+            _zoopGhosts[0].transform.rotation = _zoopStartRot;
+            _zoopGhosts[0].SetActive(true);
+            ApplyGhostColor(_zoopGhosts[0], ValidColor);
+            for (int j = 1; j < _zoopGhosts.Count; j++)
+                _zoopGhosts[j].SetActive(false);
+            if (_ghost != null) _ghost.SetActive(false);
+            return;
+        }
 
-        // Ensure enough ghosts in pool
-        while (_zoopGhosts.Count < cells.Count)
+        // Pick zoop direction.
+        // Walls: force along length axis (perpendicular to facing) so they
+        // chain side-by-side, never face-to-face.
+        Vector3 zoopDir;
+        if (_currentTool == BuildTool.Wall)
+        {
+            int wallRot = Mathf.RoundToInt(_zoopStartRot.eulerAngles.y) % 360;
+            bool facesZ = wallRot == 0 || wallRot == 180;
+            // Length axis is perpendicular to facing
+            if (facesZ)
+                zoopDir = new Vector3(Mathf.Sign(delta.x) != 0 ? Mathf.Sign(delta.x) : 1f, 0f, 0f);
+            else
+                zoopDir = new Vector3(0f, 0f, Mathf.Sign(delta.z) != 0 ? Mathf.Sign(delta.z) : 1f);
+        }
+        else if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.z))
+        {
+            zoopDir = new Vector3(Mathf.Sign(delta.x), 0f, 0f);
+        }
+        else
+        {
+            zoopDir = new Vector3(0f, 0f, Mathf.Sign(delta.z));
+        }
+
+        // How many ghosts: distance along dominant axis / snap step size.
+        // We discover the step size from the first snap chain link.
+        int rotDeg = Mathf.RoundToInt(_zoopStartRot.eulerAngles.y);
+
+        // Build chain: each ghost snaps to the previous ghost's snap point
+        var positions = new List<Vector3> { _zoopStartPos };
+        var rotations = new List<Quaternion> { _zoopStartRot };
+
+        for (int i = 0; i < MaxZoopCount - 1; i++)
+        {
+            var prevPos = positions[positions.Count - 1];
+            var prevRot = rotations[rotations.Count - 1];
+
+            // Find the snap point on the prefab that faces the zoop direction
+            var snapPoint = FindZoopSnapPoint(prefab, zoopDir, prevRot);
+            if (snapPoint == null) break;
+
+            // Get the world position of that snap point on the previous ghost
+            Vector3 snapWorldPos = prevPos + prevRot * snapPoint.transform.localPosition;
+
+            // Place next ghost by snapping to that point
+            var (nextPos, nextRot) = GridManager.GetSnapPlacementPosition(
+                snapPoint, prefab, rotDeg, 0f);
+            // GetSnapPlacementPosition uses the snap's actual world transform,
+            // but we need it relative to the previous ghost. Compute manually:
+            // Find the ghost's matching snap (opposite normal)
+            var ghostSnap = FindZoopSnapPoint(prefab, -zoopDir, prevRot);
+            if (ghostSnap == null) break;
+
+            Vector3 ghostSnapLocal = ghostSnap.transform.localPosition;
+            nextPos = snapWorldPos - prevRot * ghostSnapLocal;
+
+            // Check if we've passed the target along the zoop axis
+            float distFromStart = Vector3.Dot(nextPos - _zoopStartPos, zoopDir);
+            float targetDist = Vector3.Dot(delta, zoopDir);
+            if (targetDist < 0f) targetDist = -targetDist;
+            if (distFromStart > targetDist + 0.1f) break;
+
+            positions.Add(nextPos);
+            rotations.Add(prevRot);
+        }
+
+        // Ensure enough ghosts
+        while (_zoopGhosts.Count < positions.Count)
             _zoopGhosts.Add(CreateGhostFromPrefab(prefab));
 
         for (int i = 0; i < _zoopGhosts.Count; i++)
         {
-            if (i < cells.Count)
+            if (i < positions.Count)
             {
-                float cs = FactoryGrid.CellSize;
-                var worldHit = new Vector3(cells[i].x * cs + cs * 0.5f, _zoopStartSurfaceY, cells[i].y * cs + cs * 0.5f);
-                var result = GridManager.GetGridPlacementPosition(worldHit, prefab, Mathf.RoundToInt(rot.eulerAngles.y));
-                _zoopGhosts[i].transform.position = result.position;
-                _zoopGhosts[i].transform.rotation = result.rotation;
+                _zoopGhosts[i].transform.position = positions[i];
+                _zoopGhosts[i].transform.rotation = rotations[i];
                 _zoopGhosts[i].SetActive(true);
                 ApplyGhostColor(_zoopGhosts[i], ValidColor);
             }
@@ -624,68 +733,79 @@ public class NetworkBuildController : NetworkBehaviour
             }
         }
 
-        // Hide single ghost during preview
         if (_ghost != null) _ghost.SetActive(false);
     }
 
-    private List<Vector2Int> GetZoopCells(Vector2Int start, Vector2Int end)
+    private const int MaxZoopCount = 5;
+
+    /// <summary>
+    /// Find the snap point on a prefab whose normal (in world space given rotation)
+    /// most closely matches the desired world direction.
+    /// </summary>
+    private static BuildingSnapPoint FindZoopSnapPoint(GameObject prefab, Vector3 worldDir, Quaternion rot)
     {
-        var cells = new List<Vector2Int>();
-        int dx = end.x - start.x;
-        int dz = end.y - start.y;
+        var snaps = prefab.GetComponentsInChildren<BuildingSnapPoint>();
+        BuildingSnapPoint best = null;
+        float bestScore = -1f;
 
-        // Walk along dominant axis
-        if (Mathf.Abs(dx) >= Mathf.Abs(dz))
+        // We want the snap whose local normal, rotated into world, aligns with worldDir
+        Vector3 desiredLocal = Quaternion.Inverse(rot) * worldDir;
+
+        foreach (var s in snaps)
         {
-            int step = dx >= 0 ? 1 : -1;
-            var prefab = GetSelectedPrefab();
-            var extents = GridManager.GetPrefabExtents(prefab);
-            int footprintCells = Mathf.Max(1, Mathf.RoundToInt(extents.x * 2f / FactoryGrid.CellSize));
+            float dot = Vector3.Dot(s.Normal, desiredLocal);
+            if (dot < 0.5f) continue;
 
-            for (int x = start.x; step > 0 ? x <= end.x : x >= end.x; x += step * footprintCells)
-                cells.Add(new Vector2Int(x, start.y));
-        }
-        else
-        {
-            int step = dz >= 0 ? 1 : -1;
-            var prefab = GetSelectedPrefab();
-            var extents = GridManager.GetPrefabExtents(prefab);
-            int footprintCells = Mathf.Max(1, Mathf.RoundToInt(extents.z * 2f / FactoryGrid.CellSize));
+            // Prefer HighEdge/LowEdge over cardinal snaps for ramp chaining.
+            // These encode slope geometry that cardinal _Bot snaps don't.
+            float edgeBonus = s.gameObject.name.Contains("Edge") ? 0.1f : 0f;
+            float score = dot + edgeBonus;
 
-            for (int z = start.y; step > 0 ? z <= end.y : z >= end.y; z += step * footprintCells)
-                cells.Add(new Vector2Int(start.x, z));
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = s;
+            }
         }
 
-        return cells;
+        return best;
     }
 
+    /// <summary>
+    /// Place the zoop chain using the same snap-to-snap logic as the preview.
+    /// Ghosts already hold the correct positions -- just read from them.
+    /// </summary>
     private void PlaceZoopLine(Vector2Int start, Vector2Int end, Quaternion rot)
     {
         var prefab = GetSelectedPrefab();
         if (prefab == null) return;
 
         var category = ToolToCategory(_currentTool);
-        int rotDeg = Mathf.RoundToInt(rot.eulerAngles.y);
-        var cells = GetZoopCells(start, end);
 
-        foreach (var cell in cells)
+        int placed = 0;
+        for (int i = 0; i < _zoopGhosts.Count; i++)
         {
-            float cs = FactoryGrid.CellSize;
-            var worldHit = new Vector3(cell.x * cs + cs * 0.5f, _zoopStartSurfaceY, cell.y * cs + cs * 0.5f);
-            var result = GridManager.GetGridPlacementPosition(worldHit, prefab, rotDeg);
+            if (!_zoopGhosts[i].activeSelf) continue;
+
+            var pos = _zoopGhosts[i].transform.position;
+            var ghostRot = _zoopGhosts[i].transform.rotation;
+            int rotDeg = Mathf.RoundToInt(ghostRot.eulerAngles.y);
+            var cell = GridManager.Instance.Grid.WorldToCell(pos);
+            float surfaceY = pos.y - GridManager.GetPrefabBaseOffset(prefab);
 
             if (category == BuildingCategory.Wall || category == BuildingCategory.Ramp)
             {
                 var dir = RotationToDirection(rotDeg);
-                GridManager.Instance.CmdPlaceDirectional(cell, _zoopStartSurfaceY, dir, CurrentVariant, category, result.position, result.rotation);
+                GridManager.Instance.CmdPlaceDirectional(cell, surfaceY, dir, CurrentVariant, category, pos, ghostRot);
             }
             else
             {
-                GridManager.Instance.CmdPlace(cell, _zoopStartSurfaceY, rotDeg, CurrentVariant, category, result.position);
+                GridManager.Instance.CmdPlace(cell, surfaceY, rotDeg, CurrentVariant, category, pos);
             }
+            placed++;
         }
 
-        Debug.Log($"build: zoop placed {cells.Count} {category}");
+        Debug.Log($"build: zoop placed {placed} {category}");
     }
 
     // -- Raycast helpers --
@@ -699,8 +819,9 @@ public class NetworkBuildController : NetworkBehaviour
     {
         var ray = new Ray(_camera.transform.position, _camera.transform.forward);
 
-        // Skip snap detection during zoop -- zoop always uses grid placement
-        if (!_zoopMode)
+        // Allow snap detection for zoop's first click (before start is locked),
+        // then skip it once zooping so preview stays grid-based.
+        if (!_zoopMode || !_zoopStartSet)
         {
             // RaycastAll to catch all overlapping snap spheres along the ray
             var hits = Physics.RaycastAll(ray, _placementRange, StructuralMask);
