@@ -23,10 +23,10 @@ public class SnapPlacementTests
         return go;
     }
 
-    private GameObject CreateCubeWithSnaps(Vector3 scale, bool isRamp = false)
+    private GameObject CreateTestBuildingWithSnaps(Vector3 scale, BuildingCategory category = BuildingCategory.Foundation)
     {
         var go = CreateCube(scale);
-        BuildingSnapPoint.GenerateFromBounds(go, isRamp);
+        BuildingSnapPoint.GenerateFromBounds(go, category);
         return go;
     }
 
@@ -85,8 +85,8 @@ public class SnapPlacementTests
         // Existing 4x0.5x4 at origin. North_Mid at (0, 0, 2), normal (0,0,1).
         // Ghost 4x0.5x4. Ghost's South_Mid at local (0, 0, -2).
         // ghostPos = (0,0,2) - (0,0,-2) = (0, 0, 4). Surfaces flush at Z=2.
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
 
         var northSnap = FindSnapByNormal(_existing, Vector3.forward);
         Assert.IsNotNull(northSnap, "Should have a north snap point");
@@ -104,8 +104,8 @@ public class SnapPlacementTests
         // Foundation North_Mid at (0, 0, 2), normal (0,0,1).
         // Wall ghost South_Mid at local (0, 0, -0.25).
         // ghostPos = (0, 0, 2) - (0, 0, -0.25) = (0, 0, 2.25). Flush at Z=2.
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 3f, 0.5f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 3f, 0.5f));
 
         var northSnap = FindSnapByNormal(_existing, Vector3.forward);
         Assert.IsNotNull(northSnap, "Should have a north snap point");
@@ -120,11 +120,11 @@ public class SnapPlacementTests
     [Test]
     public void SnapPlacement_FoundationOnTop_StacksVertically()
     {
-        // Top_Center at (0, 0.25, 0), normal (0,1,0).
-        // Ghost's Bot_Center at local (0, -0.25, 0).
+        // Center_Top at (0, 0.25, 0), normal (0,1,0).
+        // Ghost's Center_Bot at local (0, -0.25, 0).
         // ghostPos = (0, 0.25, 0) - (0, -0.25, 0) = (0, 0.5, 0).
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
 
         var topSnap = FindSnapByNormal(_existing, Vector3.up);
         Assert.IsNotNull(topSnap, "Should have a top snap point");
@@ -144,8 +144,8 @@ public class SnapPlacementTests
         // Ghost at 90 deg: desiredLocal = Inv(90Y) * (-1,0,0) = (0,0,-1) = South.
         // Ghost's South_Mid at local (0, 0, -0.25). Rotated by 90Y: (-0.25, 0, 0).
         // ghostPos = (2, 0, 0) - (-0.25, 0, 0) = (2.25, 0, 0).
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 3f, 0.5f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 3f, 0.5f));
 
         var eastSnap = FindSnapByNormal(_existing, Vector3.right);
         Assert.IsNotNull(eastSnap, "Should have an east snap point");
@@ -160,11 +160,11 @@ public class SnapPlacementTests
     [Test]
     public void SnapPlacement_BottomSnap_HangsBelowExistingBuilding()
     {
-        // Bot_Center at (0, -0.25, 0), normal (0,-1,0).
-        // Ghost's Top_Center at local (0, 0.25, 0).
+        // Center_Bot at (0, -0.25, 0), normal (0,-1,0).
+        // Ghost's Center_Top at local (0, 0.25, 0).
         // ghostPos = (0, -0.25, 0) - (0, 0.25, 0) = (0, -0.5, 0).
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
 
         var botSnap = FindSnapByNormal(_existing, Vector3.down);
         Assert.IsNotNull(botSnap, "Should have a bottom snap point");
@@ -182,8 +182,8 @@ public class SnapPlacementTests
         // Wall North_Bot at (0, -1.5, 0.25), normal (0,0,1).
         // Ghost wall South_Top at local (0, 1.5, -0.25). Opposite normal, opposite tier.
         // ghostPos = (0, -1.5, 0.25) - (0, 1.5, -0.25) = (0, -3.0, 0.5).
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 3f, 0.5f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 3f, 0.5f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 3f, 0.5f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 3f, 0.5f));
 
         var northBot = FindSnapByName(_existing, "North_Bot");
         Assert.IsNotNull(northBot, "Should have a North_Bot snap point");
@@ -199,8 +199,8 @@ public class SnapPlacementTests
         // Wall North_Top at (0, 1.5, 0.25), normal (0,0,1).
         // Ghost wall South_Bot at local (0, -1.5, -0.25). Opposite normal, opposite tier.
         // ghostPos = (0, 1.5, 0.25) - (0, -1.5, -0.25) = (0, 3.0, 0.5).
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 3f, 0.5f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 3f, 0.5f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 3f, 0.5f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 3f, 0.5f));
 
         var northTop = FindSnapByName(_existing, "North_Top");
         Assert.IsNotNull(northTop, "Should have a North_Top snap point");
@@ -213,10 +213,10 @@ public class SnapPlacementTests
     [Test]
     public void SnapPlacement_BottomSnap_SurfaceYDiffersFromExisting()
     {
-        // Bot_Center placement must produce different surfaceY than existing building
+        // Center_Bot placement must produce different surfaceY than existing building
         // so HasBuildingAt doesn't block it.
-        _existing = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
-        _prefab = CreateCubeWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _existing = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
+        _prefab = CreateTestBuildingWithSnaps(new Vector3(4f, 0.5f, 4f));
 
         var botSnap = FindSnapByNormal(_existing, Vector3.down);
         Assert.IsNotNull(botSnap, "Should have a bottom snap point");

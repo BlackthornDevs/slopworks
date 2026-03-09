@@ -173,13 +173,16 @@ public class GridManager : NetworkBehaviour
     /// No extent/offset math -- positions are baked into the snap point children.
     /// </summary>
     public static (Vector3 position, Quaternion rotation) GetSnapPlacementPosition(
-        BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg, float surfaceY)
+        BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg, float surfaceY,
+        BuildingCategory ghostCategory = BuildingCategory.Foundation,
+        BuildingCategory targetCategory = BuildingCategory.Foundation)
     {
         Vector3 targetPos = snapPoint.transform.position;
         Vector3 targetNormal = snapPoint.Normal;
         Quaternion ghostRot = Quaternion.Euler(0f, rotationDeg, 0f);
 
-        var ghostSnap = FindGhostAttachSnap(prefab, targetNormal, snapPoint.gameObject.name, ghostRot);
+        var ghostSnap = FindGhostAttachSnap(prefab, targetNormal, snapPoint.gameObject.name,
+            ghostRot, ghostCategory, targetCategory);
 
         if (ghostSnap != null)
         {
@@ -195,26 +198,43 @@ public class GridManager : NetworkBehaviour
 
     /// <summary>
     /// Find the ghost prefab's snap point that should connect to the target snap.
-    /// Picks opposite normal + opposite height tier (_Bot→_Top, _Top→_Bot, _Mid→_Mid).
+    /// Structural on structural: opposite normal + opposite height tier.
+    /// Machine/Storage on structural: always Center_Bot (sits on surface, never edge-to-edge).
+    /// Machine/Storage on machine/storage: opposite normal cardinal _Bot matching (side-by-side).
     /// </summary>
     private static BuildingSnapPoint FindGhostAttachSnap(
-        GameObject prefab, Vector3 targetNormal, string targetSnapName, Quaternion ghostRot)
+        GameObject prefab, Vector3 targetNormal, string targetSnapName, Quaternion ghostRot,
+        BuildingCategory ghostCategory, BuildingCategory targetCategory)
     {
         var snaps = prefab.GetComponentsInChildren<BuildingSnapPoint>();
         if (snaps.Length == 0) return null;
 
-        // Ghost snap's rotated normal should oppose the target normal
+        bool ghostIsMachine = ghostCategory == BuildingCategory.Machine
+            || ghostCategory == BuildingCategory.Storage;
+        bool targetIsStructural = targetCategory == BuildingCategory.Foundation
+            || targetCategory == BuildingCategory.Wall
+            || targetCategory == BuildingCategory.Ramp;
+
+        // Machine/Storage on structural: always use Center_Bot
+        if (ghostIsMachine && targetIsStructural)
+        {
+            foreach (var s in snaps)
+                if (s.gameObject.name.Contains("Center_Bot")) return s;
+            return null;
+        }
+
+        // Standard matching: opposite normal + tier pairing
         Vector3 desiredLocal = Quaternion.Inverse(ghostRot) * (-targetNormal);
 
-        // Opposite height tier / slope edge pairing
+        bool peerSnap = ghostIsMachine
+            && (targetCategory == BuildingCategory.Machine || targetCategory == BuildingCategory.Storage);
+
         string wantTier;
         if (targetSnapName.Contains("HighEdge")) wantTier = "LowEdge";
         else if (targetSnapName.Contains("LowEdge")) wantTier = "HighEdge";
-        else if (targetSnapName.Contains("_Bot")) wantTier = "_Top";
+        else if (targetSnapName.Contains("_Bot")) wantTier = peerSnap ? "_Bot" : "_Top";
         else if (targetSnapName.Contains("_Top")) wantTier = "_Bot";
         else wantTier = "_Mid";
-        // Center snaps (Top_Center, Bot_Center) have vertical normals --
-        // opposite normal match handles them without tier logic
 
         BuildingSnapPoint best = null;
         float bestScore = float.MinValue;
@@ -256,7 +276,11 @@ public class GridManager : NetworkBehaviour
             _ => go.layer // keep prefab layer (e.g. Interactable for machines)
         };
         foreach (var t in go.GetComponentsInChildren<Transform>(true))
+        {
+            // Preserve snap point layer -- they must stay on SnapPoints for raycasts
+            if (t.gameObject.layer == PhysicsLayers.SnapPoints) continue;
             t.gameObject.layer = layer;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -300,7 +324,7 @@ public class GridManager : NetworkBehaviour
         info.SurfaceY = surfaceY;
         info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         ServerManager.Spawn(go);
-        BuildingSnapPoint.GenerateFromBounds(go, category == BuildingCategory.Ramp);
+        BuildingSnapPoint.GenerateFromBounds(go, category);
 
         var record = new PlacedRecord
         {
@@ -344,7 +368,7 @@ public class GridManager : NetworkBehaviour
         info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         info.EdgeDirection = direction;
         ServerManager.Spawn(go);
-        BuildingSnapPoint.GenerateFromBounds(go, category == BuildingCategory.Ramp);
+        BuildingSnapPoint.GenerateFromBounds(go, category);
 
         _placedRecords[key] = new PlacedRecord
         {
@@ -393,7 +417,7 @@ public class GridManager : NetworkBehaviour
         }
 
         ServerManager.Spawn(go);
-        BuildingSnapPoint.GenerateFromBounds(go);
+        BuildingSnapPoint.GenerateFromBounds(go, BuildingCategory.Belt);
 
         var visualizer = go.AddComponent<BeltItemVisualizer>();
         visualizer.Init(netBelt);

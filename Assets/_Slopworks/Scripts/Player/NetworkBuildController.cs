@@ -58,12 +58,14 @@ public class NetworkBuildController : NetworkBehaviour
 
     // Snap mode toggle: center snaps (default) vs edge snaps (scroll wheel)
     private bool _edgeSnapMode;
+    // Machine/Storage snap target: false = foundation/grid (default), true = peer machine/storage
+    private bool _peerSnapMode;
     private GameObject _snapHighlight;
 
     private static readonly int StructuralMask =
         (1 << PhysicsLayers.Terrain) | (1 << PhysicsLayers.Structures) | (1 << PhysicsLayers.SnapPoints);
     private static readonly int DeleteMask =
-        (1 << PhysicsLayers.Structures);
+        (1 << PhysicsLayers.Structures) | (1 << PhysicsLayers.Interactable);
 
     private static readonly Color ValidColor = new(0f, 1f, 0f, 0.5f);
     private static readonly Color InvalidColor = new(1f, 0f, 0f, 0.5f);
@@ -165,11 +167,16 @@ public class NetworkBuildController : NetworkBehaviour
         if (kb.tabKey.wasPressedThisFrame)
             CycleVariant();
 
-        // Snap mode toggle: scroll wheel swaps center vs edge snap points
-        if (_placementMode == PlacementMode.Snap)
+        // Snap mode toggle: scroll wheel swaps snap filter
+        float scroll = mouse.scroll.ReadValue().y;
+        if (Mathf.Abs(scroll) > 0.1f)
         {
-            float scroll = mouse.scroll.ReadValue().y;
-            if (Mathf.Abs(scroll) > 0.1f)
+            if (_currentTool == BuildTool.Machine || _currentTool == BuildTool.Storage)
+            {
+                _peerSnapMode = !_peerSnapMode;
+                Debug.Log($"build: snap target = {(_peerSnapMode ? "MACHINE/STORAGE" : "FOUNDATION")}");
+            }
+            else
             {
                 _edgeSnapMode = !_edgeSnapMode;
                 Debug.Log($"build: snap filter = {(_edgeSnapMode ? "EDGE" : "CENTER")}");
@@ -242,6 +249,10 @@ public class NetworkBuildController : NetworkBehaviour
 
         if (_placementMode == PlacementMode.Snap && _activeSnapPoint != null)
         {
+            var targetInfo = _activeSnapPoint.GetComponentInParent<PlacementInfo>();
+            var ghostCategory = ToolToCategory(_currentTool);
+            var targetCategory = targetInfo != null ? targetInfo.Category : BuildingCategory.Foundation;
+
             int effectiveRotation;
             if (Mathf.Abs(_activeSnapPoint.Normal.y) > 0.9f)
             {
@@ -249,7 +260,6 @@ public class NetworkBuildController : NetworkBehaviour
             }
             else
             {
-                var targetInfo = _activeSnapPoint.GetComponentInParent<PlacementInfo>();
                 bool isWallOnWall = targetInfo != null
                     && targetInfo.Category == BuildingCategory.Wall
                     && _currentTool == BuildTool.Wall;
@@ -272,7 +282,7 @@ public class NetworkBuildController : NetworkBehaviour
             }
 
             var result = GridManager.GetSnapPlacementPosition(
-                _activeSnapPoint, prefab, effectiveRotation, _surfaceY);
+                _activeSnapPoint, prefab, effectiveRotation, _surfaceY, ghostCategory, targetCategory);
             ghostPos = result.position + new Vector3(0f, _nudgeOffset, 0f);
             ghostRot = result.rotation;
         }
@@ -494,6 +504,7 @@ public class NetworkBuildController : NetworkBehaviour
         _nudgeOffset = 0f;
         if (tool == BuildTool.Machine || tool == BuildTool.Storage)
             _placeRotation = 0;
+        _peerSnapMode = false;
         Debug.Log($"build: tool = {tool}");
     }
 
@@ -912,23 +923,40 @@ public class NetworkBuildController : NetworkBehaviour
     }
 
     /// <summary>
-    /// Returns true if the snap point matches the current center/edge filter.
-    /// Center mode: names containing "Center" or "Mid" (Top_Center, Bot_Center, North_Mid, etc.)
-    /// Edge mode: names containing "Top" or "Bot" on cardinal faces (North_Top, South_Bot, etc.)
-    ///            but NOT Top_Center or Bot_Center.
+    /// Returns true if the snap point matches the current snap filter.
+    /// Structural tools: scroll toggles center (Mid/Center) vs edge (Top/Bot cardinal).
+    /// Machine/Storage tools: scroll toggles foundation mode (_Top snaps on structural)
+    ///                        vs peer mode (any snap on other machines/storage).
     /// </summary>
     private bool MatchesSnapFilter(BuildingSnapPoint snap)
     {
         var name = snap.gameObject.name;
 
+        if (_currentTool == BuildTool.Machine || _currentTool == BuildTool.Storage)
+        {
+            var targetInfo = snap.GetComponentInParent<PlacementInfo>();
+
+            if (_peerSnapMode)
+            {
+                // Peer mode: only snap to other machines/storage
+                return targetInfo != null
+                    && (targetInfo.Category == BuildingCategory.Machine
+                        || targetInfo.Category == BuildingCategory.Storage);
+            }
+
+            // Foundation/grid mode: only structural _Top snaps
+            bool isStructural = targetInfo != null
+                && targetInfo.Category != BuildingCategory.Machine
+                && targetInfo.Category != BuildingCategory.Storage;
+            return isStructural && name.Contains("Top");
+        }
+
         if (!_edgeSnapMode)
         {
-            // Center mode: Mid snaps on cardinal faces + Top_Center + Bot_Center
             return name.Contains("Mid") || name.Contains("Center");
         }
         else
         {
-            // Edge mode: Top/Bot snaps on cardinal faces (not Center)
             return !name.Contains("Mid") && !name.Contains("Center");
         }
     }
@@ -1268,13 +1296,16 @@ public class NetworkBuildController : NetworkBehaviour
             : $"Surface: {EffectiveY:F1}m";
         GUILayout.Label($"BUILD MODE  |  Tool: {_currentTool}  |  {surfaceLabel}{variantLabel}");
 
-        if (_placementMode == PlacementMode.Snap && _activeSnapPoint != null)
-        {
-            string filterLabel = _edgeSnapMode ? "EDGE" : "CENTER";
-            GUILayout.Label($"Snap: {_activeSnapPoint.name}  |  Filter: {filterLabel} (scroll to swap)");
-        }
+        string filterLabel;
+        if (_currentTool == BuildTool.Machine || _currentTool == BuildTool.Storage)
+            filterLabel = _peerSnapMode ? "MACHINE/STORAGE" : "FOUNDATION";
         else
-            GUILayout.Label("Mode: Grid");
+            filterLabel = _edgeSnapMode ? "EDGE" : "CENTER";
+
+        if (_placementMode == PlacementMode.Snap && _activeSnapPoint != null)
+            GUILayout.Label($"Snap: {_activeSnapPoint.name}  |  Filter: {filterLabel} (scroll to swap)");
+        else
+            GUILayout.Label($"Mode: Grid  |  Filter: {filterLabel} (scroll to swap)");
 
         GUILayout.Label($"1:Foundation 2:Wall 3:Ramp 4:Machine 5:Storage 6:Belt  |  Mode: {zoopLabel}");
         GUILayout.Label($"Rotation: {_placeRotation}  |  [R] Rotate  [X] Delete  [Z] Zoop  [G] Grid  [Tab] Variant  [PgUp/Dn] Nudge (+Shift: 0.5m)");
