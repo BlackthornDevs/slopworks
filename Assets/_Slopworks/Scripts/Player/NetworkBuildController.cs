@@ -43,10 +43,13 @@ public class NetworkBuildController : NetworkBehaviour
     private readonly List<GameObject> _ghostPool = new();
     private readonly List<GameObject> _zoopGhosts = new();
 
-    // Belt 2-click
-    private bool _beltStartSet;
-    private Vector2Int _beltStartCell;
-    private GameObject _beltGhostLine;
+    // Belt spline placement
+    private enum BeltPlacementState { Idle, PickingStart, Dragging }
+    private BeltPlacementState _beltState = BeltPlacementState.Idle;
+    private Vector3 _beltStartPos;
+    private Vector3 _beltStartDir;
+    private GameObject _beltPreviewLine;
+    private LineRenderer _beltLineRenderer;
 
     // Single ghost for simple tools
     private GameObject _ghost;
@@ -1046,119 +1049,127 @@ public class NetworkBuildController : NetworkBehaviour
 
     private void HandleBeltInput(Mouse mouse)
     {
-        if (!RaycastPlacement(out var hit))
+        var cam = Camera.main;
+        if (cam == null) return;
+
+        var ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+
+        switch (_beltState)
         {
-            if (!_beltStartSet) DestroyGhost();
-            return;
-        }
-
-        var cell = GridManager.Instance.Grid.WorldToCell(hit.point);
-
-        if (!_beltStartSet)
-        {
-            EnsureGhost(new Vector3(0.6f, 0.08f, 0.6f));
-            _ghost.transform.position = BeltCellCenter(cell, EffectiveY);
-            _ghost.transform.rotation = Quaternion.identity;
-            _ghost.SetActive(true);
-            SetGhostColor(new Color(1f, 1f, 0f, 0.5f));
-
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                _beltStartSet = true;
-                _beltStartCell = cell;
-                DestroyGhost();
-                Debug.Log($"build: belt start ({cell.x},{cell.y}) -- click end cell");
-            }
-        }
-        else
-        {
-            UpdateBeltGhostLine(cell);
-
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                var diff = cell - _beltStartCell;
-                Vector2Int snappedEnd;
-                if (Mathf.Abs(diff.x) >= Mathf.Abs(diff.y))
-                    snappedEnd = new Vector2Int(cell.x, _beltStartCell.y);
-                else
-                    snappedEnd = new Vector2Int(_beltStartCell.x, cell.y);
-
-                if (snappedEnd != _beltStartCell)
-                    GridManager.Instance.CmdPlaceBelt(_beltStartCell, snappedEnd, EffectiveY, CurrentVariant);
-                else
-                    Debug.Log("build: belt start and end are the same cell");
-
-                CancelBeltPlacement();
-            }
-
-            if (mouse.rightButton.wasPressedThisFrame)
-            {
-                CancelBeltPlacement();
-            }
+            case BeltPlacementState.Idle:
+            case BeltPlacementState.PickingStart:
+                HandleBeltPickStart(mouse, ray);
+                break;
+            case BeltPlacementState.Dragging:
+                HandleBeltDragging(mouse, ray);
+                break;
         }
     }
 
-    private void UpdateBeltGhostLine(Vector2Int endCell)
+    private void HandleBeltPickStart(Mouse mouse, Ray ray)
     {
-        DestroyBeltGhostLine();
+        if (!mouse.leftButton.wasPressedThisFrame) return;
 
-        var diff = endCell - _beltStartCell;
-        Vector2Int snappedEnd;
-        if (Mathf.Abs(diff.x) >= Mathf.Abs(diff.y))
-            snappedEnd = new Vector2Int(endCell.x, _beltStartCell.y);
-        else
-            snappedEnd = new Vector2Int(_beltStartCell.x, endCell.y);
+        if (TryResolveBeltEndpoint(ray, out var pos, out var dir))
+        {
+            _beltStartPos = pos;
+            _beltStartDir = dir;
+            _beltState = BeltPlacementState.Dragging;
 
-        if (snappedEnd == _beltStartCell) return;
-
-        var startWorld = BeltCellCenter(_beltStartCell, EffectiveY);
-        var endWorld = BeltCellCenter(snappedEnd, EffectiveY);
-        var center = (startWorld + endWorld) * 0.5f;
-        var d = endWorld - startWorld;
-        float len = d.magnitude + FactoryGrid.CellSize;
-
-        _beltGhostLine = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        _beltGhostLine.name = "BeltGhost";
-        var col = _beltGhostLine.GetComponent<Collider>();
-        if (col != null) Destroy(col);
-        _beltGhostLine.layer = PhysicsLayers.Decal;
-        _beltGhostLine.transform.position = center;
-        _beltGhostLine.transform.localScale = Mathf.Abs(d.x) > Mathf.Abs(d.z)
-            ? new Vector3(len, 0.08f, 0.6f)
-            : new Vector3(0.6f, 0.08f, len);
-
-        var renderer = _beltGhostLine.GetComponent<Renderer>();
-        var mat = new Material(renderer.sharedMaterial);
-        mat.color = new Color(1f, 1f, 0f, 0.5f);
-        renderer.sharedMaterial = mat;
+            if (_beltPreviewLine == null)
+            {
+                _beltPreviewLine = new GameObject("BeltPreview");
+                _beltLineRenderer = _beltPreviewLine.AddComponent<LineRenderer>();
+                _beltLineRenderer.startWidth = 0.3f;
+                _beltLineRenderer.endWidth = 0.3f;
+                _beltLineRenderer.positionCount = 30;
+                _beltLineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+            }
+            _beltPreviewLine.SetActive(true);
+        }
     }
 
-    private void DestroyBeltGhostLine()
+    private void HandleBeltDragging(Mouse mouse, Ray ray)
     {
-        if (_beltGhostLine != null)
+        if (TryResolveBeltEndpoint(ray, out var endPos, out var endDir))
         {
-            Destroy(_beltGhostLine);
-            _beltGhostLine = null;
+            var splineData = BeltSplineBuilder.Build(_beltStartPos, _beltStartDir, endPos, endDir);
+            var validation = BeltPlacementValidator.Validate(
+                _beltStartPos, _beltStartDir, endPos, endDir);
+
+            var color = validation.IsValid ? Color.green : Color.red;
+            _beltLineRenderer.startColor = color;
+            _beltLineRenderer.endColor = color;
+
+            for (int i = 0; i < 30; i++)
+            {
+                float t = (float)i / 29;
+                _beltLineRenderer.SetPosition(i, splineData.Evaluate(t));
+            }
+
+            if (mouse.leftButton.wasPressedThisFrame && validation.IsValid)
+            {
+                GridManager.Instance.CmdPlaceBelt(
+                    _beltStartPos, _beltStartDir,
+                    endPos, endDir);
+
+                _beltState = BeltPlacementState.Idle;
+                _beltPreviewLine.SetActive(false);
+            }
         }
+
+        if (mouse.rightButton.wasPressedThisFrame)
+        {
+            _beltState = BeltPlacementState.Idle;
+            if (_beltPreviewLine != null)
+                _beltPreviewLine.SetActive(false);
+        }
+    }
+
+    private bool TryResolveBeltEndpoint(Ray ray, out Vector3 pos, out Vector3 dir)
+    {
+        pos = Vector3.zero;
+        dir = Vector3.forward;
+
+        if (Physics.Raycast(ray, out var hit, 200f,
+            PhysicsLayers.StructuralPlacementMask | PhysicsLayers.InteractMask |
+            (1 << PhysicsLayers.SnapPoints)))
+        {
+            var beltPort = hit.collider.GetComponentInParent<BeltPort>();
+            if (beltPort != null)
+            {
+                pos = beltPort.WorldPosition;
+                dir = beltPort.Direction == BeltPortDirection.Output
+                    ? beltPort.WorldDirection
+                    : -beltPort.WorldDirection;
+                return true;
+            }
+
+            var snapAnchor = hit.collider.GetComponentInParent<BeltSnapAnchor>();
+            if (snapAnchor != null)
+            {
+                pos = snapAnchor.WorldPosition;
+                dir = snapAnchor.WorldDirection;
+                return true;
+            }
+
+            pos = hit.point;
+            var camForward = Camera.main.transform.forward;
+            camForward.y = 0;
+            dir = camForward.normalized;
+            if (dir.sqrMagnitude < 0.001f) dir = Vector3.forward;
+            return true;
+        }
+
+        return false;
     }
 
     private void CancelBeltPlacement()
     {
-        _beltStartSet = false;
-        DestroyBeltGhostLine();
+        _beltState = BeltPlacementState.Idle;
+        if (_beltPreviewLine != null)
+            _beltPreviewLine.SetActive(false);
         DestroyGhost();
-    }
-
-    /// <summary>
-    /// Returns the world-space center of a cell at the given surface Y, offset by belt half-height.
-    /// </summary>
-    private static Vector3 BeltCellCenter(Vector2Int cell, float surfaceY)
-    {
-        float cs = FactoryGrid.CellSize;
-        return new Vector3(
-            cell.x * cs + cs * 0.5f,
-            surfaceY + 0.04f,
-            cell.y * cs + cs * 0.5f);
     }
 
     // -- Ghost helpers --
