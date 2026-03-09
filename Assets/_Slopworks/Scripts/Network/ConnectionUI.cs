@@ -1,57 +1,31 @@
-using FishNet;
 using FishNet.Managing;
-using FishNet.Transporting;
 using UnityEngine;
 
 public class ConnectionUI : MonoBehaviour
 {
     private NetworkManager _networkManager;
     private string _joinAddress = "localhost";
-    private bool _connected;
 
-    private void Awake()
+    private NetworkManager GetNetworkManager()
     {
-        _networkManager = InstanceFinder.NetworkManager;
+        if (_networkManager == null)
+            _networkManager = FindFirstObjectByType<NetworkManager>();
+        return _networkManager;
     }
 
-    private void OnEnable()
+    private bool IsConnected()
     {
-        if (_networkManager != null)
-        {
-            _networkManager.ServerManager.OnServerConnectionState += OnServerState;
-            _networkManager.ClientManager.OnClientConnectionState += OnClientState;
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (_networkManager != null)
-        {
-            _networkManager.ServerManager.OnServerConnectionState -= OnServerState;
-            _networkManager.ClientManager.OnClientConnectionState -= OnClientState;
-        }
-    }
-
-    private void OnServerState(ServerConnectionStateArgs args)
-    {
-        _connected = args.ConnectionState == LocalConnectionState.Started;
-        Debug.Log($"network: server state changed to {args.ConnectionState}");
-    }
-
-    private void OnClientState(ClientConnectionStateArgs args)
-    {
-        _connected = args.ConnectionState == LocalConnectionState.Started;
-        Debug.Log($"network: client state changed to {args.ConnectionState}");
+        var nm = GetNetworkManager();
+        return nm != null && nm.ServerManager != null && nm.ServerManager.Started;
     }
 
     private void OnGUI()
     {
-        if (_connected)
+        if (IsConnected())
         {
-            // Clear any IMGUI focus (e.g. TextField from join address) so it doesn't eat input
             GUI.FocusControl(null);
             GUILayout.BeginArea(new Rect(10, 10, 200, 30));
-            GUILayout.Label($"Connected ({(_networkManager.IsServerStarted ? "Host" : "Client")})");
+            GUILayout.Label("Connected (Host)");
             GUILayout.EndArea();
             return;
         }
@@ -60,9 +34,17 @@ public class ConnectionUI : MonoBehaviour
 
         if (GUILayout.Button("Host", GUILayout.Height(30)))
         {
-            _networkManager.ServerManager.StartConnection();
-            _networkManager.ClientManager.StartConnection();
-            Debug.Log("network: starting as host");
+            var nm = GetNetworkManager();
+            if (nm != null && nm.ServerManager != null)
+            {
+                nm.ServerManager.StartConnection();
+                nm.ClientManager.StartConnection();
+                Debug.Log("network: starting as host");
+            }
+            else
+            {
+                Debug.LogError("network: NetworkManager not ready");
+            }
         }
 
         GUILayout.Space(10);
@@ -71,8 +53,16 @@ public class ConnectionUI : MonoBehaviour
 
         if (GUILayout.Button("Join", GUILayout.Height(30)))
         {
-            _networkManager.ClientManager.StartConnection(_joinAddress);
-            Debug.Log($"network: joining {_joinAddress}");
+            var nm = GetNetworkManager();
+            if (nm != null && nm.ClientManager != null)
+            {
+                nm.ClientManager.StartConnection(_joinAddress);
+                Debug.Log($"network: joining {_joinAddress}");
+            }
+            else
+            {
+                Debug.LogError("network: NetworkManager not ready");
+            }
         }
 
         GUILayout.EndArea();

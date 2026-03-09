@@ -55,7 +55,7 @@ public class NetworkBuildController : NetworkBehaviour
     private GridOverlay _gridOverlay;
 
     private static readonly int StructuralMask =
-        (1 << PhysicsLayers.Terrain) | (1 << PhysicsLayers.Structures);
+        (1 << PhysicsLayers.Terrain) | (1 << PhysicsLayers.Structures) | (1 << PhysicsLayers.SnapPoints);
 
     private static readonly Color ValidColor = new(0f, 1f, 0f, 0.5f);
     private static readonly Color InvalidColor = new(1f, 0f, 0f, 0.5f);
@@ -201,8 +201,37 @@ public class NetworkBuildController : NetworkBehaviour
 
         if (_placementMode == PlacementMode.Snap && _activeSnapPoint != null)
         {
+            int effectiveRotation;
+            if (Mathf.Abs(_activeSnapPoint.Normal.y) > 0.9f)
+            {
+                effectiveRotation = _placeRotation;
+            }
+            else
+            {
+                var targetInfo = _activeSnapPoint.GetComponentInParent<PlacementInfo>();
+                bool isWallOnWall = targetInfo != null
+                    && targetInfo.Category == BuildingCategory.Wall
+                    && _currentTool == BuildTool.Wall;
+                bool isRampOnRamp = targetInfo != null
+                    && targetInfo.Category == BuildingCategory.Ramp
+                    && _currentTool == BuildTool.Ramp;
+
+                int baseYaw;
+                if (isWallOnWall || isRampOnRamp)
+                {
+                    baseYaw = Mathf.RoundToInt(_activeSnapPoint.transform.root.eulerAngles.y);
+                }
+                else
+                {
+                    float autoYaw = Mathf.Atan2(_activeSnapPoint.Normal.x, _activeSnapPoint.Normal.z) * Mathf.Rad2Deg;
+                    baseYaw = Mathf.RoundToInt(autoYaw);
+                }
+
+                effectiveRotation = (baseYaw + _placeRotation) % 360;
+            }
+
             var result = GridManager.GetSnapPlacementPosition(
-                _activeSnapPoint, prefab, _placeRotation);
+                _activeSnapPoint, prefab, effectiveRotation, _surfaceY);
             ghostPos = result.position + new Vector3(0f, _nudgeOffset, 0f);
             ghostRot = result.rotation;
         }
@@ -231,7 +260,8 @@ public class NetworkBuildController : NetworkBehaviour
 
         // Validity check
         var category = ToolToCategory(_currentTool);
-        bool valid = !GridManager.Instance.HasBuildingAt(cell, _surfaceY);
+        float placeSurfaceY = _surfaceY + _nudgeOffset;
+        bool valid = !GridManager.Instance.HasBuildingAt(cell, placeSurfaceY);
         SetGhostColor(valid ? ValidColor : InvalidColor);
 
         // Place on left click
@@ -242,20 +272,20 @@ public class NetworkBuildController : NetworkBehaviour
             if (category == BuildingCategory.Wall || category == BuildingCategory.Ramp)
             {
                 var dir = RotationToDirection(rotDeg);
-                GridManager.Instance.CmdPlaceDirectional(cell, _surfaceY, dir, CurrentVariant, category, ghostPos, ghostRot);
+                GridManager.Instance.CmdPlaceDirectional(cell, placeSurfaceY, dir, CurrentVariant, category, ghostPos, ghostRot);
             }
             else
             {
-                GridManager.Instance.CmdPlace(cell, _surfaceY, rotDeg, CurrentVariant, category, ghostPos);
+                GridManager.Instance.CmdPlace(cell, placeSurfaceY, rotDeg, CurrentVariant, category, ghostPos);
             }
-            Debug.Log($"build: placed {category} at ({cell.x},{cell.y}) y={_surfaceY:F1}");
+            Debug.Log($"build: placed {category} at ({cell.x},{cell.y}) y={placeSurfaceY:F1}");
         }
 
         // Delete on right click
         if (mouse.rightButton.wasPressedThisFrame)
         {
             var hitCell = GridManager.Instance.Grid.WorldToCell(hit.point);
-            GridManager.Instance.CmdDelete(hitCell, _surfaceY);
+            GridManager.Instance.CmdDelete(hitCell, placeSurfaceY);
         }
     }
 
@@ -505,8 +535,8 @@ public class NetworkBuildController : NetworkBehaviour
         _zoopStartSet = false;
         for (int i = 0; i < _ghostPool.Count; i++)
             _ghostPool[i].SetActive(false);
-        for (int i = 0; i < _zoopGhosts.Count; i++)
-            _zoopGhosts[i].SetActive(false);
+        // Destroy zoop ghosts -- pool may contain ghosts from a different tool
+        DestroyGhostPool(_zoopGhosts);
     }
 
     // -- Zoop (batch placement) --
@@ -656,16 +686,30 @@ public class NetworkBuildController : NetworkBehaviour
             return false;
         }
 
-        // Check if we hit an existing building with snap points
-        var placement = hit.collider.GetComponentInParent<PlacementInfo>();
-        if (placement != null)
+        // Check if we hit a snap point collider directly
+        // Skip during zoop -- zoop always uses grid placement
+        if (!_zoopMode)
         {
-            var nearest = BuildingSnapPoint.FindNearest(placement.gameObject, hit.point);
-            if (nearest != null)
+            var directSnap = hit.collider.GetComponent<BuildingSnapPoint>();
+            if (directSnap == null)
+                directSnap = hit.collider.GetComponentInParent<BuildingSnapPoint>();
+
+            var placement = directSnap != null
+                ? directSnap.GetComponentInParent<PlacementInfo>()
+                : hit.collider.GetComponentInParent<PlacementInfo>();
+
+            // Direct hit on snap point sphere
+            BuildingSnapPoint chosen = directSnap;
+
+            // Fallback: hit building mesh, find nearest snap point
+            if (chosen == null && placement != null)
+                chosen = BuildingSnapPoint.FindNearest(placement.gameObject, hit.point, hit.normal);
+
+            if (chosen != null && placement != null)
             {
                 _placementMode = PlacementMode.Snap;
-                _activeSnapPoint = nearest;
-                _surfaceY = placement.SurfaceY + placement.ObjectHeight;
+                _activeSnapPoint = chosen;
+                _surfaceY = ComputeSnapSurfaceY(chosen, placement);
                 return true;
             }
         }
@@ -675,6 +719,14 @@ public class NetworkBuildController : NetworkBehaviour
         _activeSnapPoint = null;
         _surfaceY = hit.point.y;
         return true;
+    }
+
+    private float ComputeSnapSurfaceY(BuildingSnapPoint snap, PlacementInfo placement)
+    {
+        // The snap point's world Y already encodes the correct attachment height.
+        // Top snap on a foundation = foundation top. Mid snap = face center. etc.
+        // No category-specific logic needed.
+        return snap.transform.position.y;
     }
 
     // -- Belt: 2-click placement --

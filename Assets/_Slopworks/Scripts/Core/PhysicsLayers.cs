@@ -13,6 +13,7 @@ public static class PhysicsLayers
     public const int NavMeshAgent = 17;
     public const int Decal = 18;
     public const int FogOfWar = 19;
+    public const int SnapPoints = 20;
 
     // Raycast masks -- compute once at class load, reuse everywhere
     public static readonly int PlacementMask =

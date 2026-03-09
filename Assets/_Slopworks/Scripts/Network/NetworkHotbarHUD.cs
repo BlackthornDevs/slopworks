@@ -1,5 +1,6 @@
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class NetworkHotbarHUD : NetworkBehaviour
 {
@@ -21,11 +22,13 @@ public class NetworkHotbarHUD : NetworkBehaviour
         if (!IsOwner || _inventory == null) return;
 
         // Scroll wheel for hotbar selection
-        float scroll = Input.mouseScrollDelta.y;
+        var mouse = Mouse.current;
+        if (mouse == null) return;
+        float scroll = mouse.scroll.ReadValue().y;
         if (scroll != 0f)
         {
             int current = _inventory.SelectedHotbarIndex;
-            int next = current - Mathf.RoundToInt(scroll);
+            int next = current - (scroll > 0f ? 1 : -1);
             next = ((next % NetworkInventory.HotbarSlots) + NetworkInventory.HotbarSlots) % NetworkInventory.HotbarSlots;
             _inventory.CmdSelectHotbar(next);
         }

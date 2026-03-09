@@ -126,7 +126,6 @@ public class GridManager : NetworkBehaviour
 
     /// <summary>
     /// Returns the Y extent (half-height) of a prefab's renderer bounds.
-    /// Used to place objects so their bottom sits on the surface.
     /// </summary>
     public static float GetPrefabHalfHeight(GameObject prefab)
     {
@@ -134,36 +133,36 @@ public class GridManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// Unified grid placement: snaps center-bottom of prefab to nearest grid-aligned
-    /// position based on its footprint. Thin objects (depth less than 1m) snap back face
-    /// flush to nearest grid line instead of centering.
+    /// Returns the Y offset needed to place the mesh bottom on the surface.
+    /// Accounts for localBounds.center -- works correctly for both center-origin
+    /// meshes (Unity primitives) and center-bottom meshes (Revit FBX exports).
     /// </summary>
-    /// <param name="hitPoint">World-space point where the crosshair hit terrain</param>
-    /// <param name="prefab">The building prefab to place</param>
-    /// <param name="rotationDeg">Rotation in degrees (0, 90, 180, 270)</param>
-    /// <returns>World position (center of object) and rotation quaternion</returns>
+    public static float GetPrefabBaseOffset(GameObject prefab)
+    {
+        if (prefab == null) return 0.5f;
+        var renderer = prefab.GetComponentInChildren<Renderer>();
+        if (renderer == null) return 0.5f;
+        var lb = renderer.localBounds;
+        var s = renderer.transform.lossyScale;
+        float extY = lb.extents.y * Mathf.Abs(s.y);
+        float centerY = lb.center.y * Mathf.Abs(s.y);
+        // Distance from mesh origin to bottom of bounds
+        // Center-origin cube: 0.5 - 0 = 0.5 (origin above bottom)
+        // Center-bottom FBX:  h/2 - h/2 = 0 (origin at bottom)
+        return extY - centerY;
+    }
+
+    /// <summary>
+    /// Unified grid placement: snaps the prefab center to the nearest 1m grid intersection.
+    /// Y is offset by the prefab's base offset so the bottom sits on the surface.
+    /// Adjacency between buildings is handled by snap points, not grid alignment.
+    /// </summary>
     public static (Vector3 position, Quaternion rotation) GetGridPlacementPosition(
         Vector3 hitPoint, GameObject prefab, int rotationDeg)
     {
-        Vector3 extents = GetPrefabExtents(prefab);
-
-        // Determine footprint after rotation: at 90/270, X and Z swap
-        float footprintX, footprintZ;
-        bool swapped = (rotationDeg == 90 || rotationDeg == 270);
-        if (swapped)
-        {
-            footprintX = extents.z * 2f;
-            footprintZ = extents.x * 2f;
-        }
-        else
-        {
-            footprintX = extents.x * 2f;
-            footprintZ = extents.z * 2f;
-        }
-
-        float posX = SnapAxis(hitPoint.x, footprintX, swapped ? extents.z : extents.x);
-        float posZ = SnapAxis(hitPoint.z, footprintZ, swapped ? extents.x : extents.z);
-        float posY = hitPoint.y + extents.y;
+        float posX = SnapAxis(hitPoint.x);
+        float posZ = SnapAxis(hitPoint.z);
+        float posY = hitPoint.y + GetPrefabBaseOffset(prefab);
 
         return (new Vector3(posX, posY, posZ), Quaternion.Euler(0f, rotationDeg, 0f));
     }
@@ -174,56 +173,60 @@ public class GridManager : NetworkBehaviour
     /// For vertical normals (top): place center-bottom on snap point.
     /// </summary>
     public static (Vector3 position, Quaternion rotation) GetSnapPlacementPosition(
-        BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg)
+        BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg, float surfaceY)
     {
         Vector3 extents = GetPrefabExtents(prefab);
+        float baseOffset = GetPrefabBaseOffset(prefab);
 
         Vector3 snapPos = snapPoint.transform.position;
         Vector3 normal = snapPoint.Normal;
-        float halfHeight = extents.y;
 
         // Vertical normal: stack on top
         if (Mathf.Abs(normal.y) > 0.9f)
         {
-            float yOffset = normal.y > 0 ? halfHeight : -halfHeight;
+            float yOffset = normal.y > 0 ? baseOffset : -baseOffset;
             Vector3 position = new Vector3(snapPos.x, snapPos.y + yOffset, snapPos.z);
             Quaternion rotation = Quaternion.Euler(0f, rotationDeg, 0f);
             return (position, rotation);
         }
 
-        // Horizontal normal: auto-align yaw from normal direction
+        // Horizontal normal: caller provides the full rotation (base yaw + R-key offset)
         float autoYaw = Mathf.Atan2(normal.x, normal.z) * Mathf.Rad2Deg;
+        float finalYaw = (float)rotationDeg;
 
-        // Auto-yaw rotates the object so its local Z (forward) faces the normal.
-        // Therefore depth along the normal is always extents.z (the local forward extent).
-        float halfDepth = extents.z;
+        // Compute which extent faces the normal after rotation
+        float yawDiff = (finalYaw - autoYaw) * Mathf.Deg2Rad;
+        float halfDepth = Mathf.Abs(extents.z * Mathf.Cos(yawDiff)) + Mathf.Abs(extents.x * Mathf.Sin(yawDiff));
 
         Vector3 horizontalNormal = new Vector3(normal.x, 0f, normal.z).normalized;
         Vector3 pos = new Vector3(
             snapPos.x + horizontalNormal.x * halfDepth,
-            snapPos.y + halfHeight,
+            snapPos.y + baseOffset,
             snapPos.z + horizontalNormal.z * halfDepth);
 
-        return (pos, Quaternion.Euler(0f, autoYaw, 0f));
+        return (pos, Quaternion.Euler(0f, finalYaw, 0f));
     }
 
     /// <summary>
-    /// Snaps a single axis value to grid. Thin axes (less than 1m) snap back face flush
-    /// to nearest grid line. Wide axes snap center to grid aligned to footprint size.
+    /// Snaps a value to the nearest 1m grid intersection.
+    /// Adjacency between buildings is handled by snap points, not grid alignment.
     /// </summary>
-    private static float SnapAxis(float hitValue, float footprint, float halfExtent)
+    private static float SnapAxis(float hitValue)
     {
-        if (footprint < 1f)
-        {
-            // Thin: snap back face flush to nearest grid line
-            float gridLine = Mathf.Round(hitValue);
-            return gridLine + halfExtent;
-        }
+        return Mathf.Round(hitValue);
+    }
 
-        // Wide: snap center to the grid-aligned block the point falls in
-        float gridStep = footprint;
-        float origin = Mathf.Floor(hitValue / gridStep) * gridStep;
-        return origin + gridStep * 0.5f;
+    private static void SetBuildingLayer(GameObject go, BuildingCategory category)
+    {
+        int layer = category switch
+        {
+            BuildingCategory.Foundation => PhysicsLayers.Structures,
+            BuildingCategory.Wall => PhysicsLayers.Structures,
+            BuildingCategory.Ramp => PhysicsLayers.Structures,
+            _ => go.layer // keep prefab layer (e.g. Interactable for machines)
+        };
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            t.gameObject.layer = layer;
     }
 
     // ------------------------------------------------------------------
@@ -259,13 +262,15 @@ public class GridManager : NetworkBehaviour
         }
 
         var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
+
+        SetBuildingLayer(go, category);
         var info = go.AddComponent<PlacementInfo>();
         info.Category = category;
         info.Cell = cell;
         info.SurfaceY = surfaceY;
         info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         ServerManager.Spawn(go);
-        BuildingSnapPoint.GenerateFromBounds(go);
+        BuildingSnapPoint.GenerateFromBounds(go, category == BuildingCategory.Ramp);
 
         var record = new PlacedRecord
         {
@@ -300,6 +305,8 @@ public class GridManager : NetworkBehaviour
         }
 
         var go = Instantiate(prefab, worldPos, worldRot);
+
+        SetBuildingLayer(go, category);
         var info = go.AddComponent<PlacementInfo>();
         info.Category = category;
         info.Cell = cell;
@@ -307,7 +314,7 @@ public class GridManager : NetworkBehaviour
         info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         info.EdgeDirection = direction;
         ServerManager.Spawn(go);
-        BuildingSnapPoint.GenerateFromBounds(go);
+        BuildingSnapPoint.GenerateFromBounds(go, category == BuildingCategory.Ramp);
 
         _placedRecords[key] = new PlacedRecord
         {
@@ -333,6 +340,7 @@ public class GridManager : NetworkBehaviour
         int length = Mathf.Max(1, Mathf.Abs(toCell.x - fromCell.x) + Mathf.Abs(toCell.y - fromCell.y));
 
         var go = Instantiate(prefab, (startPos + endPos) * 0.5f, Quaternion.identity);
+
 
         var diff = endPos - startPos;
         float beltLen = diff.magnitude + FactoryGrid.CellSize;
