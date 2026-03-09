@@ -273,7 +273,7 @@ public class GridManager : NetworkBehaviour
             BuildingCategory.Foundation => PhysicsLayers.Structures,
             BuildingCategory.Wall => PhysicsLayers.Structures,
             BuildingCategory.Ramp => PhysicsLayers.Structures,
-            _ => go.layer // keep prefab layer (e.g. Interactable for machines)
+            _ => PhysicsLayers.Interactable
         };
         foreach (var t in go.GetComponentsInChildren<Transform>(true))
         {

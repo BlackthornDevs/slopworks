@@ -1,10 +1,16 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-09 23:45
+Last updated: 2026-03-10 00:15
 Branch: kevin/multiplayer-step1
-Last commit: 95e007f Machine/storage snap-point placement system
+Last commit: 236d10a Restrict machine placement to foundations, fix equipment layer, add pipeline doc
 
 ## What was completed this session
+
+### Post-commit fixes
+- Machine/Storage FOUNDATION mode restricted to Foundation targets only (was allowing walls/ramps)
+- Machine/Storage/Belt layer set to Interactable (14) at spawn so delete tool works
+- Wall-on-foundation-edge tier pairing fixed (Bot-to-Bot only for machine/storage peers)
+- Created `docs/reference/building-prefab-pipeline.md` -- living reference for the full prefab pipeline
 
 ### Machine/storage snap-point placement system
 - `BuildingSnapPoint.cs`: `GenerateFromBounds()` now accepts `BuildingCategory` instead of `bool isRamp`. Machine gets 5 snaps (4 cardinal Bot + Center_Bot), Storage gets 6 snaps (4 cardinal Bot + Center_Bot + Center_Top for vertical stacking). Combined renderer bounds for multi-mesh FBX models.
