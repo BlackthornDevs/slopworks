@@ -944,11 +944,10 @@ public class NetworkBuildController : NetworkBehaviour
                         || targetInfo.Category == BuildingCategory.Storage);
             }
 
-            // Foundation/grid mode: only structural _Top snaps
-            bool isStructural = targetInfo != null
-                && targetInfo.Category != BuildingCategory.Machine
-                && targetInfo.Category != BuildingCategory.Storage;
-            return isStructural && name.Contains("Top");
+            // Foundation mode: only _Top snaps on foundations
+            return targetInfo != null
+                && targetInfo.Category == BuildingCategory.Foundation
+                && name.Contains("Top");
         }
 
         if (!_edgeSnapMode)
