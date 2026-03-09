@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &747621104953931672
+--- !u!1 &580438282689703873
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,213 +8,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1879145888249183284}
-  - component: {fileID: 2628923445225774353}
-  - component: {fileID: 7261942414730953046}
-  m_Layer: 20
-  m_Name: SnapPoint_Center_Bot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1879145888249183284
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 747621104953931672}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3324028396957768517}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2628923445225774353
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 747621104953931672}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
-  _normalOverride: {x: 0, y: -1, z: 0}
-  SurfaceSize: {x: 4, y: 4}
---- !u!135 &7261942414730953046
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 747621104953931672}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &2124656328360500144
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3790055030638613243}
-  - component: {fileID: 4304193231330866988}
-  - component: {fileID: 405759570321548328}
-  m_Layer: 20
-  m_Name: SnapPoint_LowEdge
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3790055030638613243
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2124656328360500144}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -2}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3324028396957768517}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4304193231330866988
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2124656328360500144}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
-  _normalOverride: {x: 0, y: 0, z: -1}
-  SurfaceSize: {x: 4, y: 0.1}
---- !u!135 &405759570321548328
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2124656328360500144}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &2301648381639750837
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7382555241384158657}
-  - component: {fileID: 4487978756091319110}
-  - component: {fileID: 4230891291587888908}
-  m_Layer: 20
-  m_Name: SnapPoint_West_Bot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7382555241384158657
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2301648381639750837}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3324028396957768517}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4487978756091319110
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2301648381639750837}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
-  _normalOverride: {x: -1, y: 0, z: 0}
-  SurfaceSize: {x: 4, y: 1}
---- !u!135 &4230891291587888908
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2301648381639750837}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &3590865666250966306
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1520377522205070760}
-  - component: {fileID: 919289736771718538}
-  - component: {fileID: 4867672558840747882}
+  - component: {fileID: 8654922647384271370}
+  - component: {fileID: 4191093734217916136}
+  - component: {fileID: 6618337111337430274}
   m_Layer: 20
   m_Name: SnapPoint_North_Bot
   m_TagString: Untagged
@@ -222,42 +18,42 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1520377522205070760
+--- !u!4 &8654922647384271370
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3590865666250966306}
+  m_GameObject: {fileID: 580438282689703873}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3324028396957768517}
+  m_Father: {fileID: 7045750514484976655}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &919289736771718538
+--- !u!114 &4191093734217916136
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3590865666250966306}
+  m_GameObject: {fileID: 580438282689703873}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
   _normalOverride: {x: 0, y: 0, z: 1}
-  SurfaceSize: {x: 4, y: 1}
---- !u!135 &4867672558840747882
+  SurfaceSize: {x: 4, y: 2}
+--- !u!135 &6618337111337430274
 SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3590865666250966306}
+  m_GameObject: {fileID: 580438282689703873}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -272,7 +68,7 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &6689583322298207465
+--- !u!1 &3629483749348522457
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -280,52 +76,52 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4029404264987667330}
-  - component: {fileID: 7086295719073549774}
-  - component: {fileID: 704977666114485107}
+  - component: {fileID: 6165933785901841370}
+  - component: {fileID: 6916169633572943860}
+  - component: {fileID: 4386407262278375040}
   m_Layer: 20
-  m_Name: SnapPoint_HighEdge
+  m_Name: SnapPoint_West_Bot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4029404264987667330
+--- !u!4 &6165933785901841370
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6689583322298207465}
+  m_GameObject: {fileID: 3629483749348522457}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 2}
+  m_LocalPosition: {x: -2, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3324028396957768517}
+  m_Father: {fileID: 7045750514484976655}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7086295719073549774
+--- !u!114 &6916169633572943860
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6689583322298207465}
+  m_GameObject: {fileID: 3629483749348522457}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
-  _normalOverride: {x: 0, y: 0, z: 1}
-  SurfaceSize: {x: 4, y: 0.1}
---- !u!135 &704977666114485107
+  _normalOverride: {x: -1, y: 0, z: 0}
+  SurfaceSize: {x: 4, y: 2}
+--- !u!135 &4386407262278375040
 SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6689583322298207465}
+  m_GameObject: {fileID: 3629483749348522457}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -340,7 +136,7 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &8905113505847463912
+--- !u!1 &3669102849132682983
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -348,9 +144,145 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 5198314911524840567}
-  - component: {fileID: 1532873425949436941}
-  - component: {fileID: 1110161321928521233}
+  - component: {fileID: 4594333415680472904}
+  - component: {fileID: 4465380563082431688}
+  - component: {fileID: 312504747113707420}
+  m_Layer: 20
+  m_Name: SnapPoint_Center_Bot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4594333415680472904
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3669102849132682983}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7045750514484976655}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4465380563082431688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3669102849132682983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
+  _normalOverride: {x: 0, y: -1, z: 0}
+  SurfaceSize: {x: 4, y: 4}
+--- !u!135 &312504747113707420
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3669102849132682983}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &8745076444455213740
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5682833337113013099}
+  - component: {fileID: 3970045778590643500}
+  - component: {fileID: 5999113819863850508}
+  m_Layer: 20
+  m_Name: SnapPoint_South_Bot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5682833337113013099
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8745076444455213740}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7045750514484976655}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3970045778590643500
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8745076444455213740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
+  _normalOverride: {x: 0, y: 0, z: -1}
+  SurfaceSize: {x: 4, y: 2}
+--- !u!135 &5999113819863850508
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8745076444455213740}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &8939605892455121097
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3011866154497198084}
+  - component: {fileID: 6575107415387814525}
+  - component: {fileID: 6151833259971691142}
   m_Layer: 20
   m_Name: SnapPoint_East_Bot
   m_TagString: Untagged
@@ -358,42 +290,42 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &5198314911524840567
+--- !u!4 &3011866154497198084
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8905113505847463912}
+  m_GameObject: {fileID: 8939605892455121097}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 2, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 3324028396957768517}
+  m_Father: {fileID: 7045750514484976655}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1532873425949436941
+--- !u!114 &6575107415387814525
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8905113505847463912}
+  m_GameObject: {fileID: 8939605892455121097}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4d343d0ac90318a4a8ec8af0f9aeb7f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Slopworks.Runtime::BuildingSnapPoint
   _normalOverride: {x: 1, y: 0, z: 0}
-  SurfaceSize: {x: 4, y: 1}
---- !u!135 &1110161321928521233
+  SurfaceSize: {x: 4, y: 2}
+--- !u!135 &6151833259971691142
 SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8905113505847463912}
+  m_GameObject: {fileID: 8939605892455121097}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -408,7 +340,7 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1001 &3002752280996347054
+--- !u!1001 &7371602858016930788
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -416,107 +348,129 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 181.01971
+      value: 869.9799
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.50347
+      value: 0.00002324276
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 245.18
+      value: 867.16455
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalRotation.w
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalRotation.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalRotation.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalRotation.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - target: {fileID: -5442355415925399799, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+      propertyPath: m_Layer
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: -427238377049681681, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+      propertyPath: m_Layer
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       propertyPath: m_Name
-      value: RAMP 4x1
+      value: CONSTRUCTOR
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+      propertyPath: m_Layer
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 1881578106174485921, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+      propertyPath: m_Layer
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 4661343235834862799, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+      propertyPath: m_Layer
+      value: 14
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
-    - {fileID: 7174986039450648032, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - {fileID: -8994975331661816471, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1520377522205070760}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+      addedObject: {fileID: 8654922647384271370}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5198314911524840567}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+      addedObject: {fileID: 5682833337113013099}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 7382555241384158657}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+      addedObject: {fileID: 3011866154497198084}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4029404264987667330}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+      addedObject: {fileID: 6165933785901841370}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 3790055030638613243}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1879145888249183284}
+      addedObject: {fileID: 4594333415680472904}
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 9131183016094044579}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
+      addedObject: {fileID: 7474118918504515880}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4830805860199334360}
-  m_SourcePrefab: {fileID: 100100000, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
---- !u!1 &2696110932207780351 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
-  m_PrefabInstance: {fileID: 3002752280996347054}
+      addedObject: {fileID: 1641591714844032696}
+  m_SourcePrefab: {fileID: 100100000, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+--- !u!4 &7045750514484976655 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+  m_PrefabInstance: {fileID: 7371602858016930788}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &9131183016094044579
+--- !u!1 &7677608702103733941 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 7338081ba5c47b84eb1901ebc9162d28, type: 3}
+  m_PrefabInstance: {fileID: 7371602858016930788}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7474118918504515880
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2696110932207780351}
+  m_GameObject: {fileID: 7677608702103733941}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.EmptyNetworkBehaviour
   _componentIndexCache: 255
-  _addedNetworkObject: {fileID: 4830805860199334360}
+  _addedNetworkObject: {fileID: 1641591714844032696}
   _networkObjectCache: {fileID: 0}
---- !u!114 &4830805860199334360
+--- !u!114 &1641591714844032696
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2696110932207780351}
+  m_GameObject: {fileID: 7677608702103733941}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
@@ -557,15 +511,10 @@ MonoBehaviour:
   _teleportThreshold: 1
   <PrefabId>k__BackingField: 65535
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 7729878796392121634
+  <AssetPathHash>k__BackingField: 3749552755259558511
   SceneId: 0
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 0}
     Scale: {x: 0, y: 0, z: 0}
     IsValid: 0
---- !u!4 &3324028396957768517 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82731b345ea9975468eb05e64a506dce, type: 3}
-  m_PrefabInstance: {fileID: 3002752280996347054}
-  m_PrefabAsset: {fileID: 0}

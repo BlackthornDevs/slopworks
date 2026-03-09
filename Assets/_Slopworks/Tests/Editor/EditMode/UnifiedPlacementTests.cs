@@ -391,7 +391,7 @@ public class UnifiedPlacementTests
     }
 
     [Test]
-    public void Snap_SmallMachineOnFoundationTop_CenteredOnTopFace()
+    public void Snap_SmallMachineOnFoundationCenter_TopedOnTopFace()
     {
         // Top snap for center-origin cube at (0,0,0) with extents.y=0.25:
         // localPos = (0, 0.25, 0). World Y = 0.25.

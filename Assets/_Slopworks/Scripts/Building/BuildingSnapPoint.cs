@@ -24,27 +24,31 @@ public class BuildingSnapPoint : MonoBehaviour
 
     /// <summary>
     /// Auto-generate snap points from renderer bounds if none exist on the object.
-    /// Foundations/walls: 14 points (4 cardinal x 3 heights + Top_Center + Bot_Center).
-    /// Ramps: 5 points (4 cardinal mid + Top_Center). Fewer to avoid collider clutter.
+    /// Structural (foundation/wall): 14 points (4 cardinal x 3 heights + Center_Top + Center_Bot).
+    /// Ramps: 6 points (3 cardinal _Bot + HighEdge + LowEdge + Center_Bot).
+    /// Machines/Storage: 5 placement points (4 cardinal _Bot + Center_Bot).
     /// Skips generation if any BuildingSnapPoint already exists on children.
     /// </summary>
-    public static void GenerateFromBounds(GameObject go, bool isRamp = false)
+    public static void GenerateFromBounds(GameObject go, BuildingCategory category = BuildingCategory.Foundation)
     {
         if (go.GetComponentInChildren<BuildingSnapPoint>() != null)
             return;
 
-        var renderer = go.GetComponentInChildren<Renderer>();
-        if (renderer == null) return;
+        var renderers = go.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return;
 
-        var lb = renderer.localBounds;
-        var s = renderer.transform.lossyScale;
-        var worldExtents = new Vector3(
-            lb.extents.x * Mathf.Abs(s.x),
-            lb.extents.y * Mathf.Abs(s.y),
-            lb.extents.z * Mathf.Abs(s.z));
-        var center = renderer.transform.TransformPoint(lb.center);
-        var localCenter = go.transform.InverseTransformPoint(center);
-        var ext = lb.extents;
+        // Combine world-space bounds from all renderers
+        var worldBounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            worldBounds.Encapsulate(renderers[i].bounds);
+
+        var worldExtents = worldBounds.extents;
+        var localCenter = go.transform.InverseTransformPoint(worldBounds.center);
+        var ext = worldExtents;
+
+        bool isRamp = category == BuildingCategory.Ramp;
+        bool isMachine = category == BuildingCategory.Machine;
+        bool isStorage = category == BuildingCategory.Storage;
 
         var cardinals = new[]
         {
@@ -63,9 +67,13 @@ public class BuildingSnapPoint : MonoBehaviour
 
             if (isRamp)
             {
-                // Ramps: bottom edge only per cardinal (skip South -- slope ends use HighEdge/LowEdge)
                 if (name != "South")
                     AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
+            }
+            else if (isMachine || isStorage)
+            {
+                // Machines/Storage: bottom edge only -- side-by-side alignment
+                AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
             }
             else
             {
@@ -77,19 +85,31 @@ public class BuildingSnapPoint : MonoBehaviour
 
         if (isRamp)
         {
-            // HighEdge at top of slope (forward), LowEdge at bottom (back), Bot_Center underneath
             var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
             AddPoint(go, "HighEdge", localCenter + new Vector3(0, ext.y, ext.z), Vector3.forward,
                 new Vector2(worldExtents.x * 2, 0.1f));
             AddPoint(go, "LowEdge", localCenter + new Vector3(0, -ext.y, -ext.z), Vector3.back,
                 new Vector2(worldExtents.x * 2, 0.1f));
-            AddPoint(go, "Bot_Center", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+        }
+        else if (isMachine)
+        {
+            // Machines: Center_Bot only, no stacking
+            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+        }
+        else if (isStorage)
+        {
+            // Storage: Center_Top + Center_Bot for vertical stacking
+            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+            AddPoint(go, "Center_Top", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
+            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
         }
         else
         {
             var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
-            AddPoint(go, "Top_Center", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
-            AddPoint(go, "Bot_Center", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+            AddPoint(go, "Center_Top", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
+            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
         }
     }
 
