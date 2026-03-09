@@ -20,6 +20,8 @@ Always adhere to the general principles of engineering:
 3. Make it efficient/fast.
 4. Make it secure.
 
+**Prefer GameObject-oriented data over computed values.** If information can be baked into child objects, components, or transform positions on a prefab, do that instead of computing it from mesh bounds, extents, or offsets at runtime. Unity's scene graph is the source of truth. Snap points encode attachment geometry as child transforms -- placement reads those positions directly instead of deriving them from renderer bounds. This principle applies broadly: if you find yourself writing `GetComponent<Renderer>().bounds.extents` to derive a value that could instead be a field on a component or a child object's position, you're overcomplicating it. Unless explicitly asked to interpret mesh data, default to Unity's GameObject-oriented solutions first.
+
 ---
 
 ## Agent hierarchy
@@ -88,7 +90,9 @@ These are non-negotiable. Violating any of them creates bugs that are hard to fi
 
 **When adding a new PortOwnerType, update ConnectionResolver.** `CreateSource` and `CreateDestination` in `ConnectionResolver.cs` have switch statements over `PortOwnerType`. Adding a new enum value without adding corresponding cases causes exceptions at runtime when ports try to wire up. This is an integration seam that unit tests don't catch — it only fails when you place buildings adjacent to each other.
 
-**Never duplicate placement math, physics constants, or derived values.** Every building type's world position, Y offset, rotation, and scale must come from a single source of truth -- currently `GridManager`'s universal placement methods (`GetFoundationWorldPos`, `GetWallWorldPos`, `GetBuildingWorldPos`, `GetBeltEndpointPos`, `GetRampPlacement`). Ghost previews and server spawns call the same method. Y offsets derive from prefab renderer bounds via `GetPrefabHalfHeight()`, not hardcoded magic numbers. If you're writing `new Vector3(x, someOffset, z)` for placement anywhere outside GridManager, you're doing it wrong. This rule extends beyond placement: any logic that could apply to multiple building/item/enemy types belongs in a shared method parameterized by the type's data (prefab, definition SO, etc.), not copy-pasted per type.
+**Never duplicate placement math, physics constants, or derived values.** Every building type's world position, rotation, and scale must come from a single source of truth -- currently `GridManager`'s universal placement methods. Ghost previews and server spawns call the same method. If you're writing `new Vector3(x, someOffset, z)` for placement anywhere outside GridManager, you're doing it wrong. This rule extends beyond placement: any logic that could apply to multiple building/item/enemy types belongs in a shared method parameterized by the type's data (prefab, definition SO, etc.), not copy-pasted per type.
+
+**Snap placement is snap-to-snap, not computed.** `GetSnapPlacementPosition` finds the ghost prefab's matching snap point (opposite normal, opposite height tier) and positions the ghost so the two snap points meet: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos`. No extents, no halfHeight, no baseOffset math. Snap point child transforms on the prefab encode all attachment geometry. If a building snaps wrong, fix the snap point positions on the prefab, don't add offset calculations to GridManager.
 
 ---
 

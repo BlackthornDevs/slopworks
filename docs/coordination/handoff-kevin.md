@@ -1,52 +1,56 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-08 23:00
+Last updated: 2026-03-09 22:00
 Branch: kevin/multiplayer-step1
-Last commit: b8a4921 Snap point sphere colliders and data-driven placement
+Last commit: (uncommitted -- snap-to-snap placement + center/edge filter)
 
 ## What was completed this session
 
-### Snap point sphere collider system
-- Each `BuildingSnapPoint` child now gets a `SphereCollider` (radius 0.5, isTrigger=true) on layer 20 (SnapPoints)
-- Build raycasts hit snap colliders directly instead of relying on distance-based FindNearest
-- Added SnapPoints layer 20 to `PhysicsLayers.cs` and `TagManager.asset`
-- Configured physics collision matrix: SnapPoints collides with nothing (triggers only)
-- `NetworkBuildController.RaycastPlacement()` checks for direct snap point hit first, falls back to FindNearest with hitNormal
+### Snap-to-snap placement system (replaced offset-based math)
+- `GridManager.GetSnapPlacementPosition()` completely rewritten -- no more extents, halfHeight, or baseOffset calculations
+- New `FindGhostAttachSnap()` finds the ghost prefab's matching snap point (opposite normal + opposite height tier)
+- Placement math is now: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos`
+- Ghost prefab snap points encode all attachment geometry -- fix snap positions on the prefab, not in GridManager
 
-### Data-driven snap placement (removed hardcoded category logic)
-- `ComputeSnapSurfaceY()` simplified to just `return snap.transform.position.y` -- no category-based sitsOnTop logic
-- `GridManager.GetSnapPlacementPosition()` horizontal Y uses `snapPos.y + baseOffset` instead of `surfaceY + baseOffset`
-- Rotation always comes from caller (`rotationDeg` param), no autoYaw fallback
-- Wall-to-wall and ramp-to-ramp inherit existing building's yaw as base, R-key adds offset
+### Center/Edge snap filter toggle (scroll wheel)
+- `NetworkBuildController.RaycastPlacement()` uses `Physics.RaycastAll` to find all overlapping snap spheres
+- `MatchesSnapFilter()` filters by active mode: CENTER (_Mid, _Center) or EDGE (_Top, _Bot)
+- Scroll wheel toggles between modes in build mode
+- HUD shows active filter and snap point name
+- Cyan highlight sphere shows which snap point is active
 
-### Ramp snap point reduction
-- Ramps get 7 snap points (4 cardinal mid + Top_Center + HighEdge + LowEdge) instead of 14+2
-- Both `BuildingSnapPoint.GenerateFromBounds()` and `SnapPointPrefabSetup` support `isRamp` parameter
-
-### Editor tool: SnapPointPrefabSetup
-- New editor tool at `Tools > Slopworks > Add Snap Points to Prefabs`
-- Preserves existing snap points (skips prefabs that already have them) so manual edits survive
-- Generates sphere colliders on each snap point child
-
-### New building prefabs
-- `SLAB_1m/2m/4m` (foundations), `WALL_0.5m`, `RAMP 4x1/4x2`
-- All have snap point children with sphere collider triggers
+### Bottom/downward placement fix
+- _Bot snap points on target pair with _Top on ghost, extending new building downward
+- _Top snap points on target pair with _Bot on ghost, extending upward
+- Eliminates the hardcoded "always extend upward" behavior
 
 ### Test updates
-- `SnapPlacementTests.cs`: explicit autoYaw for east snap rotation
-- `UnifiedPlacementTests.cs`: new test file covering east/south/corner snaps with explicit rotation
-- `GridPlacementTests.cs`: updated for new API
+- `SnapPlacementTests.cs` rewritten for snap-to-snap expected values
+- Added `CreateCubeWithSnaps()` helper and `FindSnapByName()` utility
+- New tests: `HorizontalBot_ExtendsDownward`, `HorizontalTop_ExtendsUpward`
+
+### Documentation updates
+- `.claude/CLAUDE.md`: new engineering principle "Prefer GameObject-oriented data over computed values"
+- `.claude/CLAUDE.md`: updated placement hard rule for snap-to-snap approach
+- `docs/reference/snap-point-system.md`: updated placement mode descriptions, center/edge filter
+- `memory/MEMORY.md`: updated placement section
 
 ## What's in progress (not yet committed)
-- Unstaged terrain data, metal materials, old prefab deletions, "test 1" prefabs, FBX Raw assets, Recovery assets -- NOT part of snap point work
+- All changes listed above are uncommitted
+- Also: unstaged terrain data, metal materials, old prefab deletions, "test 1" prefabs, FBX Raw assets, Recovery assets (NOT part of snap point work)
 
 ## Next task to pick up
 
-### Known bugs (from playtest)
+### Playtest verification
+1. Run all EditMode tests in Test Runner -- verify snap-to-snap tests pass
+2. Playtest snap placement: place foundations, snap walls to edges (CENTER and EDGE modes), stack vertically, hang from bottom
+3. Verify wall runs (wall-to-wall side snapping) still work
+4. Check ramp placement behavior with the new snap-to-snap approach
+
+### Known bugs (from previous session, may still apply)
 1. **Zoop ghost shifts to different grid after first click** -- ghost jumps to wrong cell when zoop starts
-2. **Ramp zoop should change elevation** -- currently places flat copies. Should increment elevation (high-to-low or low-to-high) so zooped ramps build upward
-3. **Ramp HighEdge/LowEdge snap points need manual positioning** -- auto-detection from mesh bounds doesn't match actual slope. Editor tool preserves manual edits.
-4. **Wall-to-floor snap positioning** -- foundation top flush with wall top requires correct snap point positioning on wall prefabs (tuning, not code)
+2. **Ramp zoop should change elevation** -- currently places flat copies
+3. **Ramp HighEdge/LowEdge snap points need manual positioning** -- auto-detection from mesh bounds doesn't match actual slope
 
 ### After bugs
 - Continue Step 4: Machines + Belts + Simulation network wrappers
@@ -56,16 +60,19 @@ Last commit: b8a4921 Snap point sphere colliders and data-driven placement
 - None
 
 ## Test status
-- Tests not run via MCP this session (MCP run_tests corrupts FishNet DefaultPrefabObjects)
+- Tests not run this session (MCP run_tests corrupts FishNet DefaultPrefabObjects)
 - Run manually: Window > General > Test Runner > EditMode > Run All
+- Expect some test adjustments may be needed for FBX-based prefabs vs center-origin test cubes
 
 ## Key context the next session needs
 - **Branch:** `kevin/multiplayer-step1`, NOT `kevin/main`
 - **NEVER use MCP run_tests** -- triggers recompilation that corrupts FishNet DefaultPrefabObjects.asset
-- **SnapPoints layer 20**: trigger colliders only, no physics collisions. Raycasts hit them via Physics.queriesHitTriggers
-- **Snap point Y drives placement**: no category-based surfaceY logic. Snap point position encodes the geometry.
-- **Editor tool preserves manual edits**: SnapPointPrefabSetup skips prefabs that already have snap points
-- **placeSurfaceY includes nudge**: `_surfaceY + _nudgeOffset` used for all placement commands
-- **Zoop skipped during snap detection**: `if (!_zoopMode)` guards snap point checking
-- **Ghost system**: Prefab-based ghosts via `CreateGhostFromPrefab()` / `EnsurePrefabGhost()`
-- **Camera-facing edge**: `GetFacingEdgeDirection()` determines wall/ramp edge based on camera direction
+- **Snap-to-snap placement**: `GetSnapPlacementPosition` uses `FindGhostAttachSnap` to pair opposite snap points. No extents/offset math. Fix snap geometry on the prefab, not in code.
+- **Center/Edge filter**: Scroll wheel toggles which snap points are active. CENTER = _Mid/_Center (default, less overlap). EDGE = _Top/_Bot (for extending from edges).
+- **`Physics.RaycastAll`**: `RaycastPlacement` uses RaycastAll to find all overlapping snap sphere hits, then filters by active mode. Falls back to FindNearestFiltered if no snap sphere matched.
+- **Ghost prefabs need snap points**: `FindGhostAttachSnap` queries `GetComponentsInChildren<BuildingSnapPoint>()` on the prefab. All building prefabs must have snap point children.
+- **Engineering principle**: Prefer baking data into child objects/transforms over computing from renderer bounds. See CLAUDE.md.
+- **SnapPoints layer 20**: trigger colliders only, no physics collisions. RaycastAll hits them via Physics.queriesHitTriggers.
+- **Editor tool preserves manual edits**: SnapPointPrefabSetup skips prefabs that already have snap points.
+- **placeSurfaceY includes nudge**: derived from ghostPos.y - GetPrefabBaseOffset(prefab) for HasBuildingAt check.
+- **Zoop skipped during snap detection**: `if (!_zoopMode)` guards snap point checking.

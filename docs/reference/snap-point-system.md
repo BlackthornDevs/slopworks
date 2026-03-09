@@ -7,7 +7,7 @@ Every building prefab has child GameObjects with a `BuildingSnapPoint` component
 - **Normal**: outward direction of that face (stored as `_normalOverride`, transformed by parent rotation at runtime via `transform.TransformDirection`)
 - **SurfaceSize**: width and height of the attachment area
 
-When the player's crosshair raycast hits an existing building (layer 13, Structures), `BuildingSnapPoint.FindNearest()` returns the closest snap point to the hit position. The placement system then offsets the new building along that normal by half the incoming prefab's depth, so the two buildings sit edge-to-edge.
+When the player's crosshair raycast hits an existing building (layer 13, Structures) or snap point sphere (layer 20, SnapPoints), the system picks the best snap point filtered by the current center/edge mode (scroll wheel toggle). The placement system then finds the ghost prefab's matching snap point (opposite normal, opposite height tier) and positions the ghost so the two snap points meet: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos`. No extent/offset math -- positions are baked into the snap point children.
 
 ## Normal direction and rotation
 
@@ -20,24 +20,23 @@ This means snap normals are always correct regardless of building rotation. No s
 | Mode | Trigger | Position calculation |
 |------|---------|---------------------|
 | **Grid** | Raycast hits Terrain (layer 12) | `Mathf.Round(hit.x/z)` centers on 1m grid, Y from terrain + baseOffset |
-| **Snap** | Raycast hits Structure (layer 13) with snap points | Offset along snap normal by half-depth, Y from `surfaceY + baseOffset` |
+| **Snap** | Raycast hits Structure/SnapPoint (layer 13/20) | Snap-to-snap: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos` |
 
-## Surface Y tracking
+## Snap-to-snap placement
 
-`surfaceY` is the Y of the ground/surface the building sits on. It determines vertical alignment:
-- **Side snap**: `surfaceY = existingBuilding.PlacementInfo.SurfaceY` (same ground level)
-- **Top snap**: `surfaceY = existingBuilding.SurfaceY + existingBuilding.ObjectHeight` (top of existing)
-- **Grid**: `surfaceY = terrain hit.point.y`
+The ghost prefab has its own snap points (same layout as placed buildings). `FindGhostAttachSnap` picks the ghost snap with:
+1. **Opposite normal**: ghost snap's rotated normal opposes target normal (accounting for ghost rotation)
+2. **Opposite height tier**: target `_Bot` matches ghost `_Top`, target `_Top` matches ghost `_Bot`, target `_Mid` matches ghost `_Mid`
 
-Buildings placed side-by-side on the same surface share the same `surfaceY`, so their bottoms align.
+The ghost is positioned so the two snap points meet in world space. No extents, no halfHeight, no baseOffset calculations. The snap point child transforms encode all geometry.
 
-## Base offset calculation
+## Center/Edge filter toggle
 
-`GetPrefabBaseOffset(prefab)` handles both mesh origins:
-- **Center-origin** (Unity cubes): `extents.y - center.y = 0.5 - 0 = 0.5` (offset up by half-height)
-- **Center-bottom** (Revit FBX): `extents.y - center.y = h/2 - h/2 = 0` (origin already at bottom)
+Scroll wheel in build mode swaps between two snap point filters:
+- **CENTER (default)**: Only `_Mid` and `_Center` snap points are active. Less overlap, good default.
+- **EDGE**: Only `_Top` and `_Bot` snap points on cardinal faces are active. Needed for extending walls up/down from edges.
 
-All Y positioning uses: `posY = surfaceY + baseOffset`
+The same filter drives both target snap selection (via `Physics.RaycastAll` filtering) and ghost snap tier matching. In EDGE mode, hitting a foundation's `North_Bot` automatically pairs with the ghost wall's `South_Top`, so the wall hangs below.
 
 ---
 
@@ -315,28 +314,9 @@ HighEdge and LowEdge positions depend on the actual ramp mesh geometry -- the Y 
 
 ---
 
-## Building from below (missed scenario)
+## Building from below
 
-When the player stands UNDER a foundation and looks up, the raycast hits the foundation's bottom face. Currently there's no Bottom snap point, so `FindNearest` returns the closest existing point (probably a side snap seen from below), which produces unexpected placement.
-
-With Bottom snap points added:
-- Raycast hits underside of foundation
-- FindNearest returns Bottom snap (normal = (0, -1, 0))
-- `GetSnapPlacementPosition` detects vertical normal (abs(normal.y) > 0.9)
-- New building placed below: `posY = snapPos.y - baseOffset` (negative direction)
-- Wall hanging from underside: wall center = bottom snap Y - wall halfHeight
-
-This also covers placing a second foundation underneath an elevated one (e.g., filling in below a ramp). The bottom snap gives the correct attachment point.
-
-### Code change needed for bottom snap
-
-Currently `GetSnapPlacementPosition` handles vertical normals:
-```
-float yOffset = normal.y > 0 ? baseOffset : -baseOffset;
-```
-This already supports downward normals -- `normal.y < 0` produces `-baseOffset`, placing the new building's center BELOW the snap point. The bottom of the new building's bounding box would touch the snap point. This should work without code changes.
-
-`surfaceY` for bottom snaps: `_surfaceY = placement.SurfaceY - placement.ObjectHeight` (the underside level). This needs a code addition in `RaycastPlacement` to detect downward-facing snaps and set surfaceY accordingly.
+Bot_Center snap points (normal = (0,-1,0)) on foundations enable underside attachment. With snap-to-snap placement, hitting Bot_Center on a foundation pairs with the ghost's Top_Center, positioning the ghost so its top meets the foundation's bottom. No special code needed -- the snap point positions encode the geometry.
 
 ---
 

@@ -231,3 +231,31 @@ EditMode tests passing is necessary but not sufficient. The MasterPlaytest scene
 **Rationale:** Tugboat works immediately, no Steam SDK setup. LAN play between two local machines (dev workflow) is the primary use case. FishySteamworks can be added later as a transport swap without changing game code.
 
 **Impact:** No Steam SDK dependency. Players on the same network connect via IP address. Dedicated server on Ubuntu mini PC uses same Tugboat transport.
+
+---
+
+## D-017: Snap-to-snap placement (no computed offsets)
+
+**Date:** 2026-03-09
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Snap placement was computing Y offsets, half-depths, and base offsets from renderer bounds. This broke for FBX prefabs with non-center origins (baseOffset=0) and required constant hacks for different building types.
+
+**Decision:** Snap placement uses snap-to-snap alignment. Both the target building and the ghost prefab have snap point children. `FindGhostAttachSnap` pairs them (opposite normal, opposite height tier: _Bot->_Top, _Top->_Bot, _Mid->_Mid). Ghost position = `targetSnapPos - Rot * ghostSnapLocalPos`. No extents, no halfHeight, no baseOffset math.
+
+**Rationale:** Snap point child transforms already encode all attachment geometry. Computing offsets from renderer bounds duplicates information, breaks on non-center-origin meshes, and requires per-type special cases. The snap points are the single source of truth.
+
+**Impact:** Fix snap geometry by moving snap point children on the prefab, not by adding offset calculations to GridManager. All building prefabs must have snap point children for snap placement to work. `GetPrefabBaseOffset` and `GetPrefabExtents` are still used for grid-mode placement but NOT for snap-mode.
+
+---
+
+## D-018: Prefer GameObject-oriented data over computed values
+
+**Date:** 2026-03-09
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** Multiple bugs in the snap system were caused by computing values from renderer bounds at runtime (baseOffset=0 for FBX, wrong renderer found in hierarchy, etc).
+
+**Decision:** If information can be baked into child objects, components, or transform positions on a prefab, do that instead of computing from mesh bounds at runtime. Unless explicitly asked to interpret mesh data, default to Unity's GameObject-oriented solutions.
+
+**Rationale:** Child transforms and component fields are visible in the Inspector, debuggable, and independent of mesh origin conventions. Computed values from renderer bounds are fragile (origin varies between Unity primitives and FBX imports), invisible at edit time, and require understanding the math to debug.
+
+**Impact:** New systems should prefer data-on-object patterns. Existing systems that compute from renderer bounds should be left as-is unless they cause bugs.
