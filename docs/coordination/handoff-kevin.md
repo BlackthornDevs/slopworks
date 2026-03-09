@@ -1,78 +1,79 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-09 22:00
+Last updated: 2026-03-09 23:30
 Branch: kevin/multiplayer-step1
-Last commit: (uncommitted -- snap-to-snap placement + center/edge filter)
+Last commit: (uncommitted -- zoop snap-chain + ramp/wall fixes + delete mask)
 
 ## What was completed this session
 
-### Snap-to-snap placement system (replaced offset-based math)
-- `GridManager.GetSnapPlacementPosition()` completely rewritten -- no more extents, halfHeight, or baseOffset calculations
-- New `FindGhostAttachSnap()` finds the ghost prefab's matching snap point (opposite normal + opposite height tier)
-- Placement math is now: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos`
-- Ghost prefab snap points encode all attachment geometry -- fix snap positions on the prefab, not in GridManager
+### Zoop system rewrite (snap-chain based)
+- `NetworkBuildController.cs`: Zoop preview and placement now chain snap-to-snap instead of computing cell offsets and footprints
+- `UpdateZoopPreview()` builds a chain: each ghost snaps to the previous ghost's snap point along the zoop direction
+- `PlaceZoopLine()` reads positions directly from ghost transforms, no recalculation
+- `FindZoopSnapPoint()` finds the snap whose rotated normal aligns with the zoop direction, with Edge bonus for ramp HighEdge/LowEdge
+- Removed `GetZoopCells()` -- no longer needed
+- `MaxZoopCount = 5` hard cap on chain length
 
-### Center/Edge snap filter toggle (scroll wheel)
-- `NetworkBuildController.RaycastPlacement()` uses `Physics.RaycastAll` to find all overlapping snap spheres
-- `MatchesSnapFilter()` filters by active mode: CENTER (_Mid, _Center) or EDGE (_Top, _Bot)
-- Scroll wheel toggles between modes in build mode
-- HUD shows active filter and snap point name
-- Cyan highlight sphere shows which snap point is active
+### Zoop first-click snap support
+- First click in zoop mode uses full snap/grid placement (same as non-zoop)
+- `RaycastPlacement()` allows snap detection when `_zoopStartSet == false`
+- Stores `_zoopStartPos` and `_zoopStartRot` on first click for anchor
 
-### Bottom/downward placement fix
-- _Bot snap points on target pair with _Top on ghost, extending new building downward
-- _Top snap points on target pair with _Bot on ghost, extending upward
-- Eliminates the hardcoded "always extend upward" behavior
+### Zoop ray-plane extension
+- After first click, uses `Plane.Raycast` at anchor Y height instead of geometry raycast
+- Works when looking at sky, ramp edges, or beyond terrain
+- Clamped to `_placementRange` to prevent runaway at low angles
 
-### Test updates
-- `SnapPlacementTests.cs` rewritten for snap-to-snap expected values
-- Added `CreateCubeWithSnaps()` helper and `FindSnapByName()` utility
-- New tests: `HorizontalBot_ExtendsDownward`, `HorizontalTop_ExtendsUpward`
+### Wall zoop axis lock
+- Walls forced to zoop along their length axis (perpendicular to facing)
+- Uses `_zoopStartRot` (actual rotation from first click including snap auto-yaw)
+- Prevents face-to-face wall stacking
 
-### Documentation updates
-- `.claude/CLAUDE.md`: new engineering principle "Prefer GameObject-oriented data over computed values"
-- `.claude/CLAUDE.md`: updated placement hard rule for snap-to-snap approach
-- `docs/reference/snap-point-system.md`: updated placement mode descriptions, center/edge filter
-- `memory/MEMORY.md`: updated placement section
+### Ramp snap point overhaul
+- `BuildingSnapPoint.cs` and `SnapPointPrefabSetup.cs`: ramps now get North_Bot, East_Bot, West_Bot, HighEdge, LowEdge, Bot_Center
+- No Top_Center, no _Mid, no _Top on ramps
+- HighEdge at top of slope (high Y, forward Z), LowEdge at bottom (low Y, back Z)
+- `FindGhostAttachSnap()` in GridManager.cs: HighEdge pairs with LowEdge and vice versa
+
+### Delete mode fix
+- Added `DeleteMask` (Structures layer only) -- delete raycast no longer hits snap point triggers
+- Previously required aiming at bottom edge of slabs to delete
+
+### PR #52 merged to master
+- Snap-to-snap placement + center/edge filter from previous session
 
 ## What's in progress (not yet committed)
-- All changes listed above are uncommitted
-- Also: unstaged terrain data, metal materials, old prefab deletions, "test 1" prefabs, FBX Raw assets, Recovery assets (NOT part of snap point work)
+- All zoop/ramp/delete changes listed above are uncommitted
+- Also: unstaged terrain data, metal materials, old prefab deletions, "test 1" prefabs, FBX Raw assets, Recovery assets (NOT part of this work)
 
 ## Next task to pick up
 
 ### Playtest verification
-1. Run all EditMode tests in Test Runner -- verify snap-to-snap tests pass
-2. Playtest snap placement: place foundations, snap walls to edges (CENTER and EDGE modes), stack vertically, hang from bottom
-3. Verify wall runs (wall-to-wall side snapping) still work
-4. Check ramp placement behavior with the new snap-to-snap approach
+1. Run all EditMode tests in Test Runner -- verify snap/placement tests still pass
+2. Playtest zoop: foundations (should chain side-by-side), walls (chain along length), ramps (chain uphill via HighEdge/LowEdge)
+3. Verify delete mode works reliably (should highlight on crosshair, not require bottom-edge aiming)
+4. Re-run SnapPointPrefabSetup (Tools > Slopworks > Add Snap Points to Prefabs) on ramp prefabs after deleting old snap point children
 
-### Known bugs (from previous session, may still apply)
-1. **Zoop ghost shifts to different grid after first click** -- ghost jumps to wrong cell when zoop starts
-2. **Ramp zoop should change elevation** -- currently places flat copies
-3. **Ramp HighEdge/LowEdge snap points need manual positioning** -- auto-detection from mesh bounds doesn't match actual slope
-
-### After bugs
+### After verification
 - Continue Step 4: Machines + Belts + Simulation network wrappers
 - Steps 5-7: Combat, Tower+Buildings, Supabase
 
 ## Blockers or decisions needed
-- None
+- Existing ramp prefabs may still have old snap points (Mid + Top_Center). Need to delete old children and re-run the editor tool.
 
 ## Test status
 - Tests not run this session (MCP run_tests corrupts FishNet DefaultPrefabObjects)
 - Run manually: Window > General > Test Runner > EditMode > Run All
-- Expect some test adjustments may be needed for FBX-based prefabs vs center-origin test cubes
+- SnapPlacementTests may need adjustment for new ramp snap point names
 
 ## Key context the next session needs
-- **Branch:** `kevin/multiplayer-step1`, NOT `kevin/main`
+- **Branch:** `kevin/multiplayer-step1`
 - **NEVER use MCP run_tests** -- triggers recompilation that corrupts FishNet DefaultPrefabObjects.asset
-- **Snap-to-snap placement**: `GetSnapPlacementPosition` uses `FindGhostAttachSnap` to pair opposite snap points. No extents/offset math. Fix snap geometry on the prefab, not in code.
-- **Center/Edge filter**: Scroll wheel toggles which snap points are active. CENTER = _Mid/_Center (default, less overlap). EDGE = _Top/_Bot (for extending from edges).
-- **`Physics.RaycastAll`**: `RaycastPlacement` uses RaycastAll to find all overlapping snap sphere hits, then filters by active mode. Falls back to FindNearestFiltered if no snap sphere matched.
-- **Ghost prefabs need snap points**: `FindGhostAttachSnap` queries `GetComponentsInChildren<BuildingSnapPoint>()` on the prefab. All building prefabs must have snap point children.
-- **Engineering principle**: Prefer baking data into child objects/transforms over computing from renderer bounds. See CLAUDE.md.
-- **SnapPoints layer 20**: trigger colliders only, no physics collisions. RaycastAll hits them via Physics.queriesHitTriggers.
-- **Editor tool preserves manual edits**: SnapPointPrefabSetup skips prefabs that already have snap points.
-- **placeSurfaceY includes nudge**: derived from ghostPos.y - GetPrefabBaseOffset(prefab) for HasBuildingAt check.
-- **Zoop skipped during snap detection**: `if (!_zoopMode)` guards snap point checking.
+- **Snap-chain zoop**: `UpdateZoopPreview` chains ghosts by finding matching snap points on each successive ghost. `FindZoopSnapPoint` picks the snap whose normal aligns with zoop direction.
+- **Wall zoop axis**: Forced to length axis via `_zoopStartRot`. Wall at 0 deg -> zoop along X only.
+- **Ramp snap points**: HighEdge (top of slope, forward), LowEdge (bottom of slope, back), cardinal _Bot only, Bot_Center. No _Mid/_Top/Top_Center.
+- **HighEdge/LowEdge pairing**: `FindGhostAttachSnap` maps HighEdge->LowEdge and vice versa. `FindZoopSnapPoint` gives 0.1 bonus to Edge snaps so they win over cardinal _Bot.
+- **Delete mask**: `DeleteMask = (1 << PhysicsLayers.Structures)` -- only hits building meshes, not snap sphere triggers.
+- **Zoop ray-plane**: After first click, uses `Plane.Raycast` at anchor Y for end cell. No geometry needed.
+- **MaxZoopCount = 5**: Hard cap in chain loop.
+- **Ramp prefabs need re-setup**: Delete old snap children, re-run Tools > Slopworks > Add Snap Points to Prefabs.
