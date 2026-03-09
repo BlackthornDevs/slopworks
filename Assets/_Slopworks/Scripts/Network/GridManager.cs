@@ -428,7 +428,29 @@ public class GridManager : NetworkBehaviour
         if (netBelt != null && _factorySimulation != null)
             _factorySimulation.RegisterBelt(netBelt);
 
+        // Add BeltPort children at endpoints for port-based connections
+        AddBeltPort(go, startPos, -startDir, BeltPortDirection.Input, 0);
+        AddBeltPort(go, endPos, endDir, BeltPortDirection.Output, 0);
+
         Debug.Log($"grid: belt placed from {startPos} to {endPos} arc={splineData.ArcLength:F1}m by {sender?.ClientId}");
+    }
+
+    private static void AddBeltPort(GameObject parent, Vector3 worldPos, Vector3 worldDir, BeltPortDirection direction, int slotIndex)
+    {
+        var portName = direction == BeltPortDirection.Input ? "BeltPort_Input" : "BeltPort_Output";
+        var child = new GameObject($"{portName}_{slotIndex}");
+        child.transform.SetParent(parent.transform);
+        child.transform.position = worldPos;
+        child.transform.forward = worldDir;
+        child.layer = PhysicsLayers.SnapPoints;
+
+        var port = child.AddComponent<BeltPort>();
+        port.Direction = direction;
+        port.SlotIndex = slotIndex;
+
+        var col = child.AddComponent<SphereCollider>();
+        col.radius = 0.15f;
+        col.isTrigger = true;
     }
 
     [ServerRpc(RequireOwnership = false)]
