@@ -380,45 +380,47 @@ public class GridManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceBelt(Vector2Int fromCell, Vector2Int toCell, float surfaceY,
-        int variant = 0, NetworkConnection sender = null)
+    public void CmdPlaceBelt(Vector3 startPos, Vector3 startDir, Vector3 endPos, Vector3 endDir,
+        byte tier = 0, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
+
+        var validation = BeltPlacementValidator.Validate(startPos, startDir, endPos, endDir);
+        if (!validation.IsValid)
+        {
+            Debug.Log($"grid: belt placement rejected: {validation.Error} by {sender?.ClientId}");
+            return;
+        }
 
         var prefab = GetPrefab(BuildingCategory.Belt, variant);
         if (prefab == null) return;
 
-        float cs = FactoryGrid.CellSize;
-        float beltHalfH = GetPrefabHalfHeight(prefab);
-        Vector3 startPos = new Vector3(fromCell.x * cs + cs * 0.5f, surfaceY + beltHalfH, fromCell.y * cs + cs * 0.5f);
-        Vector3 endPos = new Vector3(toCell.x * cs + cs * 0.5f, surfaceY + beltHalfH, toCell.y * cs + cs * 0.5f);
-        int length = Mathf.Max(1, Mathf.Abs(toCell.x - fromCell.x) + Mathf.Abs(toCell.y - fromCell.y));
+        var splineData = BeltSplineBuilder.Build(startPos, startDir, endPos, endDir);
+        var segment = BeltSegment.FromArcLength(splineData.ArcLength);
 
-        var go = Instantiate(prefab, (startPos + endPos) * 0.5f, Quaternion.identity);
+        var midpoint = splineData.Evaluate(0.5f);
+        var go = Instantiate(prefab, midpoint, Quaternion.identity);
 
-
-        var diff = endPos - startPos;
-        float beltLen = diff.magnitude + FactoryGrid.CellSize;
-        if (Mathf.Abs(diff.x) > Mathf.Abs(diff.z))
-            go.transform.localScale = new Vector3(beltLen, 0.08f, 0.6f);
-        else
-            go.transform.localScale = new Vector3(0.6f, 0.08f, beltLen);
+        // Reset scale -- mesh comes from SplineExtrude, not prefab scale
+        go.transform.localScale = Vector3.one;
 
         var info = go.AddComponent<PlacementInfo>();
         info.Category = BuildingCategory.Belt;
-        info.Cell = fromCell;
-        info.SurfaceY = surfaceY;
-        info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
+        info.SurfaceY = startPos.y;
 
         var netBelt = go.GetComponent<NetworkBeltSegment>();
         if (netBelt != null)
-        {
-            var segment = new BeltSegment(length);
-            netBelt.ServerInit(segment, startPos, endPos);
-        }
+            netBelt.ServerInit(segment, splineData, tier);
 
         ServerManager.Spawn(go);
-        BuildingSnapPoint.GenerateFromBounds(go, BuildingCategory.Belt);
+
+        // Server also bakes mesh (host needs to see it)
+        var material = go.GetComponent<MeshRenderer>()?.sharedMaterial;
+        BeltSplineMeshBaker.BakeMesh(go, splineData, material);
+
+        // Add belt collider for raycast interaction (D-BLT-005)
+        var meshCollider = go.AddComponent<MeshCollider>();
+        meshCollider.sharedMesh = go.GetComponent<MeshFilter>()?.sharedMesh;
 
         var visualizer = go.AddComponent<BeltItemVisualizer>();
         visualizer.Init(netBelt);
@@ -426,19 +428,7 @@ public class GridManager : NetworkBehaviour
         if (netBelt != null && _factorySimulation != null)
             _factorySimulation.RegisterBelt(netBelt);
 
-        var fromKey = RecordKey(fromCell, surfaceY);
-        var record = new PlacedRecord
-        {
-            Category = BuildingCategory.Belt, Instance = go,
-            SurfaceY = surfaceY, NetBelt = netBelt
-        };
-        _placedRecords[fromKey] = record;
-
-        if (fromCell != toCell)
-            _placedRecords[RecordKey(toCell, surfaceY)] = record;
-
-        AutoWire(record, fromCell);
-        Debug.Log($"grid: belt placed from ({fromCell.x},{fromCell.y}) to ({toCell.x},{toCell.y}) y={surfaceY:F1} by {sender?.ClientId}");
+        Debug.Log($"grid: belt placed from {startPos} to {endPos} arc={splineData.ArcLength:F1}m by {sender?.ClientId}");
     }
 
     [ServerRpc(RequireOwnership = false)]
