@@ -54,6 +54,10 @@ public class NetworkBuildController : NetworkBehaviour
 
     private GridOverlay _gridOverlay;
 
+    // Snap mode toggle: center snaps (default) vs edge snaps (scroll wheel)
+    private bool _edgeSnapMode;
+    private GameObject _snapHighlight;
+
     private static readonly int StructuralMask =
         (1 << PhysicsLayers.Terrain) | (1 << PhysicsLayers.Structures) | (1 << PhysicsLayers.SnapPoints);
 
@@ -157,6 +161,17 @@ public class NetworkBuildController : NetworkBehaviour
         if (kb.tabKey.wasPressedThisFrame)
             CycleVariant();
 
+        // Snap mode toggle: scroll wheel swaps center vs edge snap points
+        if (_placementMode == PlacementMode.Snap)
+        {
+            float scroll = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) > 0.1f)
+            {
+                _edgeSnapMode = !_edgeSnapMode;
+                Debug.Log($"build: snap filter = {(_edgeSnapMode ? "EDGE" : "CENTER")}");
+            }
+        }
+
         // Zoop toggle: Z key
         if (kb.zKey.wasPressedThisFrame)
         {
@@ -258,9 +273,10 @@ public class NetworkBuildController : NetworkBehaviour
         _ghost.transform.rotation = ghostRot;
         _ghost.SetActive(true);
 
-        // Validity check
+        // Validity check -- derive surfaceY from ghost position so bottom snaps
+        // don't collide with the existing building's record key
         var category = ToolToCategory(_currentTool);
-        float placeSurfaceY = _surfaceY + _nudgeOffset;
+        float placeSurfaceY = ghostPos.y - GridManager.GetPrefabBaseOffset(prefab);
         bool valid = !GridManager.Instance.HasBuildingAt(cell, placeSurfaceY);
         SetGhostColor(valid ? ValidColor : InvalidColor);
 
@@ -292,6 +308,7 @@ public class NetworkBuildController : NetworkBehaviour
     private void HideGhost()
     {
         if (_ghost != null) _ghost.SetActive(false);
+        HideSnapHighlight();
     }
 
     // -- Delete mode (X key) --
@@ -528,6 +545,7 @@ public class NetworkBuildController : NetworkBehaviour
         CancelZoop();
         CancelBeltPlacement();
         DestroyGhost();
+        HideSnapHighlight();
     }
 
     private void CancelZoop()
@@ -675,50 +693,197 @@ public class NetworkBuildController : NetworkBehaviour
     /// <summary>
     /// Unified raycast for all build tools. Sets _placementMode and _activeSnapPoint
     /// based on what the ray hits (snap point on existing building vs terrain grid).
+    /// Uses RaycastAll to find all snap sphere hits, then filters by center/edge mode.
     /// </summary>
     private bool RaycastPlacement(out RaycastHit hit)
     {
         var ray = new Ray(_camera.transform.position, _camera.transform.forward);
+
+        // Skip snap detection during zoop -- zoop always uses grid placement
+        if (!_zoopMode)
+        {
+            // RaycastAll to catch all overlapping snap spheres along the ray
+            var hits = Physics.RaycastAll(ray, _placementRange, StructuralMask);
+            if (hits.Length > 0)
+            {
+                // Sort by distance so we process closest first
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+                // Find the best snap point that matches our center/edge filter
+                BuildingSnapPoint bestSnap = null;
+                PlacementInfo bestPlacement = null;
+                float bestDist = float.MaxValue;
+                RaycastHit bestHit = default;
+
+                foreach (var h in hits)
+                {
+                    var snap = h.collider.GetComponent<BuildingSnapPoint>();
+                    if (snap == null) continue;
+                    if (!MatchesSnapFilter(snap)) continue;
+
+                    float dist = h.distance;
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        bestSnap = snap;
+                        bestPlacement = snap.GetComponentInParent<PlacementInfo>();
+                        bestHit = h;
+                    }
+                }
+
+                if (bestSnap != null && bestPlacement != null)
+                {
+                    hit = bestHit;
+                    _placementMode = PlacementMode.Snap;
+                    _activeSnapPoint = bestSnap;
+                    _surfaceY = ComputeSnapSurfaceY(bestSnap, bestPlacement);
+                    UpdateSnapHighlight();
+                    return true;
+                }
+
+                // No snap matched filter -- check if we hit a building mesh
+                // and find nearest filtered snap on that building
+                foreach (var h in hits)
+                {
+                    var placement = h.collider.GetComponentInParent<PlacementInfo>();
+                    if (placement == null) continue;
+
+                    var chosen = FindNearestFiltered(placement.gameObject, h.point, h.normal);
+                    if (chosen != null)
+                    {
+                        hit = h;
+                        _placementMode = PlacementMode.Snap;
+                        _activeSnapPoint = chosen;
+                        _surfaceY = ComputeSnapSurfaceY(chosen, placement);
+                        UpdateSnapHighlight();
+                        return true;
+                    }
+                }
+
+                // Fall through to terrain/grid from first hit
+                hit = hits[0];
+                if (hit.collider.gameObject.layer == PhysicsLayers.Terrain)
+                {
+                    _placementMode = PlacementMode.Grid;
+                    _activeSnapPoint = null;
+                    HideSnapHighlight();
+                    _surfaceY = hit.point.y;
+                    return true;
+                }
+            }
+        }
+
+        // Single raycast fallback (zoop mode or no RaycastAll hits)
         if (!Physics.Raycast(ray, out hit, _placementRange, StructuralMask))
         {
             _placementMode = PlacementMode.None;
             _activeSnapPoint = null;
+            HideSnapHighlight();
             return false;
-        }
-
-        // Check if we hit a snap point collider directly
-        // Skip during zoop -- zoop always uses grid placement
-        if (!_zoopMode)
-        {
-            var directSnap = hit.collider.GetComponent<BuildingSnapPoint>();
-            if (directSnap == null)
-                directSnap = hit.collider.GetComponentInParent<BuildingSnapPoint>();
-
-            var placement = directSnap != null
-                ? directSnap.GetComponentInParent<PlacementInfo>()
-                : hit.collider.GetComponentInParent<PlacementInfo>();
-
-            // Direct hit on snap point sphere
-            BuildingSnapPoint chosen = directSnap;
-
-            // Fallback: hit building mesh, find nearest snap point
-            if (chosen == null && placement != null)
-                chosen = BuildingSnapPoint.FindNearest(placement.gameObject, hit.point, hit.normal);
-
-            if (chosen != null && placement != null)
-            {
-                _placementMode = PlacementMode.Snap;
-                _activeSnapPoint = chosen;
-                _surfaceY = ComputeSnapSurfaceY(chosen, placement);
-                return true;
-            }
         }
 
         // Terrain hit -- grid mode
         _placementMode = PlacementMode.Grid;
         _activeSnapPoint = null;
+        HideSnapHighlight();
         _surfaceY = hit.point.y;
         return true;
+    }
+
+    /// <summary>
+    /// Returns true if the snap point matches the current center/edge filter.
+    /// Center mode: names containing "Center" or "Mid" (Top_Center, Bot_Center, North_Mid, etc.)
+    /// Edge mode: names containing "Top" or "Bot" on cardinal faces (North_Top, South_Bot, etc.)
+    ///            but NOT Top_Center or Bot_Center.
+    /// </summary>
+    private bool MatchesSnapFilter(BuildingSnapPoint snap)
+    {
+        var name = snap.gameObject.name;
+
+        if (!_edgeSnapMode)
+        {
+            // Center mode: Mid snaps on cardinal faces + Top_Center + Bot_Center
+            return name.Contains("Mid") || name.Contains("Center");
+        }
+        else
+        {
+            // Edge mode: Top/Bot snaps on cardinal faces (not Center)
+            return !name.Contains("Mid") && !name.Contains("Center");
+        }
+    }
+
+    /// <summary>
+    /// Find the nearest snap point on a building that matches the current center/edge filter.
+    /// Optionally filters by hit normal to prefer same-face snaps.
+    /// </summary>
+    private BuildingSnapPoint FindNearestFiltered(GameObject building, Vector3 worldPoint, Vector3 hitNormal)
+    {
+        var points = building.GetComponentsInChildren<BuildingSnapPoint>();
+        BuildingSnapPoint nearest = null;
+        float bestDist = float.MaxValue;
+
+        // First pass: same face + filter match
+        foreach (var p in points)
+        {
+            if (!MatchesSnapFilter(p)) continue;
+            if (Vector3.Dot(p.Normal, hitNormal) < 0.5f) continue;
+
+            float dist = Vector3.Distance(p.transform.position, worldPoint);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                nearest = p;
+            }
+        }
+
+        // Fallback: any filtered snap on the building
+        if (nearest == null)
+        {
+            foreach (var p in points)
+            {
+                if (!MatchesSnapFilter(p)) continue;
+                float dist = Vector3.Distance(p.transform.position, worldPoint);
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    nearest = p;
+                }
+            }
+        }
+
+        return nearest;
+    }
+
+    private void HideSnapHighlight()
+    {
+        if (_snapHighlight != null)
+            _snapHighlight.SetActive(false);
+    }
+
+    private void UpdateSnapHighlight()
+    {
+        if (_activeSnapPoint == null)
+        {
+            if (_snapHighlight != null) _snapHighlight.SetActive(false);
+            return;
+        }
+
+        if (_snapHighlight == null)
+        {
+            _snapHighlight = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _snapHighlight.name = "SnapHighlight";
+            var col = _snapHighlight.GetComponent<Collider>();
+            if (col != null) DestroyImmediate(col);
+            _snapHighlight.layer = PhysicsLayers.Decal;
+            _snapHighlight.transform.localScale = Vector3.one * 0.3f;
+            var r = _snapHighlight.GetComponent<Renderer>();
+            var mat = new Material(r.sharedMaterial);
+            mat.color = new Color(0f, 1f, 1f, 0.7f);
+            r.sharedMaterial = mat;
+        }
+
+        _snapHighlight.transform.position = _activeSnapPoint.transform.position;
+        _snapHighlight.SetActive(true);
     }
 
     private float ComputeSnapSurfaceY(BuildingSnapPoint snap, PlacementInfo placement)
@@ -983,7 +1148,10 @@ public class NetworkBuildController : NetworkBehaviour
         GUILayout.Label($"BUILD MODE  |  Tool: {_currentTool}  |  {surfaceLabel}{variantLabel}");
 
         if (_placementMode == PlacementMode.Snap && _activeSnapPoint != null)
-            GUILayout.Label($"Snap: {_activeSnapPoint.Normal:F1} on {_activeSnapPoint.transform.parent?.name}");
+        {
+            string filterLabel = _edgeSnapMode ? "EDGE" : "CENTER";
+            GUILayout.Label($"Snap: {_activeSnapPoint.name}  |  Filter: {filterLabel} (scroll to swap)");
+        }
         else
             GUILayout.Label("Mode: Grid");
 
@@ -1046,5 +1214,7 @@ public class NetworkBuildController : NetworkBehaviour
     private void OnDestroy()
     {
         CancelAllPending();
+        if (_snapHighlight != null)
+            Destroy(_snapHighlight);
     }
 }

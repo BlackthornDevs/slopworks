@@ -168,43 +168,71 @@ public class GridManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// Snap placement: position a new building flush against an existing building's snap point.
-    /// For horizontal normals: offset along normal by half the incoming depth, Y = snapY + halfHeight.
-    /// For vertical normals (top): place center-bottom on snap point.
+    /// Snap placement: find the ghost prefab's matching snap point (opposite normal,
+    /// opposite height tier) and position the ghost so the two snap points meet.
+    /// No extent/offset math -- positions are baked into the snap point children.
     /// </summary>
     public static (Vector3 position, Quaternion rotation) GetSnapPlacementPosition(
         BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg, float surfaceY)
     {
-        Vector3 extents = GetPrefabExtents(prefab);
-        float baseOffset = GetPrefabBaseOffset(prefab);
+        Vector3 targetPos = snapPoint.transform.position;
+        Vector3 targetNormal = snapPoint.Normal;
+        Quaternion ghostRot = Quaternion.Euler(0f, rotationDeg, 0f);
 
-        Vector3 snapPos = snapPoint.transform.position;
-        Vector3 normal = snapPoint.Normal;
+        var ghostSnap = FindGhostAttachSnap(prefab, targetNormal, snapPoint.gameObject.name, ghostRot);
 
-        // Vertical normal: stack on top
-        if (Mathf.Abs(normal.y) > 0.9f)
+        if (ghostSnap != null)
         {
-            float yOffset = normal.y > 0 ? baseOffset : -baseOffset;
-            Vector3 position = new Vector3(snapPos.x, snapPos.y + yOffset, snapPos.z);
-            Quaternion rotation = Quaternion.Euler(0f, rotationDeg, 0f);
-            return (position, rotation);
+            Vector3 rotatedLocal = ghostRot * ghostSnap.transform.localPosition;
+            Vector3 pos = targetPos - rotatedLocal;
+            return (pos, ghostRot);
         }
 
-        // Horizontal normal: caller provides the full rotation (base yaw + R-key offset)
-        float autoYaw = Mathf.Atan2(normal.x, normal.z) * Mathf.Rad2Deg;
-        float finalYaw = (float)rotationDeg;
+        // Fallback: center ghost on target snap (shouldn't happen if prefab has snap points)
+        Debug.LogWarning($"snap placement: no matching ghost snap on {prefab.name} for {snapPoint.gameObject.name}");
+        return (targetPos, ghostRot);
+    }
 
-        // Compute which extent faces the normal after rotation
-        float yawDiff = (finalYaw - autoYaw) * Mathf.Deg2Rad;
-        float halfDepth = Mathf.Abs(extents.z * Mathf.Cos(yawDiff)) + Mathf.Abs(extents.x * Mathf.Sin(yawDiff));
+    /// <summary>
+    /// Find the ghost prefab's snap point that should connect to the target snap.
+    /// Picks opposite normal + opposite height tier (_Bot→_Top, _Top→_Bot, _Mid→_Mid).
+    /// </summary>
+    private static BuildingSnapPoint FindGhostAttachSnap(
+        GameObject prefab, Vector3 targetNormal, string targetSnapName, Quaternion ghostRot)
+    {
+        var snaps = prefab.GetComponentsInChildren<BuildingSnapPoint>();
+        if (snaps.Length == 0) return null;
 
-        Vector3 horizontalNormal = new Vector3(normal.x, 0f, normal.z).normalized;
-        Vector3 pos = new Vector3(
-            snapPos.x + horizontalNormal.x * halfDepth,
-            snapPos.y + baseOffset,
-            snapPos.z + horizontalNormal.z * halfDepth);
+        // Ghost snap's rotated normal should oppose the target normal
+        Vector3 desiredLocal = Quaternion.Inverse(ghostRot) * (-targetNormal);
 
-        return (pos, Quaternion.Euler(0f, finalYaw, 0f));
+        // Opposite height tier
+        string wantTier;
+        if (targetSnapName.Contains("_Bot")) wantTier = "_Top";
+        else if (targetSnapName.Contains("_Top")) wantTier = "_Bot";
+        else wantTier = "_Mid";
+        // Center snaps (Top_Center, Bot_Center) have vertical normals --
+        // opposite normal match handles them without tier logic
+
+        BuildingSnapPoint best = null;
+        float bestScore = float.MinValue;
+
+        foreach (var s in snaps)
+        {
+            float normalDot = Vector3.Dot(s.Normal, desiredLocal);
+            if (normalDot < 0.5f) continue;
+
+            float tierBonus = s.gameObject.name.Contains(wantTier) ? 1f : 0f;
+            float score = normalDot + tierBonus;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = s;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>
