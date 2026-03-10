@@ -1283,7 +1283,10 @@ public class NetworkBuildController : NetworkBehaviour
                 Debug.Log($"belt: placing {_beltRoutingMode} from {_beltStartPos} to {endPos}");
                 GridManager.Instance.CmdPlaceBelt(
                     _beltStartPos, startDir,
-                    endPos, endDir);
+                    endPos, endDir,
+                    routingMode: (byte)_beltRoutingMode,
+                    startFromPort: _beltStartFromPort,
+                    endFromPort: endFromPort);
 
                 _beltState = BeltPlacementState.Idle;
                 _beltPreviewLine.SetActive(false);
@@ -1348,10 +1351,10 @@ public class NetworkBuildController : NetworkBehaviour
             return true;
         }
 
-        // Ground/structure fallback
-        // Start: use camForward as placeholder (will be overridden in HandleBeltDragging)
-        // End: use start-to-end direction
+        // Ground/structure fallback -- support will be placed here.
+        // Raise belt endpoint to where the support's snap anchor will be.
         pos = hit.point;
+        pos.y += GridManager.Instance.SupportAnchorHeight;
         if (isStart)
         {
             var camForward = Camera.main.transform.forward;
