@@ -20,7 +20,6 @@ jobs:
       - uses: github/codeql-action/init@v3
         with:
           languages: csharp
-
-      - uses: github/codeql-action/autobuild@v3
+          build-mode: none
 
       - uses: github/codeql-action/analyze@v3
