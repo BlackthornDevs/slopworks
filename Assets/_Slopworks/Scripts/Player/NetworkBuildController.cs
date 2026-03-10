@@ -46,7 +46,8 @@ public class NetworkBuildController : NetworkBehaviour
     // Belt spline placement
     private enum BeltPlacementState { Idle, PickingStart, Dragging }
     private BeltPlacementState _beltState = BeltPlacementState.Idle;
-    private Vector3 _beltStartPos;
+    private Vector3 _beltStartPos;       // preview position (at anchor height for free endpoints)
+    private Vector3 _beltStartGroundPos; // raw ground position sent to server
     private Vector3 _beltStartDir;
     private bool _beltStartFromPort;
     private float _beltEndYawOffset;
@@ -54,6 +55,10 @@ public class NetworkBuildController : NetworkBehaviour
     private BeltRoutingMode _beltRoutingMode = BeltRoutingMode.Curved;
     private GameObject _beltPreviewLine;
     private LineRenderer _beltLineRenderer;
+
+    // Belt support ghosts
+    private GameObject _beltStartSupportGhost;
+    private GameObject _beltEndSupportGhost;
 
     // Single ghost for simple tools
     private GameObject _ghost;
@@ -591,6 +596,8 @@ public class NetworkBuildController : NetworkBehaviour
         DestroyGhost();
         DestroyGhostPool(_ghostPool);
         DestroyGhostPool(_zoopGhosts);
+        if (_beltStartSupportGhost != null) { Destroy(_beltStartSupportGhost); _beltStartSupportGhost = null; }
+        if (_beltEndSupportGhost != null) { Destroy(_beltEndSupportGhost); _beltEndSupportGhost = null; }
     }
 
     private static void DestroyGhostPool(List<GameObject> pool)
@@ -1094,16 +1101,29 @@ public class NetworkBuildController : NetworkBehaviour
 
         if (TryResolveBeltEndpoint(ray, true, out var pos, out var dir, out var fromPort))
         {
-            // Grid-snap free start position in straight mode
             if (!fromPort)
             {
                 pos.x = Mathf.Round(pos.x);
                 pos.z = Mathf.Round(pos.z);
             }
-            _beltStartPos = pos;
+            _beltStartGroundPos = pos;
+            _beltStartPos = fromPort ? pos : new Vector3(pos.x, pos.y + GridManager.Instance.SupportAnchorHeight, pos.z);
             _beltStartDir = dir;
             _beltStartFromPort = fromPort;
             _beltState = BeltPlacementState.Dragging;
+
+            // Show ghost support at start if placing on ground
+            if (!fromPort)
+            {
+                _beltStartSupportGhost = EnsureSupportGhost(_beltStartSupportGhost);
+                if (_beltStartSupportGhost != null)
+                {
+                    _beltStartSupportGhost.transform.position = pos;
+                    _beltStartSupportGhost.transform.rotation = Quaternion.LookRotation(dir);
+                    _beltStartSupportGhost.SetActive(true);
+                    ApplyGhostColor(_beltStartSupportGhost, ValidColor);
+                }
+            }
 
             if (_beltPreviewLine == null)
             {
@@ -1136,6 +1156,7 @@ public class NetworkBuildController : NetworkBehaviour
         {
             var startDir = _beltStartDir;
             bool isValid;
+            var endGroundPos = endPos; // raw ground position for server
 
             if (_beltRoutingMode == BeltRoutingMode.Straight)
             {
@@ -1145,6 +1166,11 @@ public class NetworkBuildController : NetworkBehaviour
                     endPos.x = Mathf.Round(endPos.x);
                     endPos.z = Mathf.Round(endPos.z);
                 }
+
+                // Capture ground pos after grid snap, then raise for preview
+                endGroundPos = endPos;
+                if (!endFromPort)
+                    endPos.y += GridManager.Instance.SupportAnchorHeight;
 
                 // Snap start direction to cardinal
                 if (!_beltStartFromPort)
@@ -1180,13 +1206,12 @@ public class NetworkBuildController : NetworkBehaviour
                     }
 
                     // Elevation validation: ramp must fit on the first leg
-                    // Aligned: just needs ramp distance. L-shape: also needs post-ramp flat before the turn.
                     float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
                     if (isValid && heightDiff > 0.01f)
                     {
                         float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
                         float minAlongForElevation = idealRamp;
-                        if (crossDistVal >= 0.1f) // L-shape needs flat before turn
+                        if (crossDistVal >= 0.1f)
                             minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
                         if (alongDist < minAlongForElevation)
                             isValid = false;
@@ -1222,6 +1247,11 @@ public class NetworkBuildController : NetworkBehaviour
                     endPos.z = Mathf.Round(endPos.z);
                 }
 
+                // Capture ground pos after grid snap, then raise for preview
+                endGroundPos = endPos;
+                if (!endFromPort)
+                    endPos.y += GridManager.Instance.SupportAnchorHeight;
+
                 if (!_beltStartFromPort)
                 {
                     var toEnd = endPos - _beltStartPos;
@@ -1244,11 +1274,32 @@ public class NetworkBuildController : NetworkBehaviour
                 isValid = validation.IsValid;
             }
 
+            // Ghost support at end position
+            if (!endFromPort)
+            {
+                _beltEndSupportGhost = EnsureSupportGhost(_beltEndSupportGhost);
+                if (_beltEndSupportGhost != null)
+                {
+                    _beltEndSupportGhost.transform.position = endGroundPos;
+                    _beltEndSupportGhost.transform.rotation = Quaternion.LookRotation(endDir);
+                    _beltEndSupportGhost.SetActive(true);
+                }
+            }
+            else if (_beltEndSupportGhost != null)
+            {
+                _beltEndSupportGhost.SetActive(false);
+            }
+
+            // Tint ghosts and line renderer based on validity
             var color = isValid ? Color.green : Color.red;
             _beltLineRenderer.startColor = color;
             _beltLineRenderer.endColor = color;
+            if (_beltStartSupportGhost != null && _beltStartSupportGhost.activeSelf)
+                ApplyGhostColor(_beltStartSupportGhost, color);
+            if (_beltEndSupportGhost != null && _beltEndSupportGhost.activeSelf)
+                ApplyGhostColor(_beltEndSupportGhost, color);
 
-            // Preview line
+            // Preview line (at anchor height)
             if (_beltRoutingMode == BeltRoutingMode.Straight)
             {
                 var waypoints = BeltRouteBuilder.Build(_beltStartPos, startDir, endPos, endDir);
@@ -1272,10 +1323,12 @@ public class NetworkBuildController : NetworkBehaviour
 
             if (mouse.leftButton.wasPressedThisFrame && isValid)
             {
-                Debug.Log($"belt: placing {_beltRoutingMode} from {_beltStartPos} to {endPos}");
+                Debug.Log($"belt: placing {_beltRoutingMode} from {_beltStartGroundPos} to {endGroundPos}");
                 GridManager.Instance.CmdPlaceBelt(
-                    _beltStartPos, startDir,
-                    endPos, endDir,
+                    _beltStartFromPort ? _beltStartPos : _beltStartGroundPos,
+                    startDir,
+                    endFromPort ? endPos : endGroundPos,
+                    endDir,
                     routingMode: (byte)_beltRoutingMode,
                     startFromPort: _beltStartFromPort,
                     endFromPort: endFromPort);
@@ -1283,6 +1336,7 @@ public class NetworkBuildController : NetworkBehaviour
                 _beltState = BeltPlacementState.Idle;
                 _beltPreviewLine.SetActive(false);
                 _beltEndYawOffset = 0f;
+                HideSupportGhosts();
             }
 
             if (!isValid && mouse.leftButton.wasPressedThisFrame)
@@ -1295,6 +1349,7 @@ public class NetworkBuildController : NetworkBehaviour
             _beltEndYawOffset = 0f;
             if (_beltPreviewLine != null)
                 _beltPreviewLine.SetActive(false);
+            HideSupportGhosts();
         }
     }
 
@@ -1343,10 +1398,9 @@ public class NetworkBuildController : NetworkBehaviour
             return true;
         }
 
-        // Ground/structure fallback -- support will be placed here.
-        // Raise belt endpoint to where the support's snap anchor will be.
+        // Ground/structure fallback -- server will spawn support here
+        // and derive belt endpoint from the support's actual snap anchor.
         pos = hit.point;
-        pos.y += GridManager.Instance.SupportAnchorHeight;
         if (isStart)
         {
             var camForward = Camera.main.transform.forward;
@@ -1509,6 +1563,20 @@ public class NetworkBuildController : NetworkBehaviour
             _ghostMaterial = null;
             _ghostPrefabSource = null;
         }
+    }
+
+    private GameObject EnsureSupportGhost(GameObject existing)
+    {
+        if (existing != null) return existing;
+        var supportPrefab = GridManager.Instance.GetPrefab(BuildingCategory.Support, 0);
+        if (supportPrefab == null) return null;
+        return CreateGhostFromPrefab(supportPrefab);
+    }
+
+    private void HideSupportGhosts()
+    {
+        if (_beltStartSupportGhost != null) _beltStartSupportGhost.SetActive(false);
+        if (_beltEndSupportGhost != null) _beltEndSupportGhost.SetActive(false);
     }
 
     // -- OnGUI --

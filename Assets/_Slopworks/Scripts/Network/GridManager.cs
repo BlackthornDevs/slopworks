@@ -387,9 +387,18 @@ public class GridManager : NetworkBehaviour
 
         var mode = (BeltRoutingMode)routingMode;
 
-        // Validate belt placement. Straight mode skips turn angle check
-        // because the route builder handles all turns as 90-degree corners.
-        var validation = BeltPlacementValidator.Validate(startPos, startDir, endPos, endDir);
+        // For free endpoints, startPos/endPos are raw ground positions.
+        // Spawn supports first and use their actual anchor positions for the belt.
+        var beltStartPos = startPos;
+        var beltEndPos = endPos;
+
+        if (!startFromPort)
+            beltStartPos = SpawnSupportAt(startPos, Quaternion.LookRotation(startDir), sender);
+        if (!endFromPort)
+            beltEndPos = SpawnSupportAt(endPos, Quaternion.LookRotation(endDir), sender);
+
+        // Validate using anchor-derived positions
+        var validation = BeltPlacementValidator.Validate(beltStartPos, startDir, beltEndPos, endDir);
         if (!validation.IsValid)
         {
             // Allow TurnTooSharp in straight mode -- route builder creates valid 90-degree turns
@@ -400,12 +409,6 @@ public class GridManager : NetworkBehaviour
             }
         }
 
-        // Auto-spawn supports at free endpoints (not connected to a port or snap anchor)
-        if (!startFromPort)
-            SpawnSupportAt(startPos, Quaternion.LookRotation(startDir), sender);
-        if (!endFromPort)
-            SpawnSupportAt(endPos, Quaternion.LookRotation(endDir), sender);
-
         var prefab = GetPrefab(BuildingCategory.Belt, variant);
         if (prefab == null) return;
 
@@ -414,7 +417,7 @@ public class GridManager : NetworkBehaviour
 
         if (mode == BeltRoutingMode.Straight)
         {
-            var waypoints = BeltRouteBuilder.Build(startPos, startDir, endPos, endDir);
+            var waypoints = BeltRouteBuilder.Build(beltStartPos, startDir, beltEndPos, endDir);
             arcLength = BeltRouteBuilder.ComputeRouteLength(waypoints);
             var segment = BeltSegment.FromArcLength(arcLength);
 
@@ -430,11 +433,11 @@ public class GridManager : NetworkBehaviour
 
             var info = go.AddComponent<PlacementInfo>();
             info.Category = BuildingCategory.Belt;
-            info.SurfaceY = startPos.y;
+            info.SurfaceY = beltStartPos.y;
 
             var netBelt = go.GetComponent<NetworkBeltSegment>();
             if (netBelt != null)
-                netBelt.ServerInitStraight(segment, startPos, startDir, endPos, endDir, waypoints, tier);
+                netBelt.ServerInitStraight(segment, beltStartPos, startDir, beltEndPos, endDir, waypoints, tier);
 
             ServerManager.Spawn(go);
 
@@ -450,14 +453,14 @@ public class GridManager : NetworkBehaviour
             if (netBelt != null && _factorySimulation != null)
                 _factorySimulation.RegisterBelt(netBelt);
 
-            AddBeltPort(go, startPos, -startDir, BeltPortDirection.Input, 0);
-            AddBeltPort(go, endPos, endDir, BeltPortDirection.Output, 0);
+            AddBeltPort(go, beltStartPos, -startDir, BeltPortDirection.Input, 0);
+            AddBeltPort(go, beltEndPos, endDir, BeltPortDirection.Output, 0);
 
-            Debug.Log($"grid: straight belt placed from {startPos} to {endPos} route={arcLength:F1}m by {sender?.ClientId}");
+            Debug.Log($"grid: straight belt placed from {beltStartPos} to {beltEndPos} route={arcLength:F1}m by {sender?.ClientId}");
         }
         else
         {
-            var splineData = BeltSplineBuilder.Build(startPos, startDir, endPos, endDir);
+            var splineData = BeltSplineBuilder.Build(beltStartPos, startDir, beltEndPos, endDir);
             var segment = BeltSegment.FromArcLength(splineData.ArcLength);
             arcLength = splineData.ArcLength;
 
@@ -472,7 +475,7 @@ public class GridManager : NetworkBehaviour
 
             var info = go.AddComponent<PlacementInfo>();
             info.Category = BuildingCategory.Belt;
-            info.SurfaceY = startPos.y;
+            info.SurfaceY = beltStartPos.y;
 
             var netBelt = go.GetComponent<NetworkBeltSegment>();
             if (netBelt != null)
@@ -492,10 +495,10 @@ public class GridManager : NetworkBehaviour
             if (netBelt != null && _factorySimulation != null)
                 _factorySimulation.RegisterBelt(netBelt);
 
-            AddBeltPort(go, startPos, -startDir, BeltPortDirection.Input, 0);
-            AddBeltPort(go, endPos, endDir, BeltPortDirection.Output, 0);
+            AddBeltPort(go, beltStartPos, -startDir, BeltPortDirection.Input, 0);
+            AddBeltPort(go, beltEndPos, endDir, BeltPortDirection.Output, 0);
 
-            Debug.Log($"grid: curved belt placed from {startPos} to {endPos} arc={arcLength:F1}m by {sender?.ClientId}");
+            Debug.Log($"grid: curved belt placed from {beltStartPos} to {beltEndPos} arc={arcLength:F1}m by {sender?.ClientId}");
         }
     }
 
@@ -525,22 +528,23 @@ public class GridManager : NetworkBehaviour
         SpawnSupportAt(position, rotation, sender);
     }
 
-    private void SpawnSupportAt(Vector3 position, Quaternion rotation, NetworkConnection sender = null)
+    private Vector3 SpawnSupportAt(Vector3 groundPos, Quaternion rotation, NetworkConnection sender = null)
     {
         var prefab = GetPrefab(BuildingCategory.Support, 0);
         if (prefab == null)
         {
-            Debug.LogWarning($"grid: no support prefab found, skipping support at {position}");
-            return;
+            Debug.LogWarning($"grid: no support prefab found at {groundPos}");
+            return groundPos;
         }
-
-        // Position is the belt endpoint (at anchor height). Drop to ground for the support origin.
-        var groundPos = position;
-        groundPos.y -= SupportAnchorHeight;
 
         var instance = Instantiate(prefab, groundPos, rotation);
         ServerManager.Spawn(instance);
-        Debug.Log($"grid: support placed at {groundPos} (anchor at {position.y:F2}) by {sender?.ClientId}");
+
+        var anchor = instance.GetComponentInChildren<BeltSnapAnchor>();
+        var anchorPos = anchor != null ? anchor.WorldPosition : groundPos;
+
+        Debug.Log($"grid: support at {groundPos}, anchor at {anchorPos} by {sender?.ClientId}");
+        return anchorPos;
     }
 
     // ------------------------------------------------------------------
