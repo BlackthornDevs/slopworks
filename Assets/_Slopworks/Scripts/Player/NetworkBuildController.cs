@@ -1193,49 +1193,43 @@ public class NetworkBuildController : NetworkBehaviour
                 // Port endpoints: allow multi-turn (Z/U shapes)
                 if (!endFromPort)
                 {
-                    var axis = BeltRouteBuilder.SnapToCardinal(startDir);
-                    var delta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
-                    float alongDist = Mathf.Abs(Vector3.Dot(delta, axis));
-                    var cross = delta - Vector3.Dot(delta, axis) * axis;
-                    float crossDistVal = cross.magnitude;
+                    // Standard validation first (length, slope, turn angle)
+                    var validation = BeltPlacementValidator.Validate(
+                        _beltStartPos, startDir, endPos, endDir);
+                    isValid = validation.IsValid || validation.Error == BeltValidationError.TurnTooSharp;
 
-                    if (crossDistVal < 0.1f)
+                    // Additional straight-mode checks: turn geometry and ramp fitting
+                    if (isValid)
                     {
-                        // Aligned: straight belt
-                        endDir = startDir;
-                        isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2;
-                    }
-                    else
-                    {
-                        // Offset: L-shape (single turn near the end)
-                        endDir = BeltRouteBuilder.SnapToCardinal(cross);
-                        isValid = alongDist >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength
-                               && crossDistVal >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength;
-                    }
+                        var axis = BeltRouteBuilder.SnapToCardinal(startDir);
+                        var delta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
+                        float alongDist = Mathf.Abs(Vector3.Dot(delta, axis));
+                        var cross = delta - Vector3.Dot(delta, axis) * axis;
+                        float crossDistVal = cross.magnitude;
 
-                    // Slope angle check -- reject belts steeper than MaxSlopeAngle
-                    float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
-                    float horizDist = new Vector2(endPos.x - _beltStartPos.x, endPos.z - _beltStartPos.z).magnitude;
-                    if (isValid && horizDist > 0.001f)
-                    {
-                        float slopeAngle = Mathf.Atan2(heightDiff, horizDist) * Mathf.Rad2Deg;
-                        if (slopeAngle > BeltPlacementValidator.MaxSlopeAngle)
-                            isValid = false;
-                    }
-                    else if (isValid && heightDiff > 0.001f)
-                    {
-                        isValid = false;
-                    }
+                        if (crossDistVal < 0.1f)
+                        {
+                            endDir = startDir;
+                            isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2;
+                        }
+                        else
+                        {
+                            endDir = BeltRouteBuilder.SnapToCardinal(cross);
+                            isValid = alongDist >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength
+                                   && crossDistVal >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength;
+                        }
 
-                    // Elevation validation: ramp must fit on the first leg
-                    if (isValid && heightDiff > 0.01f)
-                    {
-                        float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
-                        float minAlongForElevation = idealRamp;
-                        if (crossDistVal >= 0.1f)
-                            minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
-                        if (alongDist < minAlongForElevation)
-                            isValid = false;
+                        // Ramp fitting: enough horizontal distance for the S-curve
+                        float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
+                        if (isValid && heightDiff > 0.01f)
+                        {
+                            float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
+                            float minAlongForElevation = idealRamp;
+                            if (crossDistVal >= 0.1f)
+                                minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
+                            if (alongDist < minAlongForElevation)
+                                isValid = false;
+                        }
                     }
                 }
                 else
