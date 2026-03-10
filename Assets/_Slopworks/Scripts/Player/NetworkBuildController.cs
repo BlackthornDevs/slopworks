@@ -50,9 +50,8 @@ public class NetworkBuildController : NetworkBehaviour
     private Vector3 _beltStartGroundPos; // raw ground position sent to server
     private Vector3 _beltStartDir;
     private bool _beltStartFromPort;
-    private float _beltEndYawOffset;
     private bool _beltEndFromPort;
-    private BeltRoutingMode _beltRoutingMode = BeltRoutingMode.Curved;
+    private BeltRoutingMode _beltRoutingMode = BeltRoutingMode.Default;
     private GameObject _beltPreviewLine;
     private LineRenderer _beltLineRenderer;
 
@@ -180,9 +179,12 @@ public class NetworkBuildController : NetworkBehaviour
         {
             if (_currentTool == BuildTool.Belt)
             {
-                _beltRoutingMode = _beltRoutingMode == BeltRoutingMode.Curved
-                    ? BeltRoutingMode.Straight
-                    : BeltRoutingMode.Curved;
+                _beltRoutingMode = _beltRoutingMode switch
+                {
+                    BeltRoutingMode.Default => BeltRoutingMode.Straight,
+                    BeltRoutingMode.Straight => BeltRoutingMode.Curved,
+                    _ => BeltRoutingMode.Default
+                };
                 Debug.Log($"belt: routing mode = {_beltRoutingMode}");
             }
             else
@@ -1097,6 +1099,33 @@ public class NetworkBuildController : NetworkBehaviour
 
     private void HandleBeltPickStart(Mouse mouse, Ray ray)
     {
+        // Preview ghost support at cursor before clicking
+        if (TryResolveBeltEndpoint(ray, true, out var previewPos, out var previewDir, out var previewFromPort))
+        {
+            if (!previewFromPort)
+            {
+                previewPos.x = Mathf.Round(previewPos.x);
+                previewPos.z = Mathf.Round(previewPos.z);
+
+                _beltStartSupportGhost = EnsureSupportGhost(_beltStartSupportGhost);
+                if (_beltStartSupportGhost != null)
+                {
+                    _beltStartSupportGhost.transform.position = previewPos;
+                    _beltStartSupportGhost.transform.rotation = Quaternion.LookRotation(previewDir);
+                    _beltStartSupportGhost.SetActive(true);
+                    ApplyGhostColor(_beltStartSupportGhost, ValidColor);
+                }
+            }
+            else if (_beltStartSupportGhost != null)
+            {
+                _beltStartSupportGhost.SetActive(false);
+            }
+        }
+        else if (_beltStartSupportGhost != null)
+        {
+            _beltStartSupportGhost.SetActive(false);
+        }
+
         if (!mouse.leftButton.wasPressedThisFrame) return;
 
         if (TryResolveBeltEndpoint(ray, true, out var pos, out var dir, out var fromPort))
@@ -1144,141 +1173,79 @@ public class NetworkBuildController : NetworkBehaviour
 
     private void HandleBeltDragging(Mouse mouse, Ray ray)
     {
-        // Scroll wheel rotates end tangent for shaping curves (curved mode only)
-        if (_beltRoutingMode == BeltRoutingMode.Curved)
-        {
-            var scroll = mouse.scroll.ReadValue().y;
-            if (Mathf.Abs(scroll) > 0.01f)
-                _beltEndYawOffset += scroll > 0 ? 15f : -15f;
-        }
-
         if (TryResolveBeltEndpoint(ray, false, out var endPos, out var endDir, out var endFromPort))
         {
-            var startDir = _beltStartDir;
+            var startDir = _beltStartDir;  // R-key direction, never overridden
             bool isValid;
-            var endGroundPos = endPos; // raw ground position for server
+            var endGroundPos = endPos;
 
-            if (_beltRoutingMode == BeltRoutingMode.Straight)
+            // Grid snap free endpoints
+            if (!endFromPort)
             {
-                // Grid-snap free endpoints to the 1x1 grid
-                if (!endFromPort)
+                endPos.x = Mathf.Round(endPos.x);
+                endPos.z = Mathf.Round(endPos.z);
+            }
+
+            endGroundPos = endPos;
+            if (!endFromPort)
+                endPos.y += GridManager.Instance.SupportAnchorHeight;
+
+            // Derive end direction from spatial relationship (all modes)
+            if (!endFromPort)
+                endDir = BeltRouteBuilder.DeriveEndDirection(_beltStartPos, startDir, endPos);
+
+            // Validation
+            var validation = BeltPlacementValidator.Validate(
+                _beltStartPos, startDir, endPos, endDir);
+            isValid = validation.IsValid || validation.Error == BeltValidationError.TurnTooSharp;
+
+            // Additional straight/curved validation for turn geometry
+            if (isValid && _beltRoutingMode != BeltRoutingMode.Default && !endFromPort)
+            {
+                var axis = BeltRouteBuilder.SnapToCardinal(startDir);
+                var delta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
+                float alongDist = Mathf.Abs(Vector3.Dot(delta, axis));
+                var cross = delta - Vector3.Dot(delta, axis) * axis;
+                float crossDistVal = cross.magnitude;
+
+                if (crossDistVal < 0.1f)
                 {
-                    endPos.x = Mathf.Round(endPos.x);
-                    endPos.z = Mathf.Round(endPos.z);
-                }
-
-                // Capture ground pos after grid snap, then raise for preview
-                endGroundPos = endPos;
-                if (!endFromPort)
-                    endPos.y += GridManager.Instance.SupportAnchorHeight;
-
-                // Snap start direction to cardinal
-                if (!_beltStartFromPort)
-                {
-                    var toEnd = endPos - _beltStartPos;
-                    toEnd.y = 0;
-                    if (toEnd.sqrMagnitude > 0.001f)
-                        startDir = BeltRouteBuilder.SnapToCardinal(toEnd);
-                }
-
-                // Free endpoints: max 1 turn (straight or L-shape)
-                // Port endpoints: allow multi-turn (Z/U shapes)
-                if (!endFromPort)
-                {
-                    // Standard validation first (length, slope, turn angle)
-                    var validation = BeltPlacementValidator.Validate(
-                        _beltStartPos, startDir, endPos, endDir);
-                    isValid = validation.IsValid || validation.Error == BeltValidationError.TurnTooSharp;
-
-                    // Additional straight-mode checks: turn geometry and ramp fitting
-                    if (isValid)
-                    {
-                        var axis = BeltRouteBuilder.SnapToCardinal(startDir);
-                        var delta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
-                        float alongDist = Mathf.Abs(Vector3.Dot(delta, axis));
-                        var cross = delta - Vector3.Dot(delta, axis) * axis;
-                        float crossDistVal = cross.magnitude;
-
-                        if (crossDistVal < 0.1f)
-                        {
-                            endDir = startDir;
-                            isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2;
-                        }
-                        else
-                        {
-                            endDir = BeltRouteBuilder.SnapToCardinal(cross);
-                            isValid = alongDist >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength
-                                   && crossDistVal >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength;
-                        }
-
-                        // Ramp fitting: enough horizontal distance for the S-curve
-                        float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
-                        if (isValid && heightDiff > 0.01f)
-                        {
-                            float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
-                            float minAlongForElevation = idealRamp;
-                            if (crossDistVal >= 0.1f)
-                                minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
-                            if (alongDist < minAlongForElevation)
-                                isValid = false;
-                        }
-                    }
+                    isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2;
                 }
                 else
                 {
-                    // Port endpoint: use standard validation (no TurnTooSharp override)
-                    var validation = BeltPlacementValidator.Validate(
-                        _beltStartPos, startDir, endPos, endDir);
-                    isValid = validation.IsValid;
-
-                    // Elevation validation for port endpoints too
-                    float portHeightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
-                    if (isValid && portHeightDiff > 0.01f)
+                    if (_beltRoutingMode == BeltRoutingMode.Curved)
                     {
-                        var portAxis = BeltRouteBuilder.SnapToCardinal(startDir);
-                        var portDelta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
-                        float portAlongDist = Mathf.Abs(Vector3.Dot(portDelta, portAxis));
-                        float idealRamp = portHeightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
-                        float minAlong = idealRamp + BeltRouteBuilder.MinPostRampLength;
-                        if (portAlongDist < minAlong)
-                            isValid = false;
+                        isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2
+                               && crossDistVal >= BeltRouteBuilder.MinSegLength * 2;
+                    }
+                    else
+                    {
+                        float minLeg = Mathf.Min(BeltRouteBuilder.TurnRadius,
+                                           alongDist - BeltRouteBuilder.MinSegLength)
+                                     + BeltRouteBuilder.MinSegLength;
+                        isValid = alongDist >= minLeg && crossDistVal >= minLeg;
                     }
                 }
-            }
-            else // Curved mode
-            {
-                // Grid-snap free endpoints to the 1x1 grid
-                if (!endFromPort)
+
+                float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
+                if (isValid && heightDiff > 0.01f)
                 {
-                    endPos.x = Mathf.Round(endPos.x);
-                    endPos.z = Mathf.Round(endPos.z);
+                    float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
+                    float actualRadius = crossDistVal >= 0.1f
+                        ? Mathf.Min(BeltRouteBuilder.TurnRadius,
+                            alongDist - BeltRouteBuilder.MinSegLength,
+                            crossDistVal - BeltRouteBuilder.MinSegLength)
+                        : 0f;
+                    if (_beltRoutingMode == BeltRoutingMode.Curved)
+                        actualRadius = 0f;
+                    float availableForRamp = alongDist - actualRadius;
+                    float minAlongForElevation = idealRamp;
+                    if (crossDistVal >= 0.1f && _beltRoutingMode != BeltRoutingMode.Curved)
+                        minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
+                    if (availableForRamp < minAlongForElevation)
+                        isValid = false;
                 }
-
-                // Capture ground pos after grid snap, then raise for preview
-                endGroundPos = endPos;
-                if (!endFromPort)
-                    endPos.y += GridManager.Instance.SupportAnchorHeight;
-
-                if (!_beltStartFromPort)
-                {
-                    var toEnd = endPos - _beltStartPos;
-                    toEnd.y = 0;
-                    if (toEnd.sqrMagnitude > 0.001f)
-                        startDir = toEnd.normalized;
-                }
-
-                if (Mathf.Abs(_beltEndYawOffset) > 0.01f)
-                {
-                    float halfYaw = _beltEndYawOffset * 0.5f;
-                    if (!_beltStartFromPort)
-                        startDir = Quaternion.Euler(0f, halfYaw, 0f) * startDir;
-                    if (!endFromPort)
-                        endDir = Quaternion.Euler(0f, -halfYaw, 0f) * endDir;
-                }
-
-                var validation = BeltPlacementValidator.Validate(
-                    _beltStartPos, startDir, endPos, endDir);
-                isValid = validation.IsValid;
             }
 
             // Ghost support at end position
@@ -1306,25 +1273,15 @@ public class NetworkBuildController : NetworkBehaviour
             if (_beltEndSupportGhost != null && _beltEndSupportGhost.activeSelf)
                 ApplyGhostColor(_beltEndSupportGhost, color);
 
-            // Preview line (at anchor height)
-            if (_beltRoutingMode == BeltRoutingMode.Straight)
+            // Preview line (at anchor height) -- all modes use waypoints
             {
-                var waypoints = BeltRouteBuilder.Build(_beltStartPos, startDir, endPos, endDir);
+                var waypoints = BeltRouteBuilder.Build(_beltStartPos, startDir, endPos, endDir, _beltRoutingMode);
                 float routeLen = BeltRouteBuilder.ComputeRouteLength(waypoints);
                 for (int i = 0; i < 30; i++)
                 {
                     float t = (float)i / 29;
                     _beltLineRenderer.SetPosition(i,
                         BeltRouteBuilder.EvaluateRoute(waypoints, routeLen, t));
-                }
-            }
-            else
-            {
-                var splineData = BeltSplineBuilder.Build(_beltStartPos, startDir, endPos, endDir);
-                for (int i = 0; i < 30; i++)
-                {
-                    float t = (float)i / 29;
-                    _beltLineRenderer.SetPosition(i, splineData.Evaluate(t));
                 }
             }
 
@@ -1342,7 +1299,6 @@ public class NetworkBuildController : NetworkBehaviour
 
                 _beltState = BeltPlacementState.Idle;
                 _beltPreviewLine.SetActive(false);
-                _beltEndYawOffset = 0f;
                 HideSupportGhosts();
             }
 
@@ -1353,7 +1309,6 @@ public class NetworkBuildController : NetworkBehaviour
         if (mouse.rightButton.wasPressedThisFrame)
         {
             _beltState = BeltPlacementState.Idle;
-            _beltEndYawOffset = 0f;
             if (_beltPreviewLine != null)
                 _beltPreviewLine.SetActive(false);
             HideSupportGhosts();
@@ -1410,10 +1365,8 @@ public class NetworkBuildController : NetworkBehaviour
         pos = hit.point;
         if (isStart)
         {
-            var camForward = Camera.main.transform.forward;
-            camForward.y = 0;
-            dir = camForward.normalized;
-            if (dir.sqrMagnitude < 0.001f) dir = Vector3.forward;
+            // Use R-key rotation for cardinal start direction
+            dir = Quaternion.Euler(0, _placeRotation, 0) * Vector3.forward;
         }
         else
         {
@@ -1478,6 +1431,8 @@ public class NetworkBuildController : NetworkBehaviour
         _beltState = BeltPlacementState.Idle;
         if (_beltPreviewLine != null)
             _beltPreviewLine.SetActive(false);
+        if (_beltStartSupportGhost != null) _beltStartSupportGhost.SetActive(false);
+        if (_beltEndSupportGhost != null) _beltEndSupportGhost.SetActive(false);
         DestroyGhost();
     }
 
@@ -1651,7 +1606,7 @@ public class NetworkBuildController : NetworkBehaviour
         }
 
         if (_currentTool == BuildTool.Belt)
-            GUILayout.Label($"Belt mode: {_beltRoutingMode}  |  [Tab] Toggle curved/straight");
+            GUILayout.Label($"Belt mode: {_beltRoutingMode}  |  [Tab] Cycle Default/Straight/Curved");
 
         if (_beltState == BeltPlacementState.Dragging)
             GUILayout.Label($"Belt start: {_beltStartPos} -- click end point");
