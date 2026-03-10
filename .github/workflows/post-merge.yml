@@ -1,0 +1,47 @@
+name: Post-merge webhook
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    environment: main
+    steps:
+      - name: Get merged PR info
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPO="${{ github.repository }}"
+          SHA="${{ github.sha }}"
+          PR_DATA=$(gh pr list --repo "$REPO" --state merged --json number,title,mergedBy --limit 5 | \
+            jq -r --arg sha "$SHA" '.[] | select(.mergedBy != null) | "\(.number)|\(.title)|\(.mergedBy.login)"' | head -1)
+          PR_NUMBER=$(echo "$PR_DATA" | cut -d'|' -f1)
+          PR_TITLE=$(echo "$PR_DATA" | cut -d'|' -f2)
+          MERGED_BY=$(echo "$PR_DATA" | cut -d'|' -f3)
+          echo "pr_number=${PR_NUMBER:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "title=${PR_TITLE:-direct push}" >> "$GITHUB_OUTPUT"
+          echo "merged_by=${MERGED_BY:-${{ github.actor }}}" >> "$GITHUB_OUTPUT"
+
+      - name: Notify houseofjawn
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
+          TITLE="${{ steps.pr.outputs.title }}"
+          MERGED_BY="${{ steps.pr.outputs.merged_by }}"
+          SHA="${{ github.sha }}"
+          PAYLOAD=$(jq -n \
+            --arg repo "$REPO" \
+            --arg pr "$PR_NUMBER" \
+            --arg title "$TITLE" \
+            --arg merged_by "$MERGED_BY" \
+            --arg sha "$SHA" \
+            '{"repo":$repo,"pr_number":$pr,"title":$title,"merged_by":$merged_by,"sha":$sha}')
+          curl -sf -X POST https://pi.amditis.tech/api/webhooks/github-merge \
+            -H "Content-Type: application/json" \
+            -H "X-Webhook-Secret: $WEBHOOK_SECRET" \
+            -d "$PAYLOAD" || echo "Webhook failed (non-fatal)"
