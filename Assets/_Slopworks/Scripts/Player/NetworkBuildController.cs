@@ -1177,7 +1177,6 @@ public class NetworkBuildController : NetworkBehaviour
         {
             var startDir = _beltStartDir;  // R-key direction, never overridden
             bool isValid;
-            var endGroundPos = endPos;
 
             // Grid snap free endpoints
             if (!endFromPort)
@@ -1186,7 +1185,7 @@ public class NetworkBuildController : NetworkBehaviour
                 endPos.z = Mathf.Round(endPos.z);
             }
 
-            endGroundPos = endPos;
+            var endGroundPos = endPos;
             if (!endFromPort)
                 endPos.y += GridManager.Instance.SupportAnchorHeight;
 
