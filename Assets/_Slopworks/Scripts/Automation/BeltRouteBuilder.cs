@@ -235,7 +235,7 @@ public static class BeltRouteBuilder
             ? Mathf.Abs(endPos.x - startPos.x)
             : Mathf.Abs(endPos.z - startPos.z);
         float effectiveRadius = Mathf.Min(turnRadius, Mathf.Max(crossDist, 1f));
-        float overshoot = effectiveRadius * 2f + 1f;
+        float overshoot = effectiveRadius + MinSegLength;
 
         Vector3 c1, c2, crossAxis;
         if (alongZ)
@@ -536,7 +536,13 @@ public static class BeltRouteBuilder
             return startAxis;
         }
 
-        // Offset: end faces the cross (perpendicular) direction
+        if (alongDist < TurnRadius)
+        {
+            // Not enough forward distance for an L-turn: U-turn instead
+            return -startAxis;
+        }
+
+        // Offset with forward distance: L-turn, end faces the cross direction
         return SnapToCardinal(cross);
     }
 
