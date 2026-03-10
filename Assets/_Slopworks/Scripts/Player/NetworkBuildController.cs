@@ -1205,8 +1205,21 @@ public class NetworkBuildController : NetworkBehaviour
                                && crossDistVal >= BeltRouteBuilder.TurnRadius + BeltRouteBuilder.MinSegLength;
                     }
 
-                    // Elevation validation: ramp must fit on the first leg
+                    // Slope angle check -- reject belts steeper than MaxSlopeAngle
                     float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
+                    float horizDist = new Vector2(endPos.x - _beltStartPos.x, endPos.z - _beltStartPos.z).magnitude;
+                    if (isValid && horizDist > 0.001f)
+                    {
+                        float slopeAngle = Mathf.Atan2(heightDiff, horizDist) * Mathf.Rad2Deg;
+                        if (slopeAngle > BeltPlacementValidator.MaxSlopeAngle)
+                            isValid = false;
+                    }
+                    else if (isValid && heightDiff > 0.001f)
+                    {
+                        isValid = false;
+                    }
+
+                    // Elevation validation: ramp must fit on the first leg
                     if (isValid && heightDiff > 0.01f)
                     {
                         float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
