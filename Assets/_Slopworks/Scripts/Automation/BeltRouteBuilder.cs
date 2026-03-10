@@ -230,7 +230,12 @@ public static class BeltRouteBuilder
         Vector3 endPos, Vector3 endAxis, float turnRadius = TurnRadius)
     {
         bool alongZ = Mathf.Abs(startAxis.z) > 0.5f;
-        float overshoot = turnRadius * 2f + 1f;
+        // Clamp overshoot for curved mode (turnRadius=MaxValue would produce infinity)
+        float crossDist = alongZ
+            ? Mathf.Abs(endPos.x - startPos.x)
+            : Mathf.Abs(endPos.z - startPos.z);
+        float effectiveRadius = Mathf.Min(turnRadius, Mathf.Max(crossDist, 1f));
+        float overshoot = effectiveRadius * 2f + 1f;
 
         Vector3 c1, c2, crossAxis;
         if (alongZ)
