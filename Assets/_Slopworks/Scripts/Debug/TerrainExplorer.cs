@@ -10,7 +10,7 @@ public class TerrainExplorer : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float _walkSpeed = 6f;
-    [SerializeField] private float _sprintSpeed = 12f;
+    [SerializeField] private float _sprintSpeed = 30f;
     [SerializeField] private float _jumpHeight = 1.5f;
     [SerializeField] private float _gravity = -20f;
 
@@ -79,7 +79,9 @@ public class TerrainExplorer : MonoBehaviour
         if (kb.aKey.isPressed) move -= transform.right;
         if (kb.dKey.isPressed) move += transform.right;
 
-        float speed = kb.leftShiftKey.isPressed ? _sprintSpeed : _walkSpeed;
+        bool shift = kb.leftShiftKey.isPressed;
+        bool ctrl = kb.leftCtrlKey.isPressed;
+        float speed = shift && ctrl ? 60f : shift ? _sprintSpeed : _walkSpeed;
         var horizontal = move.normalized * speed;
 
         // gravity and jump
@@ -111,7 +113,7 @@ public class TerrainExplorer : MonoBehaviour
     {
         var p = transform.position;
         string info = $"pos: ({p.x:F1}, {p.y:F1}, {p.z:F1})  |  " +
-                      $"WASD move, Mouse look, Space jump, Shift sprint, Esc cursor, P log pos";
+                      $"WASD move, Mouse look, Space jump, Shift sprint, Ctrl+Shift super-sprint, Esc cursor, P log pos";
         GUI.Label(new Rect(10, 10, 800, 25), info);
 
         if (_cc.isGrounded)

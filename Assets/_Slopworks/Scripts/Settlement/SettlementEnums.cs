@@ -5,7 +5,9 @@ public enum SettlementBuildingType
     Watchtower,
     Depot,
     Market,
-    Barracks
+    Barracks,
+    RiverDepot,
+    Greenhouse
 }
 
 public enum SettlementCapability

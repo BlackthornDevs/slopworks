@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Bible art generator for Slopworks game bible.
-Generates Gemini-powered concept art and item icons for all 189 bible entries.
+Generates Gemini-powered concept art and item icons for all bible entries.
 
 Two image types:
   - Icons (square 1:1): item renderings on dark industrial background
