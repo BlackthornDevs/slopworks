@@ -162,6 +162,37 @@ public static class BeltRouteBuilder
     }
 
     /// <summary>
+    /// Validate a built route against max slope angle and max total length.
+    /// Checks the actual waypoint-to-waypoint segments, not endpoint-to-endpoint.
+    /// </summary>
+    public static bool ValidateRoute(List<Waypoint> waypoints, float maxSlopeAngle, float maxLength)
+    {
+        float totalLength = 0f;
+        for (int i = 1; i < waypoints.Count; i++)
+        {
+            var a = waypoints[i - 1].Position;
+            var b = waypoints[i].Position;
+            float segLen = Vector3.Distance(a, b);
+            totalLength += segLen;
+
+            float hDist = new Vector2(b.x - a.x, b.z - a.z).magnitude;
+            float vDist = Mathf.Abs(b.y - a.y);
+            if (hDist > 0.001f)
+            {
+                float angle = Mathf.Atan2(vDist, hDist) * Mathf.Rad2Deg;
+                if (angle > maxSlopeAngle)
+                    return false;
+            }
+            else if (vDist > 0.001f)
+            {
+                return false; // vertical segment
+            }
+        }
+
+        return totalLength <= maxLength;
+    }
+
+    /// <summary>
     /// Evaluate position along route at parameter t in [0, 1].
     /// Piecewise linear interpolation between waypoints.
     /// </summary>

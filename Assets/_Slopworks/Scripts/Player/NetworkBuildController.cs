@@ -1228,73 +1228,89 @@ public class NetworkBuildController : NetworkBehaviour
             {
                 isValid = false;
             }
-            else
+            else if (_beltRoutingMode == BeltRoutingMode.Default)
             {
-                // Validation
+                // Default mode: build the actual route and validate the real geometry.
+                // No duplicate math -- the route IS the source of truth.
                 var validation = BeltPlacementValidator.Validate(
                     _beltStartPos, startDir, endPos, endDir);
-                isValid = validation.IsValid || validation.Error == BeltValidationError.TurnTooSharp;
+                isValid = validation.IsValid;
+
+                if (isValid)
+                {
+                    var testWaypoints = BeltRouteBuilder.Build(
+                        _beltStartPos, startDir, endPos, endDir, BeltRoutingMode.Default);
+                    isValid = BeltRouteBuilder.ValidateRoute(testWaypoints,
+                        BeltRouteBuilder.MaxRampAngle, BeltPlacementValidator.MaxLength);
+                }
             }
-
-            // Additional straight/curved validation for turn geometry
-            if (isValid && _beltRoutingMode != BeltRoutingMode.Default && !endFromPort)
+            else
             {
-                var axis = BeltRouteBuilder.SnapToCardinal(startDir);
-                var delta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
-                float signedAlong = Vector3.Dot(delta, axis);
-                float alongDist = Mathf.Abs(signedAlong);
-                var cross = delta - signedAlong * axis;
-                float crossDistVal = cross.magnitude;
+                // Straight/Curved: endpoint validation, then turn geometry checks
+                var validation = BeltPlacementValidator.Validate(
+                    _beltStartPos, startDir, endPos, endDir);
+                isValid = validation.IsValid;
 
-                // Detect U-turn: endDir opposes startDir
-                bool isUturn = Vector3.Dot(BeltRouteBuilder.SnapToCardinal(endDir), axis) < -0.5f;
+                // Additional validation for turn geometry and elevation
+                if (isValid && !endFromPort)
+                {
+                    var axis = BeltRouteBuilder.SnapToCardinal(startDir);
+                    var delta = new Vector3(endPos.x - _beltStartPos.x, 0, endPos.z - _beltStartPos.z);
+                    float signedAlong = Vector3.Dot(delta, axis);
+                    float alongDist = Mathf.Abs(signedAlong);
+                    var cross = delta - signedAlong * axis;
+                    float crossDistVal = cross.magnitude;
 
-                if (isUturn)
-                {
-                    // U-turn: route builder generates forward overshoot, only cross distance matters
-                    float minCross = BeltRouteBuilder.MinSegLength * 2;
-                    isValid = crossDistVal >= minCross;
-                }
-                else if (crossDistVal < 0.1f)
-                {
-                    isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2;
-                }
-                else
-                {
-                    if (_beltRoutingMode == BeltRoutingMode.Curved)
+                    // Detect U-turn: endDir opposes startDir
+                    bool isUturn = Vector3.Dot(BeltRouteBuilder.SnapToCardinal(endDir), axis) < -0.5f;
+
+                    if (isUturn)
                     {
-                        isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2
-                               && crossDistVal >= BeltRouteBuilder.MinSegLength * 2;
+                        float minCross = BeltRouteBuilder.MinSegLength * 2;
+                        float endpointDist = Vector3.Distance(_beltStartPos, endPos);
+                        isValid = crossDistVal >= minCross
+                               && endpointDist <= BeltPlacementValidator.MaxLength;
+                    }
+                    else if (crossDistVal < 0.1f)
+                    {
+                        isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2;
                     }
                     else
                     {
-                        float minLeg = Mathf.Min(BeltRouteBuilder.TurnRadius,
-                                           alongDist - BeltRouteBuilder.MinSegLength)
-                                     + BeltRouteBuilder.MinSegLength;
-                        isValid = alongDist >= minLeg && crossDistVal >= minLeg;
-                    }
-                }
-
-                // Skip elevation check for U-turns (route builder adds overshoot distance)
-                if (isValid && !isUturn)
-                {
-                    float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
-                    if (heightDiff > 0.01f)
-                    {
-                        float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
-                        float actualRadius = crossDistVal >= 0.1f
-                            ? Mathf.Min(BeltRouteBuilder.TurnRadius,
-                                alongDist - BeltRouteBuilder.MinSegLength,
-                                crossDistVal - BeltRouteBuilder.MinSegLength)
-                            : 0f;
                         if (_beltRoutingMode == BeltRoutingMode.Curved)
-                            actualRadius = 0f;
-                        float availableForRamp = alongDist - actualRadius;
-                        float minAlongForElevation = idealRamp;
-                        if (crossDistVal >= 0.1f && _beltRoutingMode != BeltRoutingMode.Curved)
-                            minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
-                        if (availableForRamp < minAlongForElevation)
-                            isValid = false;
+                        {
+                            isValid = alongDist >= BeltRouteBuilder.MinSegLength * 2
+                                   && crossDistVal >= BeltRouteBuilder.MinSegLength * 2;
+                        }
+                        else
+                        {
+                            float minLeg = Mathf.Min(BeltRouteBuilder.TurnRadius,
+                                               alongDist - BeltRouteBuilder.MinSegLength)
+                                         + BeltRouteBuilder.MinSegLength;
+                            isValid = alongDist >= minLeg && crossDistVal >= minLeg;
+                        }
+                    }
+
+                    if (isValid)
+                    {
+                        float heightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
+                        if (heightDiff > 0.01f)
+                        {
+                            float idealRamp = 1.5f * heightDiff / Mathf.Tan(BeltRouteBuilder.MaxRampAngle * Mathf.Deg2Rad);
+                            float actualRadius = crossDistVal >= 0.1f
+                                ? Mathf.Min(BeltRouteBuilder.TurnRadius,
+                                    alongDist - BeltRouteBuilder.MinSegLength,
+                                    crossDistVal - BeltRouteBuilder.MinSegLength)
+                                : 0f;
+                            if (_beltRoutingMode == BeltRoutingMode.Curved)
+                                actualRadius = 0f;
+                            float availableForRamp = alongDist - actualRadius;
+                            float minAlongForElevation = idealRamp;
+                            if (crossDistVal >= 0.1f && _beltRoutingMode != BeltRoutingMode.Curved)
+                                minAlongForElevation += BeltRouteBuilder.MinPostRampLength;
+                            if (availableForRamp < minAlongForElevation)
+                                isValid = false;
+                        }
                     }
                 }
             }

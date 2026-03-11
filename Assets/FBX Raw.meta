@@ -1,12 +1,8 @@
 fileFormatVersion: 2
-<<<<<<<< Updated upstream:Assets/_Slopworks/Resources/Prefabs/Buildings/Supports.meta
-guid: 0180cea3ec197e8439d7fec01c46fa8e
-========
 guid: 027fe2208f6e70b4bb52760d9c200bd2
->>>>>>>> Stashed changes:Assets/FBX Raw.meta
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+  userData:
+  assetBundleName:
+  assetBundleVariant:

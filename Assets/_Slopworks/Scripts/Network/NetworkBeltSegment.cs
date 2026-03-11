@@ -57,6 +57,10 @@ public class NetworkBeltSegment : NetworkBehaviour
     {
         base.OnStartClient();
 
+        // In host mode the server already baked the mesh in GridManager.
+        // Rebuilding route + mesh here would double the work for no benefit.
+        if (IsServerInitialized) return;
+
         var mode = (BeltRoutingMode)_syncRoutingMode.Value;
         _routeWaypoints = BeltRouteBuilder.Build(
             _syncStartPos.Value, _syncStartDir.Value,

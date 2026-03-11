@@ -33,7 +33,7 @@ public static class BeltPlacementValidator
 {
     public const float MinLength = 0.5f;
     public const float MaxLength = 56f;
-    public const float MaxSlopeAngle = 45f;
+    public const float MaxSlopeAngle = BeltRouteBuilder.MaxRampAngle;
     public const float MinTurnAngle = 30f; // minimum angle between startDir and endDir
 
     public static BeltValidationResult Validate(
@@ -66,17 +66,10 @@ public static class BeltPlacementValidator
             return BeltValidationResult.Invalid(BeltValidationError.TooSteep);
         }
 
-        // Reject belts where start and end tangents diverge too sharply.
-        // Angle between tangents below MinTurnAngle would create a jagged kink.
-        var startFlat = new Vector3(startDir.x, 0, startDir.z).normalized;
-        var endFlat = new Vector3(endDir.x, 0, endDir.z).normalized;
-        if (startFlat.sqrMagnitude > 0.001f && endFlat.sqrMagnitude > 0.001f)
-        {
-            float dot = Vector3.Dot(startFlat, endFlat);
-            float angle = Mathf.Acos(Mathf.Clamp(dot, -1f, 1f)) * Mathf.Rad2Deg;
-            if (angle > (180f - MinTurnAngle))
-                return BeltValidationResult.Invalid(BeltValidationError.TurnTooSharp);
-        }
+        // Turn angle is not rejected here. Zero endDir (straight backward with
+        // no offset) is caught above. All other angles including U-turns are valid
+        // -- the route builder and per-mode validation in NetworkBuildController
+        // handle turn geometry constraints.
 
         return BeltValidationResult.Valid();
     }
