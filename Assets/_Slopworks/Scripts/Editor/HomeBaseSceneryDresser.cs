@@ -88,6 +88,29 @@ public static class HomeBaseSceneryDresser
     private static readonly Vector2 WoodshopPos = new(280f, 150f);
     private static readonly Vector2 GaragePos = new(-100f, 280f);
 
+    // settlement building pad positions and sizes (world-space x, z)
+    // these match the 8 buildings placed by HomeWorldPlaytestSetup
+    private static readonly Vector2[] SettlementPadPositions = {
+        new(0f, 0f),           // factory yard: center hub
+        new(80f, 60f),         // farmstead: NE of hub
+        new(-70f, 50f),        // workshop: NW of hub
+        new(-120f, -80f),      // river depot: SW, near river
+        new(0f, -150f),        // watchtower: south perimeter
+        new(100f, -70f),       // market: SE of hub
+        new(-80f, -40f),       // barracks: WSW of hub
+        new(60f, 130f),        // greenhouse: north of hub
+    };
+    private static readonly Vector2[] SettlementPadSizes = {
+        new(50f, 20f),   // factory yard (large footprint)
+        new(35f, 27f),   // farmstead
+        new(20f, 27f),   // workshop
+        new(15f, 15f),   // river depot (placeholder)
+        new(40f, 32f),   // watchtower
+        new(30f, 30f),   // market
+        new(22f, 22f),   // barracks
+        new(15f, 15f),   // greenhouse (placeholder)
+    };
+
     // road building positions (world-space x, z)
     private static readonly Vector2 FactoryYardPos = new(100f, 15f);
 
@@ -264,6 +287,7 @@ public static class HomeBaseSceneryDresser
         SmoothHeightmap(td, 6);
         CarveRiverValley(td);          // after smoothing so banks stay defined
         CarveWaystationPads(td);       // after river — flat pads
+        CarveSettlementPads(td);       // flat pads for settlement buildings
         RepaintSplatmap(td);
         SetupSkybox();
 
@@ -829,6 +853,59 @@ public static class HomeBaseSceneryDresser
 
         td.SetHeights(0, 0, heights);
         Debug.Log($"waystation pads flattened: {WaystationPositions.Length} locations");
+    }
+
+    private static void CarveSettlementPads(TerrainData td)
+    {
+        int res = td.heightmapResolution;
+        float[,] heights = td.GetHeights(0, 0, res, res);
+
+        for (int s = 0; s < SettlementPadPositions.Length; s++)
+        {
+            var pos = SettlementPadPositions[s];
+            var padSize = SettlementPadSizes[s];
+            float nx = (pos.x + TerrainWidth / 2f) / TerrainWidth;
+            float nz = (pos.y + TerrainWidth / 2f) / TerrainWidth;
+
+            int cx = Mathf.Clamp(Mathf.RoundToInt(nx * (res - 1)), 0, res - 1);
+            int cz = Mathf.Clamp(Mathf.RoundToInt(nz * (res - 1)), 0, res - 1);
+            float targetHeight = heights[cz, cx];
+
+            // blend margin around the pad (5m feather)
+            float halfX = (padSize.x / 2f + 5f) / TerrainWidth;
+            float halfZ = (padSize.y / 2f + 5f) / TerrainWidth;
+
+            for (int z = 0; z < res; z++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    float pnx = (float)x / (res - 1);
+                    float pnz = (float)z / (res - 1);
+                    float ddx = Mathf.Abs(pnx - nx);
+                    float ddz = Mathf.Abs(pnz - nz);
+
+                    if (ddx > halfX || ddz > halfZ) continue;
+
+                    float padHalfX = padSize.x / 2f / TerrainWidth;
+                    float padHalfZ = padSize.y / 2f / TerrainWidth;
+
+                    if (ddx < padHalfX && ddz < padHalfZ)
+                    {
+                        heights[z, x] = targetHeight;
+                    }
+                    else
+                    {
+                        float blendX = ddx > padHalfX ? (ddx - padHalfX) / (halfX - padHalfX) : 0f;
+                        float blendZ = ddz > padHalfZ ? (ddz - padHalfZ) / (halfZ - padHalfZ) : 0f;
+                        float blend = Mathf.Max(blendX, blendZ);
+                        heights[z, x] = Mathf.Lerp(targetHeight, heights[z, x], blend);
+                    }
+                }
+            }
+        }
+
+        td.SetHeights(0, 0, heights);
+        Debug.Log($"settlement pads flattened: {SettlementPadPositions.Length} locations");
     }
 
     private static void SmoothHeightmap(TerrainData td, int passes)

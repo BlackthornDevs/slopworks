@@ -33,5 +33,7 @@
 *.unitypackage filter=lfs diff=lfs merge=lfs -text
 
 # Critical: must be binary to prevent corruption
-LightingData.asset    filter=lfs diff=lfs merge=lfs -text
-TerrainData.asset     filter=lfs diff=lfs merge=lfs -text
+# Use glob patterns — literal names only match exact filenames,
+# missing prefixed variants like HomeBaseTerrainData.asset
+*LightingData.asset   filter=lfs diff=lfs merge=lfs -text
+*TerrainData.asset    filter=lfs diff=lfs merge=lfs -text
