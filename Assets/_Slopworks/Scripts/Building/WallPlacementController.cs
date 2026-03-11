@@ -20,7 +20,7 @@ public class WallPlacementController
     /// Given a world cursor position, find the nearest unoccupied foundation edge
     /// snap point within range. Updates NearestSnapPoint.
     /// </summary>
-    public void UpdateFromCursor(Vector3 cursorWorldPos, FactoryGrid grid, int level, float maxDistance = 1.5f)
+    public void UpdateFromCursor(Vector3 cursorWorldPos, FactoryGrid grid, float surfaceY, float maxDistance = 1.5f)
     {
         var cursorCell = grid.WorldToCell(cursorWorldPos);
         NearestSnapPoint = null;
@@ -32,7 +32,7 @@ public class WallPlacementController
             for (int dz = -1; dz <= 1; dz++)
             {
                 var checkCell = new Vector2Int(cursorCell.x + dx, cursorCell.y + dz);
-                var available = _snapRegistry.GetAvailableAt(checkCell, level);
+                var available = _snapRegistry.GetAvailableAt(checkCell, surfaceY);
 
                 foreach (var snap in available)
                 {
@@ -54,7 +54,7 @@ public class WallPlacementController
     /// </summary>
     public static Vector3 GetSnapWorldPosition(SnapPoint snap, FactoryGrid grid)
     {
-        var cellCenter = grid.CellToWorld(snap.Cell, snap.Level);
+        var cellCenter = grid.CellToWorld(snap.Cell, snap.SurfaceY);
         float halfCell = FactoryGrid.CellSize * 0.5f;
 
         return cellCenter + new Vector3(

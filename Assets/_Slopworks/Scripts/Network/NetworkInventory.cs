@@ -111,6 +111,48 @@ public class NetworkInventory : NetworkBehaviour
         return remaining == 0;
     }
 
+    [ServerRpc]
+    public void CmdDepositIntoStorage(NetworkObject storageNob, int hotbarSlot)
+    {
+        if (!IsServerInitialized) return;
+        if (storageNob == null) return;
+        if (hotbarSlot < 0 || hotbarSlot >= _slots.Count) return;
+
+        var netStorage = storageNob.GetComponent<NetworkStorage>();
+        if (netStorage == null || netStorage.Container == null) return;
+
+        var slot = _slots[hotbarSlot];
+        if (slot.IsEmpty) return;
+
+        if (netStorage.Container.TryInsertStack(slot.item.definitionId, slot.count))
+        {
+            Debug.Log($"inventory: deposited {slot.item.definitionId} x{slot.count} into storage");
+            _slots[hotbarSlot] = ItemSlot.Empty;
+        }
+    }
+
+    [ServerRpc]
+    public void CmdWithdrawFromStorage(NetworkObject storageNob, string itemId, int count)
+    {
+        if (!IsServerInitialized) return;
+        if (storageNob == null || string.IsNullOrEmpty(itemId) || count <= 0) return;
+
+        var netStorage = storageNob.GetComponent<NetworkStorage>();
+        if (netStorage == null || netStorage.Container == null) return;
+
+        int available = netStorage.Container.GetCount(itemId);
+        int toTake = Mathf.Min(count, available);
+        if (toTake <= 0) return;
+
+        if (TryAddServer(itemId, toTake))
+        {
+            // Extract from storage -- one at a time since ExtractAll takes everything
+            for (int i = 0; i < toTake; i++)
+                netStorage.Container.TryExtract(out _);
+            Debug.Log($"inventory: withdrew {itemId} x{toTake} from storage");
+        }
+    }
+
     public int GetCount(string definitionId)
     {
         int total = 0;

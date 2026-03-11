@@ -363,6 +363,41 @@ public class BeltSegmentTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new BeltSegment(-1));
     }
 
+    // -- FromArcLength --
+
+    [Test]
+    public void FromArcLength_3Meters_Creates300Subdivisions()
+    {
+        var belt = BeltSegment.FromArcLength(3.0f);
+        Assert.AreEqual(300, belt.TotalLength);
+    }
+
+    [Test]
+    public void FromArcLength_1Point5Meters_Creates150Subdivisions()
+    {
+        var belt = BeltSegment.FromArcLength(1.5f);
+        Assert.AreEqual(150, belt.TotalLength);
+    }
+
+    [Test]
+    public void FromArcLength_ZeroLength_ThrowsArgument()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => BeltSegment.FromArcLength(0f));
+    }
+
+    [Test]
+    public void FromArcLength_NegativeLength_ThrowsArgument()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => BeltSegment.FromArcLength(-1f));
+    }
+
+    [Test]
+    public void FromArcLength_VeryShort_ClampsToMinimum1()
+    {
+        var belt = BeltSegment.FromArcLength(0.005f);
+        Assert.GreaterOrEqual(belt.TotalLength, 1);
+    }
+
     // -- Terminal gap after extraction --
 
     [Test]

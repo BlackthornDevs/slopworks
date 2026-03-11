@@ -5,11 +5,10 @@ using UnityEngine;
 /// </summary>
 public class PlacementInfo : MonoBehaviour
 {
-    public enum PlacementType { Foundation, Wall, Ramp, Machine, Storage, Belt }
-
-    public PlacementType Type;
+    public BuildingCategory Category;
     public Vector2Int Cell;
     public Vector2Int Size;
-    public int Level;
-    public Vector2Int EdgeDirection; // for walls/ramps
+    public float SurfaceY;
+    public float ObjectHeight;
+    public Vector2Int EdgeDirection;
 }

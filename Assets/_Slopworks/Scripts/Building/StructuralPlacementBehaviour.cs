@@ -41,14 +41,14 @@ public class StructuralPlacementBehaviour : MonoBehaviour
         _placementService = placementService;
     }
 
-    public BuildingData PlaceFoundation(FoundationDefinitionSO def, Vector2Int cell, int level)
+    public BuildingData PlaceFoundation(FoundationDefinitionSO def, Vector2Int cell, float surfaceY)
     {
-        var data = _placementService.PlaceFoundation(def, cell, level);
+        var data = _placementService.PlaceFoundation(def, cell, surfaceY);
         if (data == null)
             return null;
 
         _foundations.Add(data);
-        SpawnFoundationVisual(data, cell, def.size, level);
+        SpawnFoundationVisual(data, cell, def.size, surfaceY);
         return data;
     }
 
@@ -101,16 +101,16 @@ public class StructuralPlacementBehaviour : MonoBehaviour
             Destroy(rampData.Instance);
     }
 
-    private void SpawnFoundationVisual(BuildingData data, Vector2Int origin, Vector2Int size, int level)
+    private void SpawnFoundationVisual(BuildingData data, Vector2Int origin, Vector2Int size, float surfaceY)
     {
         var grid = _factoryGrid != null ? _factoryGrid.Grid : Grid;
-        var parent = new GameObject($"Foundation_{origin.x}_{origin.y}_L{level}");
+        var parent = new GameObject($"Foundation_{origin.x}_{origin.y}_Y{surfaceY:F1}");
 
         for (int x = origin.x; x < origin.x + size.x; x++)
         {
             for (int z = origin.y; z < origin.y + size.y; z++)
             {
-                var worldPos = grid.CellToWorld(new Vector2Int(x, z), level);
+                var worldPos = grid.CellToWorld(new Vector2Int(x, z), surfaceY);
                 var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 tile.name = "FoundationTile";
                 tile.transform.SetParent(parent.transform);
@@ -126,18 +126,18 @@ public class StructuralPlacementBehaviour : MonoBehaviour
     private void SpawnWallVisual(WallData wallData)
     {
         var grid = _factoryGrid != null ? _factoryGrid.Grid : Grid;
-        var cellCenter = grid.CellToWorld(wallData.Cell, wallData.Level);
+        var cellCenter = grid.CellToWorld(wallData.Cell, wallData.SurfaceY);
         var edgeDir = wallData.EdgeDirection;
         var edgeOffset = new Vector3(edgeDir.x * 0.5f * FactoryGrid.CellSize, 0f, edgeDir.y * 0.5f * FactoryGrid.CellSize);
-        var wallPos = cellCenter + edgeOffset + Vector3.up * FactoryGrid.LevelHeight * 0.5f;
+        var wallPos = cellCenter + edgeOffset + Vector3.up * FactoryGrid.WallHeight * 0.5f;
 
         float yRotation = Mathf.Atan2(edgeDir.x, edgeDir.y) * Mathf.Rad2Deg;
 
         var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.name = $"Wall_{wallData.Cell.x}_{wallData.Cell.y}_L{wallData.Level}";
+        wall.name = $"Wall_{wallData.Cell.x}_{wallData.Cell.y}_Y{wallData.SurfaceY:F1}";
         wall.transform.position = wallPos;
         wall.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
-        wall.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+        wall.transform.localScale = new Vector3(0.95f, FactoryGrid.WallHeight, 0.1f);
         SetColor(wall, new Color(0.6f, 0.6f, 0.6f));
 
         wallData.Instance = wall;
@@ -150,21 +150,21 @@ public class StructuralPlacementBehaviour : MonoBehaviour
 
         // Edge-to-edge: start at foundation/ramp boundary, end at far edge of last ramp cell
         var snapCell = rampData.BaseCell - dir2D;
-        var cellCenter = grid.CellToWorld(snapCell, rampData.BaseLevel);
+        var cellCenter = grid.CellToWorld(snapCell, rampData.BaseSurfaceY);
         var edgeOffset = new Vector3(dir2D.x * 0.5f * FactoryGrid.CellSize, 0f, dir2D.y * 0.5f * FactoryGrid.CellSize);
         var startPos = cellCenter + edgeOffset;
-        startPos.y = rampData.BaseLevel * FactoryGrid.LevelHeight;
+        startPos.y = rampData.BaseSurfaceY;
 
         var endPos = startPos
             + new Vector3(dir2D.x, 0f, dir2D.y) * rampData.FootprintLength * FactoryGrid.CellSize;
-        endPos.y = (rampData.BaseLevel + 1) * FactoryGrid.LevelHeight;
+        endPos.y = rampData.BaseSurfaceY + FactoryGrid.WallHeight;
 
         var midpoint = (startPos + endPos) * 0.5f;
         var dir3D = (endPos - startPos).normalized;
         var length = Vector3.Distance(startPos, endPos);
 
         var ramp = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        ramp.name = $"Ramp_{rampData.BaseCell.x}_{rampData.BaseCell.y}_L{rampData.BaseLevel}";
+        ramp.name = $"Ramp_{rampData.BaseCell.x}_{rampData.BaseCell.y}_Y{rampData.BaseSurfaceY:F1}";
         ramp.transform.position = midpoint;
         ramp.transform.rotation = Quaternion.LookRotation(dir3D);
         ramp.transform.localScale = new Vector3(0.95f, 0.1f, length);

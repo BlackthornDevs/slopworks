@@ -1,5 +1,6 @@
 /// <summary>
-/// Types of structural snap points for building attachment.
+/// Legacy snap point types for single-player playtest system.
+/// Multiplayer uses BuildingSnapPoint instead.
 /// </summary>
 public enum SnapPointType
 {

@@ -26,8 +26,20 @@ public class NetworkMachine : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
-        if (_machine == null && _definition != null)
+        if (_machine == null)
+        {
+            if (_definition == null)
+            {
+                _definition = ScriptableObject.CreateInstance<MachineDefinitionSO>();
+                _definition.machineId = "smelter";
+                _definition.machineType = "smelter";
+                _definition.size = Vector2Int.one;
+                _definition.inputBufferSize = 1;
+                _definition.outputBufferSize = 1;
+                _definition.processingSpeed = 1f;
+            }
             _machine = new Machine(_definition);
+        }
     }
 
     public void ServerSyncState()

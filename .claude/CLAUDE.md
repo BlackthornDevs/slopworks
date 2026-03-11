@@ -1,14 +1,5 @@
 # Slopworks — Claude rules
 
-## GitHub Actions suspended (account-wide)
-
-GitHub Actions are disabled on the entire `jamditis` GitHub account until further notice. This means:
-- **No CI/CD pipelines will run** — builds, tests, deploys all fail silently
-- **GitHub Pages deploys won't work** — even "legacy" static deploys that used Actions under the hood
-- **No automated workflows** — PR checks, scheduled jobs, release automation are all dead
-
-**For any project that previously deployed via GitHub Actions or GitHub Pages, you must use an alternative** (manual deploy, Cloudflare Pages, Firebase Hosting, direct FTP, etc.). Do not create or rely on `.github/workflows/` files.
-
 Post-apocalyptic co-op factory/survival game built in Unity + FishNet. Two-person team: Joe (jamditis) + Kevin (kamditis) at BlackthornDevs. Both developers run parallel builds from the same design doc and merge the best parts — so both Claude instances working in this repo must follow identical rules.
 
 ## Engineering principles
@@ -19,6 +10,8 @@ Always adhere to the general principles of engineering:
 2. Make it simple.
 3. Make it efficient/fast.
 4. Make it secure.
+
+**Prefer GameObject-oriented data over computed values.** If information can be baked into child objects, components, or transform positions on a prefab, do that instead of computing it from mesh bounds, extents, or offsets at runtime. Unity's scene graph is the source of truth. Snap points encode attachment geometry as child transforms -- placement reads those positions directly instead of deriving them from renderer bounds. This principle applies broadly: if you find yourself writing `GetComponent<Renderer>().bounds.extents` to derive a value that could instead be a field on a component or a child object's position, you're overcomplicating it. Unless explicitly asked to interpret mesh data, default to Unity's GameObject-oriented solutions first.
 
 ---
 
@@ -88,6 +81,10 @@ These are non-negotiable. Violating any of them creates bugs that are hard to fi
 
 **When adding a new PortOwnerType, update ConnectionResolver.** `CreateSource` and `CreateDestination` in `ConnectionResolver.cs` have switch statements over `PortOwnerType`. Adding a new enum value without adding corresponding cases causes exceptions at runtime when ports try to wire up. This is an integration seam that unit tests don't catch — it only fails when you place buildings adjacent to each other.
 
+**Never duplicate placement math, physics constants, or derived values.** Every building type's world position, rotation, and scale must come from a single source of truth -- currently `GridManager`'s universal placement methods. Ghost previews and server spawns call the same method. If you're writing `new Vector3(x, someOffset, z)` for placement anywhere outside GridManager, you're doing it wrong. This rule extends beyond placement: any logic that could apply to multiple building/item/enemy types belongs in a shared method parameterized by the type's data (prefab, definition SO, etc.), not copy-pasted per type.
+
+**Snap placement is snap-to-snap, not computed.** `GetSnapPlacementPosition` finds the ghost prefab's matching snap point (opposite normal, opposite height tier) and positions the ghost so the two snap points meet: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos`. No extents, no halfHeight, no baseOffset math. Snap point child transforms on the prefab encode all attachment geometry. If a building snaps wrong, fix the snap point positions on the prefab, don't add offset calculations to GridManager.
+
 ---
 
 ## Before writing C# code
@@ -98,18 +95,6 @@ Load the `slopworks-architecture` skill for design decisions about where a syste
 
 ---
 
-## Reasoning principles
-
-Before taking action:
-
-- **Dependencies** — what must exist before this? Will this block something else?
-- **Risk** — what's the blast radius if this is wrong? Prefer reversible actions.
-- **Root cause** — find the actual bug, not the symptom. Don't paper over it.
-- **Adaptability** — if a result doesn't match expectations, update the plan before continuing.
-- **Persistence** — on transient errors, retry. On logic errors, change strategy. Don't give up.
-
----
-
 ## Bug-fixing workflow
 
 1. Write a failing test that reproduces the bug.
@@ -117,59 +102,6 @@ Before taking action:
 3. Verify the test passes. A passing test is the proof.
 
 Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoBehaviour dependencies — it's unusually testable. Use that.
-
----
-
-## Workflow orchestration
-
-### 1. Plan mode default
-- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
-- If something goes sideways, STOP and re-plan immediately — don't keep pushing
-- Use plan mode for verification steps, not just building
-- Write detailed specs upfront to reduce ambiguity
-
-### 2. Subagent strategy
-- Use subagents liberally to keep main context window clean
-- Offload research, exploration, and parallel analysis to subagents
-- For complex problems, throw more compute at it via subagents
-- One task per subagent for focused execution
-
-### 3. Self-improvement loop
-- After ANY correction from the user: update `tasks/lessons.md` with the pattern
-- Write rules for yourself that prevent the same mistake
-- Ruthlessly iterate on these lessons until mistake rate drops
-- Review lessons at session start for relevant project
-
-### 4. Verification before done
-- Never mark a task complete without proving it works
-- Diff your behavior between main and your changes when relevant
-- Ask yourself: "Would a staff engineer approve this?"
-- Run tests, check logs, demonstrate correctness
-
-### 5. Demand elegance (balanced)
-- For non-trivial changes: pause and ask "is there a more elegant way?"
-- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
-- Skip this for simple, obvious fixes — don't over-engineer
-- Challenge your own work before presenting it
-
-### 6. Autonomous bug fixing
-- When given a bug report: just fix it. Don't ask for hand-holding
-- Point at logs, errors, failing tests — then resolve them
-- Zero context switching required from the user
-- Go fix failing CI tests without being told how
-
-### 7. Task management
-1. **Plan first**: Write plan to `tasks/todo.md` with checkable items
-2. **Verify plan**: Check in before starting implementation
-3. **Track progress**: Mark items complete as you go
-4. **Explain changes**: High-level summary at each step
-5. **Document results**: Add review section to `tasks/todo.md`
-6. **Capture lessons**: Update `tasks/lessons.md` after corrections
-
-### Core principles
-- **Simplicity first**: Make every change as simple as possible. Impact minimal code.
-- **No laziness**: Find root causes. No temporary fixes. Senior developer standards.
-- **Minimal impact**: Changes should only touch what's necessary. Avoid introducing bugs.
 
 ---
 
@@ -356,9 +288,11 @@ Follow this checklist every time. Missing any step causes silent runtime failure
 3. **PortOwnerType** — add new value to `PortOwnerType` enum
 4. **ConnectionResolver** — add cases for the new type in both `CreateSource` and `CreateDestination`. If the port owner is a `StorageContainer`, fall through to the Storage case.
 5. **BuildingPlacementService** — add `Place[BuildingName]` method following `PlaceMachine`/`PlaceStorage`/`PlaceTurret` pattern
-6. **MonoBehaviour wrapper** — thin wrapper (e.g. `TurretBehaviour`) using inactive-then-activate pattern
-7. **StructuralPlaytestSetup** — add tool mode, build page slot, input handler, visual spawner, OnGUI stats
-8. **PreSeedFactory** (optional) — add a pre-built chain to verify the full automation loop
+6. **GridManager placement method** — add a `Get[BuildingName]WorldPos()` method to `GridManager`'s universal placement block. Derive Y offset from the prefab via `GetPrefabHalfHeight()`. Both ghost preview (NetworkBuildController) and server spawn (GridManager.CmdPlace*) must call this single method. Never hardcode offsets inline.
+7. **Prefab** — add a `_[buildingName]Prefab` serialized field to `GridManager`, a public getter, and wire it in `FactoryPrefabSetup.cs`. Ghost preview uses the prefab via `EnsurePrefabGhost()`.
+8. **MonoBehaviour wrapper** — thin wrapper (e.g. `TurretBehaviour`) using inactive-then-activate pattern
+9. **StructuralPlaytestSetup** — add tool mode, build page slot, input handler, visual spawner, OnGUI stats
+10. **PreSeedFactory** (optional) — add a pre-built chain to verify the full automation loop
 
 Reference implementation: turret system (J-013 through J-015). Files: `TurretController.cs`, `TurretDefinitionSO.cs`, `TurretBehaviour.cs`, plus modifications to `PortOwnerType.cs`, `ConnectionResolver.cs`, `BuildingPlacementService.cs`, `StructuralPlaytestSetup.cs`.
 
@@ -369,5 +303,5 @@ Reference implementation: turret system (J-013 through J-015). Files: `TurretCon
 - **Phase 3** (Combat): Complete — weapons, enemies, AI, waves
 - **Phase 4** (Turret Defenses): Complete — J-013, J-014, J-015
 - **Phase 5** (Core UI + Inventory): Complete (Kevin)
-- **Phase 7** (The Tower): Next for Joe — starts at J-016
+- **Phase 7** (The Tower): Next for Joe — starts at J-016. Tower contracts bible complete (15 contracts, 6 buildings). Website tower page updated with progression tree, contract cards, and environmental hazards.
 - **Phase 6** (Building Exploration): Next for Kevin

@@ -1,0 +1,65 @@
+name: PR review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [master]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.user.login, '[bot]')
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          direct_prompt: |
+            Review this Unity/C# pull request for BlackthornDevs/slopworks.
+
+            Focus on these areas in order:
+
+            1. **Hard rule violations** (flag as blocking):
+               - ScriptableObject mutation at runtime
+               - NetworkObject spawned per belt item
+               - Factory simulation logic running client-side (missing `if (!IsServerInitialized) return;`)
+               - Direct cross-scene object references (should use GameEventSO bus)
+               - RPCs used for persistent state (use SyncVar/SyncList instead)
+               - GetComponent/FindObjectOfType called in Update or FixedUpdate
+               - Direct push to master (both branches should go through joe/main or kevin/main)
+               - Placement math duplicated outside GridManager
+               - Missing ConnectionResolver switch case when a new PortOwnerType is added
+
+            2. **Networking correctness** (FishNet):
+               - Late-join safety: any state a new client needs must be in SyncVar or SyncList
+               - Server authority guard on all simulation code
+               - RPC vs SyncVar choice — use RPCs for events, SyncVar/SyncList for state
+
+            3. **Performance**:
+               - Allocations in Update/FixedUpdate
+               - Network bandwidth (unnecessary SyncVars, frequent dirty checks)
+               - Belt simulation (O(1) steady-state pattern using distance-offset data structure)
+
+            4. **Code quality**:
+               - Single-responsibility, no duplication
+               - Null checks on Unity object references
+               - Consistent with existing patterns in the diff
+
+            Format your review as:
+            - **Blocking issues**: Must fix before merge (hard rule violations or correctness bugs)
+            - **Suggestions**: Worth addressing but not blocking
+            - **Looks good**: Positive callouts
+
+            If there are no blocking issues, say so clearly at the top.

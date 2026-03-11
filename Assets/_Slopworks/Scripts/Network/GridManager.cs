@@ -7,495 +7,574 @@ public class GridManager : NetworkBehaviour
 {
     public static GridManager Instance { get; private set; }
 
-    [SerializeField] private GameObject _foundationPrefab;
-    [SerializeField] private GameObject _wallPrefab;
-    [SerializeField] private GameObject _rampPrefab;
-    [SerializeField] private GameObject _machinePrefab;
-    [SerializeField] private GameObject _storagePrefab;
-    [SerializeField] private GameObject _beltPrefab;
-
     private NetworkFactorySimulation _factorySimulation;
 
     private FactoryGrid _grid;
-    private SnapPointRegistry _snapRegistry;
-    private StructuralPlacementService _structuralService;
 
-    private readonly Dictionary<Vector3Int, GameObject> _foundationObjects = new();
-    private readonly List<WallRecord> _wallRecords = new();
-    private readonly List<RampRecord> _rampRecords = new();
-
-    // Building tracking for auto-wiring
-    private enum BuildingType { Machine, Storage, Belt }
-
-    private struct PlacedBuilding
-    {
-        public BuildingType Type;
-        public GameObject Instance;
-        public NetworkMachine NetMachine;
-        public NetworkStorage NetStorage;
-        public NetworkBeltSegment NetBelt;
-        public Vector2Int Cell;
-        public int Level;
-    }
-
-    private readonly Dictionary<Vector3Int, PlacedBuilding> _placedBuildings = new();
+    private Dictionary<BuildingCategory, GameObject[]> _prefabArrays = new();
 
     private static readonly Vector2Int[] CardinalDirs =
         { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
     public FactoryGrid Grid => _grid;
-    public StructuralPlacementService StructuralService => _structuralService;
-    public SnapPointRegistry SnapRegistry => _snapRegistry;
-    public GameObject FoundationPrefab => _foundationPrefab;
-    public GameObject WallPrefab => _wallPrefab;
-    public GameObject RampPrefab => _rampPrefab;
 
-    private struct WallRecord
+    // ------------------------------------------------------------------
+    // Prefab access
+    // ------------------------------------------------------------------
+
+    public GameObject[] GetPrefabs(BuildingCategory category)
     {
-        public WallData Data;
-        public GameObject Instance;
+        _prefabArrays.TryGetValue(category, out var arr);
+        return arr ?? System.Array.Empty<GameObject>();
     }
 
-    private struct RampRecord
+    public GameObject GetPrefab(BuildingCategory category, int variant)
     {
-        public RampData Data;
-        public GameObject Instance;
+        var arr = GetPrefabs(category);
+        if (arr.Length == 0) return null;
+        return arr[Mathf.Clamp(variant, 0, arr.Length - 1)];
     }
+
+    // ------------------------------------------------------------------
+    // Placed record tracking
+    // ------------------------------------------------------------------
+
+    private struct PlacedRecord
+    {
+        public BuildingCategory Category;
+        public GameObject Instance;
+        public float SurfaceY;
+        public Vector2Int Direction;
+        public NetworkMachine NetMachine;
+        public NetworkStorage NetStorage;
+        public NetworkBeltSegment NetBelt;
+    }
+
+    private readonly Dictionary<long, PlacedRecord> _placedRecords = new();
+
+    private static long RecordKey(Vector2Int cell, float surfaceY, Vector2Int direction = default)
+    {
+        int bucket = FactoryGrid.YBucket(surfaceY);
+        int dirHash = (direction.x + 2) * 5 + (direction.y + 2);
+        return ((long)(cell.x & 0xFFFF) << 48) | ((long)(cell.y & 0xFFFF) << 32) |
+               ((long)(bucket & 0xFFFF) << 16) | (long)(dirHash & 0xFFFF);
+    }
+
+    // ------------------------------------------------------------------
+    // Lifecycle
+    // ------------------------------------------------------------------
 
     private void Awake()
     {
         Instance = this;
         _grid = new FactoryGrid();
-        _snapRegistry = new SnapPointRegistry();
-        _structuralService = new StructuralPlacementService(_grid, _snapRegistry);
         _factorySimulation = GetComponent<NetworkFactorySimulation>();
+        LoadPrefabVariants();
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceFoundation(Vector2Int cell, int level, NetworkConnection sender = null)
+    private void LoadPrefabVariants()
     {
-        PlaceFoundationInternal(cell, level, sender);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceFoundationRect(Vector2Int min, Vector2Int max, int level, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        int placed = 0;
-        for (int x = min.x; x <= max.x; x++)
+        _prefabArrays = new Dictionary<BuildingCategory, GameObject[]>();
+        var folders = new Dictionary<BuildingCategory, string>
         {
-            for (int z = min.y; z <= max.y; z++)
+            { BuildingCategory.Foundation, "Prefabs/Buildings/Foundations" },
+            { BuildingCategory.Wall, "Prefabs/Buildings/Walls" },
+            { BuildingCategory.Ramp, "Prefabs/Buildings/Ramps" },
+            { BuildingCategory.Machine, "Prefabs/Buildings/Machines" },
+            { BuildingCategory.Storage, "Prefabs/Buildings/Storage" },
+            { BuildingCategory.Belt, "Prefabs/Buildings/Belts" },
+            { BuildingCategory.Support, "Prefabs/Buildings/Supports" }
+        };
+
+        foreach (var kvp in folders)
+        {
+            var loaded = Resources.LoadAll<GameObject>(kvp.Value);
+            _prefabArrays[kvp.Key] = loaded.Length > 0 ? loaded : System.Array.Empty<GameObject>();
+        }
+
+        foreach (var kvp in _prefabArrays)
+            Debug.Log($"grid: {kvp.Key} variants: {kvp.Value.Length}");
+    }
+
+    // ------------------------------------------------------------------
+    // Universal placement positions
+    // ALL ghost previews and server placement MUST use these methods.
+    // NEVER compute placement offsets inline anywhere else.
+    // Adding a new building type? Add one method here. Call it from both
+    // GridManager (server spawn) and NetworkBuildController (ghost preview).
+    //
+    // Y offsets are derived from prefab bounds so changing prefab scale
+    // doesn't break placement. The object's pivot sits at bounds center,
+    // so we offset by extents.y to place the bottom on the surface.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns the scaled extents of a prefab's renderer in world units.
+    /// Uses localBounds (valid on uninstantiated prefabs) scaled by lossyScale.
+    /// </summary>
+    public static Vector3 GetPrefabExtents(GameObject prefab)
+    {
+        if (prefab == null) return Vector3.one * 0.5f;
+        var renderer = prefab.GetComponentInChildren<Renderer>();
+        if (renderer == null) return Vector3.one * 0.5f;
+        var lb = renderer.localBounds;
+        var s = renderer.transform.lossyScale;
+        return new Vector3(
+            lb.extents.x * Mathf.Abs(s.x),
+            lb.extents.y * Mathf.Abs(s.y),
+            lb.extents.z * Mathf.Abs(s.z));
+    }
+
+    /// <summary>
+    /// Returns the Y extent (half-height) of a prefab's renderer bounds.
+    /// </summary>
+    public static float GetPrefabHalfHeight(GameObject prefab)
+    {
+        return GetPrefabExtents(prefab).y;
+    }
+
+    /// <summary>
+    /// Returns the Y offset needed to place the mesh bottom on the surface.
+    /// Accounts for localBounds.center -- works correctly for both center-origin
+    /// meshes (Unity primitives) and center-bottom meshes (Revit FBX exports).
+    /// </summary>
+    public static float GetPrefabBaseOffset(GameObject prefab)
+    {
+        if (prefab == null) return 0.5f;
+        var renderer = prefab.GetComponentInChildren<Renderer>();
+        if (renderer == null) return 0.5f;
+        var lb = renderer.localBounds;
+        var s = renderer.transform.lossyScale;
+        float extY = lb.extents.y * Mathf.Abs(s.y);
+        float centerY = lb.center.y * Mathf.Abs(s.y);
+        // Distance from mesh origin to bottom of bounds
+        // Center-origin cube: 0.5 - 0 = 0.5 (origin above bottom)
+        // Center-bottom FBX:  h/2 - h/2 = 0 (origin at bottom)
+        return extY - centerY;
+    }
+
+    /// <summary>
+    /// Unified grid placement: snaps the prefab center to the nearest 1m grid intersection.
+    /// Y is offset by the prefab's base offset so the bottom sits on the surface.
+    /// Adjacency between buildings is handled by snap points, not grid alignment.
+    /// </summary>
+    public static (Vector3 position, Quaternion rotation) GetGridPlacementPosition(
+        Vector3 hitPoint, GameObject prefab, int rotationDeg)
+    {
+        float posX = SnapAxis(hitPoint.x);
+        float posZ = SnapAxis(hitPoint.z);
+        float posY = hitPoint.y + GetPrefabBaseOffset(prefab);
+
+        return (new Vector3(posX, posY, posZ), Quaternion.Euler(0f, rotationDeg, 0f));
+    }
+
+    /// <summary>
+    /// Snap placement: find the ghost prefab's matching snap point (opposite normal,
+    /// opposite height tier) and position the ghost so the two snap points meet.
+    /// No extent/offset math -- positions are baked into the snap point children.
+    /// </summary>
+    public static (Vector3 position, Quaternion rotation) GetSnapPlacementPosition(
+        BuildingSnapPoint snapPoint, GameObject prefab, int rotationDeg, float surfaceY,
+        BuildingCategory ghostCategory = BuildingCategory.Foundation,
+        BuildingCategory targetCategory = BuildingCategory.Foundation)
+    {
+        Vector3 targetPos = snapPoint.transform.position;
+        Vector3 targetNormal = snapPoint.Normal;
+        Quaternion ghostRot = Quaternion.Euler(0f, rotationDeg, 0f);
+
+        var ghostSnap = FindGhostAttachSnap(prefab, targetNormal, snapPoint.gameObject.name,
+            ghostRot, ghostCategory, targetCategory);
+
+        if (ghostSnap != null)
+        {
+            Vector3 rotatedLocal = ghostRot * ghostSnap.transform.localPosition;
+            Vector3 pos = targetPos - rotatedLocal;
+            return (pos, ghostRot);
+        }
+
+        // Fallback: center ghost on target snap (shouldn't happen if prefab has snap points)
+        Debug.LogWarning($"snap placement: no matching ghost snap on {prefab.name} for {snapPoint.gameObject.name}");
+        return (targetPos, ghostRot);
+    }
+
+    /// <summary>
+    /// Find the ghost prefab's snap point that should connect to the target snap.
+    /// Structural on structural: opposite normal + opposite height tier.
+    /// Machine/Storage on structural: always Center_Bot (sits on surface, never edge-to-edge).
+    /// Machine/Storage on machine/storage: opposite normal cardinal _Bot matching (side-by-side).
+    /// </summary>
+    private static BuildingSnapPoint FindGhostAttachSnap(
+        GameObject prefab, Vector3 targetNormal, string targetSnapName, Quaternion ghostRot,
+        BuildingCategory ghostCategory, BuildingCategory targetCategory)
+    {
+        var snaps = prefab.GetComponentsInChildren<BuildingSnapPoint>();
+        if (snaps.Length == 0) return null;
+
+        bool ghostIsMachine = ghostCategory == BuildingCategory.Machine
+            || ghostCategory == BuildingCategory.Storage;
+        bool targetIsStructural = targetCategory == BuildingCategory.Foundation
+            || targetCategory == BuildingCategory.Wall
+            || targetCategory == BuildingCategory.Ramp;
+
+        // Machine/Storage on structural: always use Center_Bot
+        if (ghostIsMachine && targetIsStructural)
+        {
+            foreach (var s in snaps)
+                if (s.gameObject.name.Contains("Center_Bot")) return s;
+            return null;
+        }
+
+        // Standard matching: opposite normal + tier pairing
+        Vector3 desiredLocal = Quaternion.Inverse(ghostRot) * (-targetNormal);
+
+        bool peerSnap = ghostIsMachine
+            && (targetCategory == BuildingCategory.Machine || targetCategory == BuildingCategory.Storage);
+
+        string wantTier;
+        if (targetSnapName.Contains("HighEdge")) wantTier = "LowEdge";
+        else if (targetSnapName.Contains("LowEdge")) wantTier = "HighEdge";
+        else if (targetSnapName.Contains("_Bot")) wantTier = peerSnap ? "_Bot" : "_Top";
+        else if (targetSnapName.Contains("_Top")) wantTier = "_Bot";
+        else wantTier = "_Mid";
+
+        BuildingSnapPoint best = null;
+        float bestScore = float.MinValue;
+
+        foreach (var s in snaps)
+        {
+            float normalDot = Vector3.Dot(s.Normal, desiredLocal);
+            if (normalDot < 0.5f) continue;
+
+            float tierBonus = s.gameObject.name.Contains(wantTier) ? 1f : 0f;
+            float score = normalDot + tierBonus;
+
+            if (score > bestScore)
             {
-                if (PlaceFoundationInternal(new Vector2Int(x, z), level, sender))
-                    placed++;
+                bestScore = score;
+                best = s;
             }
         }
 
-        if (placed > 0)
-            Debug.Log($"grid: placed {placed} foundations in rect ({min.x},{min.y})-({max.x},{max.y}) level {level} by {sender?.ClientId}");
+        return best;
     }
 
-    private bool PlaceFoundationInternal(Vector2Int cell, int level, NetworkConnection sender)
+    /// <summary>
+    /// Snaps a value to the nearest 1m grid intersection.
+    /// Adjacency between buildings is handled by snap points, not grid alignment.
+    /// </summary>
+    private static float SnapAxis(float hitValue)
     {
-        if (!IsServerInitialized) return false;
-
-        int fs = FactoryGrid.FoundationSize;
-        // Use raw cell as origin -- no 4x4 snap for single placement
-        // Zoop pre-snaps cells before calling this method
-        var origin = cell;
-        var size = new Vector2Int(fs, fs);
-
-        // Check if this 4x4 block is already placed
-        var blockKey = new Vector3Int(origin.x, origin.y, level);
-        if (_foundationObjects.ContainsKey(blockKey))
-            return false;
-
-        // Check all cells in the 4x4 block are available
-        if (!_grid.CanPlace(origin, size, level))
-        {
-            // Log which cell is blocking
-            for (int x = origin.x; x < origin.x + size.x; x++)
-            {
-                for (int z = origin.y; z < origin.y + size.y; z++)
-                {
-                    if (!_grid.IsInBounds(new Vector2Int(x, z)))
-                        Debug.Log($"grid: foundation blocked -- cell ({x},{z}) out of bounds");
-                    else if (_grid.GetAt(new Vector2Int(x, z), level) != null)
-                        Debug.Log($"grid: foundation blocked -- cell ({x},{z}) level {level} occupied by {_grid.GetAt(new Vector2Int(x, z), level).BuildingId}");
-                }
-            }
-            return false;
-        }
-
-        // Occupy all cells
-        var data = new BuildingData("foundation", origin, size, 0, level);
-        data.IsStructural = true;
-        _grid.Place(origin, size, level, data);
-
-        // Position prefab at center of the 4x4 block
-        // Push up by half cube height so foundation sits ON the level surface
-        float halfBlock = fs * FactoryGrid.CellSize * 0.5f;
-        Vector3 worldPos = new Vector3(
-            origin.x * FactoryGrid.CellSize + halfBlock,
-            level * FactoryGrid.LevelHeight + 0.5f,
-            origin.y * FactoryGrid.CellSize + halfBlock);
-        var go = Instantiate(_foundationPrefab, worldPos, Quaternion.identity);
-        var info = go.AddComponent<PlacementInfo>();
-        info.Type = PlacementInfo.PlacementType.Foundation;
-        info.Cell = origin;
-        info.Size = size;
-        info.Level = level;
-        ServerManager.Spawn(go);
-
-        data.Instance = go;
-        _foundationObjects[blockKey] = go;
-        return true;
+        return Mathf.Round(hitValue);
     }
+
+    private static void SetBuildingLayer(GameObject go, BuildingCategory category)
+    {
+        int layer = category switch
+        {
+            BuildingCategory.Foundation => PhysicsLayers.Structures,
+            BuildingCategory.Wall => PhysicsLayers.Structures,
+            BuildingCategory.Ramp => PhysicsLayers.Structures,
+            _ => PhysicsLayers.Interactable
+        };
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+        {
+            // Preserve snap point layer -- they must stay on SnapPoints for raycasts
+            if (t.gameObject.layer == PhysicsLayers.SnapPoints) continue;
+            t.gameObject.layer = layer;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Unified CmdPlace RPCs
+    // ------------------------------------------------------------------
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdRemoveFoundation(Vector2Int cell, int level, NetworkConnection sender = null)
+    public void CmdPlace(Vector2Int cell, float surfaceY, int rotation, int variant,
+        BuildingCategory category, Vector3 worldPos, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
-        var data = _grid.GetAt(cell, level);
-        if (data == null || !data.IsStructural)
+        var prefab = GetPrefab(category, variant);
+        if (prefab == null)
         {
-            Debug.Log($"grid: nothing to remove at ({cell.x},{cell.y}) level {level}");
+            Debug.Log($"grid: no prefab for {category} variant {variant}");
             return;
         }
 
-        // Remove the full 4x4 block
-        var origin = data.Origin;
-        var size = data.Size;
-        _grid.Remove(origin, size, level);
-
-        var blockKey = new Vector3Int(origin.x, origin.y, level);
-        if (_foundationObjects.TryGetValue(blockKey, out var go))
+        var key = RecordKey(cell, surfaceY);
+        if (_placedRecords.ContainsKey(key))
         {
-            ServerManager.Despawn(go);
-            _foundationObjects.Remove(blockKey);
-        }
-
-        Debug.Log($"grid: foundation removed at ({origin.x},{origin.y}) level {level} by {sender?.ClientId}");
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceWall(Vector2Int cell, int level, Vector2Int direction, bool onFoundation = false, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        // Check for duplicate wall
-        if (HasWallAt(cell, level, direction))
-        {
-            Debug.Log($"grid: wall already exists at ({cell.x},{cell.y}) level {level} dir ({direction.x},{direction.y})");
+            Debug.Log($"grid: {category} rejected -- cell occupied at ({cell.x},{cell.y}) y={surfaceY:F1}");
             return;
         }
 
-        var wallData = new WallData("wall", cell, level, direction);
+        if (category == BuildingCategory.Foundation)
+        {
+            int fs = FactoryGrid.FoundationSize;
+            var size = new Vector2Int(fs, fs);
+            if (!_grid.CanPlace(cell, size, surfaceY)) return;
+            _grid.Place(cell, size, surfaceY, new BuildingData("foundation", cell, size, 0, 0));
+        }
 
-        Vector3 worldPos = GetWallWorldPos(cell, level, direction, onFoundation);
-        Quaternion rotation = GetWallRotation(direction);
-        var go = Instantiate(_wallPrefab, worldPos, rotation);
+        var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
+
+        SetBuildingLayer(go, category);
         var info = go.AddComponent<PlacementInfo>();
-        info.Type = PlacementInfo.PlacementType.Wall;
+        info.Category = category;
         info.Cell = cell;
-        info.Level = level;
-        info.EdgeDirection = direction;
+        info.SurfaceY = surfaceY;
+        info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         ServerManager.Spawn(go);
+        BuildingSnapPoint.GenerateFromBounds(go, category);
 
-        wallData.Instance = go;
-        _wallRecords.Add(new WallRecord { Data = wallData, Instance = go });
+        var record = new PlacedRecord
+        {
+            Category = category, Instance = go, SurfaceY = surfaceY,
+            NetMachine = go.GetComponent<NetworkMachine>(),
+            NetStorage = go.GetComponent<NetworkStorage>()
+        };
+        _placedRecords[key] = record;
 
-        Debug.Log($"grid: wall placed at ({cell.x},{cell.y}) level {level} edge ({direction.x},{direction.y}) by {sender?.ClientId}");
+        if (record.NetMachine != null && _factorySimulation != null)
+            _factorySimulation.RegisterMachine(record.NetMachine);
+
+        AutoWire(record, cell);
+        Debug.Log($"grid: {category} placed at ({cell.x},{cell.y}) y={surfaceY:F1} by {sender?.ClientId}");
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdRemoveWall(Vector2Int cell, int level, Vector2Int direction, NetworkConnection sender = null)
+    public void CmdPlaceDirectional(Vector2Int cell, float surfaceY, Vector2Int direction,
+        int variant, BuildingCategory category, Vector3 worldPos, Quaternion worldRot,
+        NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
-        for (int i = _wallRecords.Count - 1; i >= 0; i--)
+        var prefab = GetPrefab(category, variant);
+        if (prefab == null) return;
+
+        var key = RecordKey(cell, surfaceY, direction);
+        if (_placedRecords.ContainsKey(key))
         {
-            var record = _wallRecords[i];
-            if (record.Data.Cell == cell && record.Data.Level == level && record.Data.EdgeDirection == direction)
-            {
-                if (record.Instance != null)
-                    ServerManager.Despawn(record.Instance);
-                _wallRecords.RemoveAt(i);
-                Debug.Log($"grid: wall removed at ({cell.x},{cell.y}) level {level} edge ({direction.x},{direction.y}) by {sender?.ClientId}");
-                return;
-            }
-        }
-
-        Debug.Log($"grid: no wall to remove at ({cell.x},{cell.y}) level {level} edge ({direction.x},{direction.y})");
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceRamp(Vector2Int foundationCell, int level, Vector2Int direction, bool onFoundation = false, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        // Check for duplicate ramp
-        if (HasRampAt(foundationCell, level, direction))
-        {
-            Debug.Log($"grid: ramp already exists at ({foundationCell.x},{foundationCell.y}) level {level} dir ({direction.x},{direction.y})");
+            Debug.Log($"grid: {category} already exists at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y})");
             return;
         }
 
-        int footprintLength = 3;
-        var rampStart = foundationCell + direction;
-        var rampData = new RampData(rampStart, level, direction, footprintLength);
+        var go = Instantiate(prefab, worldPos, worldRot);
 
-        float rampLength = footprintLength * FactoryGrid.CellSize;
-        float slopeLength = Mathf.Sqrt(rampLength * rampLength + FactoryGrid.WallHeight * FactoryGrid.WallHeight);
-        Quaternion rotation = GetRampRotation(direction, rampLength);
-        Vector3 worldPos = GetRampWorldPos(rampData, rotation, slopeLength, onFoundation);
-        var go = Instantiate(_rampPrefab, worldPos, rotation);
+        SetBuildingLayer(go, category);
         var info = go.AddComponent<PlacementInfo>();
-        info.Type = PlacementInfo.PlacementType.Ramp;
-        info.Cell = foundationCell;
-        info.Level = level;
+        info.Category = category;
+        info.Cell = cell;
+        info.SurfaceY = surfaceY;
+        info.ObjectHeight = GetPrefabHalfHeight(prefab) * 2f;
         info.EdgeDirection = direction;
         ServerManager.Spawn(go);
+        BuildingSnapPoint.GenerateFromBounds(go, category);
 
-        rampData.Instance = go;
-        _rampRecords.Add(new RampRecord { Data = rampData, Instance = go });
-
-        Debug.Log($"grid: ramp placed at ({foundationCell.x},{foundationCell.y}) level {level} dir ({direction.x},{direction.y}) by {sender?.ClientId}");
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdRemoveRamp(Vector2Int baseCell, int level, Vector2Int direction, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        for (int i = _rampRecords.Count - 1; i >= 0; i--)
+        _placedRecords[key] = new PlacedRecord
         {
-            var record = _rampRecords[i];
-            if (record.Data.BaseCell == baseCell && record.Data.BaseLevel == level && record.Data.Direction == direction)
-            {
-                if (record.Instance != null)
-                    ServerManager.Despawn(record.Instance);
-                _rampRecords.RemoveAt(i);
-                Debug.Log($"grid: ramp removed at ({baseCell.x},{baseCell.y}) level {level} dir ({direction.x},{direction.y}) by {sender?.ClientId}");
-                return;
-            }
-        }
-
-        Debug.Log($"grid: no ramp to remove at ({baseCell.x},{baseCell.y}) level {level} dir ({direction.x},{direction.y})");
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdDeleteAt(Vector2Int cell, int level, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        var key = new Vector3Int(cell.x, cell.y, level);
-
-        // Priority 1: remove placed building (machine/storage/belt)
-        if (_placedBuildings.TryGetValue(key, out var building))
-        {
-            if (building.Instance != null)
-                ServerManager.Despawn(building.Instance);
-            _placedBuildings.Remove(key);
-            Debug.Log($"grid: deleted {building.Type} at ({cell.x},{cell.y}) level {level} by {sender?.ClientId}");
-            return;
-        }
-
-        // Priority 2: remove foundation (if no walls attached)
-        CmdRemoveFoundation(cell, level, sender);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceMachine(Vector2Int cell, int level, int rotation = 0, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        var key = new Vector3Int(cell.x, cell.y, level);
-        if (_placedBuildings.ContainsKey(key))
-        {
-            Debug.Log($"grid: machine rejected -- cell occupied at ({cell.x},{cell.y})");
-            return;
-        }
-
-        Vector3 worldPos = _grid.CellToWorld(cell, level) + new Vector3(0f, 0.1f, 0f);
-        var go = Instantiate(_machinePrefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
-        var mInfo = go.AddComponent<PlacementInfo>();
-        mInfo.Type = PlacementInfo.PlacementType.Machine;
-        mInfo.Cell = cell;
-        mInfo.Level = level;
-
-        var netMachine = go.GetComponent<NetworkMachine>();
-        if (netMachine != null)
-        {
-            var def = ScriptableObject.CreateInstance<MachineDefinitionSO>();
-            def.machineId = "smelter";
-            def.machineType = "smelter";
-            def.size = Vector2Int.one;
-            def.inputBufferSize = 1;
-            def.outputBufferSize = 1;
-            def.processingSpeed = 1f;
-
-            var machine = new Machine(def);
-            netMachine.ServerInit(def, machine);
-        }
-
-        ServerManager.Spawn(go);
-
-        if (netMachine != null && _factorySimulation != null)
-            _factorySimulation.RegisterMachine(netMachine);
-
-        var building = new PlacedBuilding
-        {
-            Type = BuildingType.Machine, Instance = go,
-            NetMachine = netMachine, Cell = cell, Level = level
+            Category = category, Instance = go, SurfaceY = surfaceY, Direction = direction
         };
-        _placedBuildings[key] = building;
-        AutoWire(building);
 
-        Debug.Log($"grid: machine placed at ({cell.x},{cell.y}) level {level} by {sender?.ClientId}");
+        Debug.Log($"grid: {category} placed at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y}) by {sender?.ClientId}");
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceStorage(Vector2Int cell, int level, int rotation = 0, NetworkConnection sender = null)
+    public void CmdPlaceBelt(Vector3 startPos, Vector3 startDir, Vector3 endPos, Vector3 endDir,
+        byte tier = 0, int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
-        var key = new Vector3Int(cell.x, cell.y, level);
-        if (_placedBuildings.ContainsKey(key))
+        var validation = BeltPlacementValidator.Validate(startPos, startDir, endPos, endDir);
+        if (!validation.IsValid)
         {
-            Debug.Log($"grid: storage rejected -- cell occupied at ({cell.x},{cell.y})");
+            Debug.Log($"grid: belt placement rejected: {validation.Error} by {sender?.ClientId}");
             return;
         }
 
-        Vector3 worldPos = _grid.CellToWorld(cell, level) + new Vector3(0f, 0.1f, 0f);
-        var go = Instantiate(_storagePrefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
-        var sInfo = go.AddComponent<PlacementInfo>();
-        sInfo.Type = PlacementInfo.PlacementType.Storage;
-        sInfo.Cell = cell;
-        sInfo.Level = level;
+        var prefab = GetPrefab(BuildingCategory.Belt, variant);
+        if (prefab == null) return;
 
-        var netStorage = go.GetComponent<NetworkStorage>();
-        if (netStorage != null)
-        {
-            var container = new StorageContainer(12, 64);
-            netStorage.ServerInit(container);
-        }
+        var splineData = BeltSplineBuilder.Build(startPos, startDir, endPos, endDir);
+        var segment = BeltSegment.FromArcLength(splineData.ArcLength);
 
-        ServerManager.Spawn(go);
+        var midpoint = splineData.Evaluate(0.5f);
+        var go = Instantiate(prefab, midpoint, Quaternion.identity);
 
-        var building = new PlacedBuilding
-        {
-            Type = BuildingType.Storage, Instance = go,
-            NetStorage = netStorage, Cell = cell, Level = level
-        };
-        _placedBuildings[key] = building;
-        AutoWire(building);
+        // Reset scale -- mesh comes from SplineExtrude, not prefab scale
+        go.transform.localScale = Vector3.one;
 
-        Debug.Log($"grid: storage placed at ({cell.x},{cell.y}) level {level} by {sender?.ClientId}");
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdPlaceBelt(Vector2Int fromCell, Vector2Int toCell, int level, NetworkConnection sender = null)
-    {
-        if (!IsServerInitialized) return;
-
-        Vector3 startPos = _grid.CellToWorld(fromCell, level) + new Vector3(0f, 0.15f, 0f);
-        Vector3 endPos = _grid.CellToWorld(toCell, level) + new Vector3(0f, 0.15f, 0f);
-
-        int length = Mathf.Max(1, Mathf.Abs(toCell.x - fromCell.x) + Mathf.Abs(toCell.y - fromCell.y));
-
-        var go = Instantiate(_beltPrefab, (startPos + endPos) * 0.5f, Quaternion.identity);
-        var bInfo = go.AddComponent<PlacementInfo>();
-        bInfo.Type = PlacementInfo.PlacementType.Belt;
-        bInfo.Cell = fromCell;
-        bInfo.Level = level;
+        var info = go.AddComponent<PlacementInfo>();
+        info.Category = BuildingCategory.Belt;
+        info.SurfaceY = startPos.y;
 
         var netBelt = go.GetComponent<NetworkBeltSegment>();
         if (netBelt != null)
-        {
-            var segment = new BeltSegment(length);
-            netBelt.ServerInit(segment, startPos, endPos);
-        }
+            netBelt.ServerInit(segment, splineData, tier);
 
         ServerManager.Spawn(go);
+
+        // Server also bakes mesh (host needs to see it)
+        var material = go.GetComponent<MeshRenderer>()?.sharedMaterial;
+        BeltSplineMeshBaker.BakeMesh(go, splineData, material);
+
+        // Add belt collider for raycast interaction (D-BLT-005)
+        var meshCollider = go.AddComponent<MeshCollider>();
+        meshCollider.sharedMesh = go.GetComponent<MeshFilter>()?.sharedMesh;
+
+        var visualizer = go.AddComponent<BeltItemVisualizer>();
+        visualizer.Init(netBelt);
 
         if (netBelt != null && _factorySimulation != null)
             _factorySimulation.RegisterBelt(netBelt);
 
-        // Register belt at both endpoints
-        var fromKey = new Vector3Int(fromCell.x, fromCell.y, level);
-        var building = new PlacedBuilding
-        {
-            Type = BuildingType.Belt, Instance = go,
-            NetBelt = netBelt, Cell = fromCell, Level = level
-        };
-        _placedBuildings[fromKey] = building;
+        // Add BeltPort children at endpoints for port-based connections
+        AddBeltPort(go, startPos, -startDir, BeltPortDirection.Input, 0);
+        AddBeltPort(go, endPos, endDir, BeltPortDirection.Output, 0);
 
-        if (fromCell != toCell)
+        Debug.Log($"grid: belt placed from {startPos} to {endPos} arc={splineData.ArcLength:F1}m by {sender?.ClientId}");
+    }
+
+    private static void AddBeltPort(GameObject parent, Vector3 worldPos, Vector3 worldDir, BeltPortDirection direction, int slotIndex)
+    {
+        var portName = direction == BeltPortDirection.Input ? "BeltPort_Input" : "BeltPort_Output";
+        var child = new GameObject($"{portName}_{slotIndex}");
+        child.transform.SetParent(parent.transform);
+        child.transform.position = worldPos;
+        child.transform.forward = worldDir;
+        child.layer = PhysicsLayers.SnapPoints;
+
+        var port = child.AddComponent<BeltPort>();
+        port.Direction = direction;
+        port.SlotIndex = slotIndex;
+
+        var col = child.AddComponent<SphereCollider>();
+        col.radius = 0.15f;
+        col.isTrigger = true;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdPlaceSupport(Vector3 position, Quaternion rotation,
+        int variant = 0, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var prefab = GetPrefab(BuildingCategory.Support, variant);
+        if (prefab == null)
         {
-            var toKey = new Vector3Int(toCell.x, toCell.y, level);
-            var toBuilding = new PlacedBuilding
+            // Runtime fallback: create a simple pole with snap anchor
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.transform.position = position;
+            go.transform.rotation = rotation;
+            go.transform.localScale = new Vector3(0.15f, 1f, 0.15f);
+            go.GetComponent<Renderer>().material.color = new Color(0.4f, 0.4f, 0.45f);
+
+            var anchorChild = new GameObject("SnapAnchor");
+            anchorChild.transform.SetParent(go.transform);
+            anchorChild.transform.localPosition = new Vector3(0, 1f, 0);
+            anchorChild.transform.localRotation = Quaternion.identity;
+            anchorChild.AddComponent<BeltSnapAnchor>();
+            anchorChild.layer = PhysicsLayers.SnapPoints;
+            var col = anchorChild.AddComponent<SphereCollider>();
+            col.radius = 0.2f;
+            col.isTrigger = true;
+
+            go.AddComponent<NetworkObject>();
+            ServerManager.Spawn(go);
+
+            Debug.Log($"grid: support placed at {position} by {sender?.ClientId}");
+            return;
+        }
+
+        var instance = Instantiate(prefab, position, rotation);
+        ServerManager.Spawn(instance);
+        Debug.Log($"grid: support placed at {position} by {sender?.ClientId}");
+    }
+
+    // ------------------------------------------------------------------
+    // Unified CmdDelete RPCs
+    // ------------------------------------------------------------------
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdDelete(Vector2Int cell, float surfaceY, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+
+        var key = RecordKey(cell, surfaceY);
+        if (_placedRecords.TryGetValue(key, out var record))
+        {
+            if (record.Instance != null)
+                ServerManager.Despawn(record.Instance);
+            _placedRecords.Remove(key);
+
+            if (record.Category == BuildingCategory.Foundation)
             {
-                Type = BuildingType.Belt, Instance = go,
-                NetBelt = netBelt, Cell = toCell, Level = level
-            };
-            _placedBuildings[toKey] = toBuilding;
+                int fs = FactoryGrid.FoundationSize;
+                _grid.Remove(cell, new Vector2Int(fs, fs), surfaceY);
+            }
+
+            Debug.Log($"grid: deleted {record.Category} at ({cell.x},{cell.y}) y={surfaceY:F1} by {sender?.ClientId}");
+            return;
         }
 
-        AutoWire(building);
-
-        Debug.Log($"grid: belt placed from ({fromCell.x},{fromCell.y}) to ({toCell.x},{toCell.y}) level {level} by {sender?.ClientId}");
+        Debug.Log($"grid: nothing to delete at ({cell.x},{cell.y}) y={surfaceY:F1}");
     }
 
-    public bool HasBuildingAt(Vector2Int cell, int level)
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdDeleteDirectional(Vector2Int cell, float surfaceY, Vector2Int direction,
+        NetworkConnection sender = null)
     {
-        var key = new Vector3Int(cell.x, cell.y, level);
-        return _placedBuildings.ContainsKey(key);
-    }
+        if (!IsServerInitialized) return;
 
-    public bool HasWallAt(Vector2Int cell, int level, Vector2Int direction)
-    {
-        foreach (var record in _wallRecords)
+        var key = RecordKey(cell, surfaceY, direction);
+        if (_placedRecords.TryGetValue(key, out var record))
         {
-            if (record.Data.Cell == cell && record.Data.Level == level && record.Data.EdgeDirection == direction)
-                return true;
+            if (record.Instance != null)
+                ServerManager.Despawn(record.Instance);
+            _placedRecords.Remove(key);
+            Debug.Log($"grid: deleted {record.Category} at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y}) by {sender?.ClientId}");
+            return;
         }
-        return false;
+
+        Debug.Log($"grid: nothing to delete at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y})");
     }
 
-    public bool HasRampAt(Vector2Int foundationCell, int level, Vector2Int direction)
+    // ------------------------------------------------------------------
+    // Query methods
+    // ------------------------------------------------------------------
+
+    public bool HasBuildingAt(Vector2Int cell, float surfaceY)
     {
-        foreach (var record in _rampRecords)
-        {
-            if (record.Data.BaseCell == foundationCell + direction &&
-                record.Data.BaseLevel == level &&
-                record.Data.Direction == direction)
-                return true;
-        }
-        return false;
+        return _placedRecords.ContainsKey(RecordKey(cell, surfaceY));
     }
 
-    private void AutoWire(PlacedBuilding newBuilding)
+    public bool HasDirectionalAt(Vector2Int cell, float surfaceY, Vector2Int direction)
+    {
+        return _placedRecords.ContainsKey(RecordKey(cell, surfaceY, direction));
+    }
+
+    // ------------------------------------------------------------------
+    // Auto-wiring
+    // ------------------------------------------------------------------
+
+    private void AutoWire(PlacedRecord newRecord, Vector2Int cell)
     {
         if (_factorySimulation == null) return;
 
         for (int d = 0; d < CardinalDirs.Length; d++)
         {
-            var neighborCell = newBuilding.Cell + CardinalDirs[d];
-            var neighborKey = new Vector3Int(neighborCell.x, neighborCell.y, newBuilding.Level);
+            var neighborCell = cell + CardinalDirs[d];
+            var neighborKey = RecordKey(neighborCell, newRecord.SurfaceY);
 
-            if (!_placedBuildings.TryGetValue(neighborKey, out var neighbor))
+            if (!_placedRecords.TryGetValue(neighborKey, out var neighbor))
                 continue;
 
-            // Try to create inserter connections between the two buildings
-            TryCreateInserter(newBuilding, neighbor);
-            TryCreateInserter(neighbor, newBuilding);
+            TryCreateInserter(newRecord, neighbor, cell, neighborCell);
+            TryCreateInserter(neighbor, newRecord, neighborCell, cell);
         }
     }
 
-    private void TryCreateInserter(PlacedBuilding source, PlacedBuilding dest)
+    private void TryCreateInserter(PlacedRecord source, PlacedRecord dest, Vector2Int sourceCell, Vector2Int destCell)
     {
         IItemSource itemSource = GetItemSource(source);
         IItemDestination itemDest = GetItemDestination(dest);
@@ -504,115 +583,36 @@ public class GridManager : NetworkBehaviour
 
         var inserter = new Inserter(itemSource, itemDest, 0.5f);
         _factorySimulation.RegisterInserter(inserter);
-        Debug.Log($"grid: auto-wired inserter from {source.Type} at ({source.Cell.x},{source.Cell.y}) to {dest.Type} at ({dest.Cell.x},{dest.Cell.y})");
+        Debug.Log($"grid: auto-wired inserter from {source.Category} at ({sourceCell.x},{sourceCell.y}) to {dest.Category} at ({destCell.x},{destCell.y})");
     }
 
-    private IItemSource GetItemSource(PlacedBuilding building)
+    private IItemSource GetItemSource(PlacedRecord record)
     {
-        switch (building.Type)
+        switch (record.Category)
         {
-            case BuildingType.Belt when building.NetBelt?.Segment != null:
-                return new BeltOutputAdapter(building.NetBelt.Segment);
-            case BuildingType.Machine when building.NetMachine?.Machine != null:
-                return new MachineOutputAdapter(building.NetMachine.Machine, 0);
-            case BuildingType.Storage when building.NetStorage?.Container != null:
-                return building.NetStorage.Container;
+            case BuildingCategory.Belt when record.NetBelt?.Segment != null:
+                return new BeltOutputAdapter(record.NetBelt.Segment);
+            case BuildingCategory.Machine when record.NetMachine?.Machine != null:
+                return new MachineOutputAdapter(record.NetMachine.Machine, 0);
+            case BuildingCategory.Storage when record.NetStorage?.Container != null:
+                return record.NetStorage.Container;
             default:
                 return null;
         }
     }
 
-    private IItemDestination GetItemDestination(PlacedBuilding building)
+    private IItemDestination GetItemDestination(PlacedRecord record)
     {
-        switch (building.Type)
+        switch (record.Category)
         {
-            case BuildingType.Belt when building.NetBelt?.Segment != null:
-                return new BeltInputAdapter(building.NetBelt.Segment);
-            case BuildingType.Machine when building.NetMachine?.Machine != null:
-                return new MachineInputAdapter(building.NetMachine.Machine, 0);
-            case BuildingType.Storage when building.NetStorage?.Container != null:
-                return building.NetStorage.Container;
+            case BuildingCategory.Belt when record.NetBelt?.Segment != null:
+                return new BeltInputAdapter(record.NetBelt.Segment);
+            case BuildingCategory.Machine when record.NetMachine?.Machine != null:
+                return new MachineInputAdapter(record.NetMachine.Machine, 0);
+            case BuildingCategory.Storage when record.NetStorage?.Container != null:
+                return record.NetStorage.Container;
             default:
                 return null;
         }
-    }
-
-    private Vector3 GetWallWorldPos(Vector2Int cell, int level, Vector2Int direction, bool onFoundation)
-    {
-        float cs = FactoryGrid.CellSize;
-        float wallHeight = FactoryGrid.WallHeight;
-        float halfWidth = FactoryGrid.WallWidth * cs * 0.5f;
-        float baseY = onFoundation
-            ? level * FactoryGrid.LevelHeight + 1f
-            : level * FactoryGrid.LevelHeight;
-
-        if (onFoundation)
-        {
-            int fs = FactoryGrid.FoundationSize;
-            float blockSize = fs * cs;
-            float halfBlock = blockSize * 0.5f;
-            Vector3 blockCenter = new Vector3(
-                cell.x * cs + halfBlock,
-                baseY,
-                cell.y * cs + halfBlock);
-            return blockCenter + new Vector3(
-                direction.x * halfBlock,
-                wallHeight * 0.5f,
-                direction.y * halfBlock);
-        }
-
-        // On terrain: wall centered on the crosshair cell
-        float cellCenter = 0.5f * cs;
-        return new Vector3(
-            cell.x * cs + cellCenter,
-            baseY + wallHeight * 0.5f,
-            cell.y * cs + cellCenter);
-    }
-
-    private Quaternion GetWallRotation(Vector2Int direction)
-    {
-        if (direction == Vector2Int.up || direction == Vector2Int.down)
-            return Quaternion.identity;
-        return Quaternion.Euler(0f, 90f, 0f);
-    }
-
-    private Vector3 GetRampWorldPos(RampData ramp, Quaternion rotation, float slopeLength, bool onFoundation)
-    {
-        Vector2Int foundationCell = ramp.BaseCell - ramp.Direction;
-        float cs = FactoryGrid.CellSize;
-
-        float baseY = onFoundation
-            ? ramp.BaseLevel * FactoryGrid.LevelHeight + 1f
-            : ramp.BaseLevel * FactoryGrid.LevelHeight;
-
-        Vector3 baseEdge;
-        if (onFoundation)
-        {
-            int fs = FactoryGrid.FoundationSize;
-            float blockSize = fs * cs;
-            float halfBlock = blockSize * 0.5f;
-            Vector3 blockCenter = new Vector3(
-                foundationCell.x * cs + halfBlock, baseY, foundationCell.y * cs + halfBlock);
-            baseEdge = blockCenter + new Vector3(
-                ramp.Direction.x * halfBlock, 0f, ramp.Direction.y * halfBlock);
-        }
-        else
-        {
-            float cellCenter = 0.5f * cs;
-            baseEdge = new Vector3(foundationCell.x * cs + cellCenter, baseY, foundationCell.y * cs + cellCenter);
-        }
-
-        Vector3 localForward = rotation * Vector3.forward;
-        return baseEdge + localForward * (slopeLength * 0.5f);
-    }
-
-    private Quaternion GetRampRotation(Vector2Int direction, float rampLength)
-    {
-        float pitch = Mathf.Atan2(FactoryGrid.WallHeight, rampLength) * Mathf.Rad2Deg;
-        float yAngle = 0f;
-        if (direction == Vector2Int.right) yAngle = 90f;
-        else if (direction == Vector2Int.down) yAngle = 180f;
-        else if (direction == Vector2Int.left) yAngle = 270f;
-        return Quaternion.Euler(-pitch, yAngle, 0f);
     }
 }

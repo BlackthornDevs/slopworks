@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower — Slopworks</title>
+    <meta name="description" content="Real NYC skyscrapers repurposed as vertical dungeons. Take contracts, clear floors, hit elevator checkpoints, extract loot. 1-4 player co-op scaling.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <meta property="og:title" content="Tower — Slopworks">
+    <meta property="og:description" content="Real NYC skyscrapers as vertical dungeons. Take contracts, clear floors, extract loot.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://blackthorndevs.com/slopworks/tower.html">
+    <meta property="og:image" content="https://blackthorndevs.com/slopworks/assets/img/tower-skyline.png">
+    <meta property="og:image:width" content="1376">
+    <meta property="og:image:height" content="768">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tower — Slopworks">
+    <meta name="twitter:description" content="Real NYC skyscrapers as vertical dungeons.">
+    <meta name="twitter:image" content="https://blackthorndevs.com/slopworks/assets/img/tower-skyline.png">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Override scroll reveal — everything visible immediately */
+        .section { opacity: 1 !important; transform: none !important; }
+
+        /* ── Loop diagram ── */
+        .loop-diagram-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 auto; max-width: 820px; }
+        .loop-diagram-wrap svg { display: block; }
+
+        /* Node glow — amber */
+        @keyframes ngA {
+            0%,8%,100% { fill:rgba(232,160,49,.03); stroke-opacity:.35; }
+            10%,14%    { fill:rgba(232,160,49,.18); stroke-opacity:1; }
+            18%        { fill:rgba(232,160,49,.03); stroke-opacity:.35; }
+        }
+        /* Node glow — teal */
+        @keyframes ngT {
+            0%,8%,100% { fill:rgba(92,207,230,.03); stroke-opacity:.35; }
+            10%,14%    { fill:rgba(92,207,230,.18); stroke-opacity:1; }
+            18%        { fill:rgba(92,207,230,.03); stroke-opacity:.35; }
+        }
+        @keyframes lb {
+            0%,8%,100% { fill-opacity:.55; }
+            10%,14%    { fill-opacity:1; }
+            18%        { fill-opacity:.55; }
+        }
+        .n1 rect{animation:ngA 5s 4.7s infinite} .n2 rect{animation:ngA 5s .9s infinite}
+        .n3 rect{animation:ngT 5s 1.6s infinite} .n4 rect{animation:ngT 5s 2.3s infinite}
+        .n5 rect{animation:ngA 5s 3.2s infinite} .n6 rect{animation:ngT 5s 2.9s infinite}
+        .n1 text{animation:lb 5s 4.7s infinite} .n2 text{animation:lb 5s .9s infinite}
+        .n3 text{animation:lb 5s 1.6s infinite} .n4 text{animation:lb 5s 2.3s infinite}
+        .n5 text{animation:lb 5s 3.2s infinite} .n6 text{animation:lb 5s 2.9s infinite}
+
+        /* Dashed return crawl */
+        @keyframes dashCrawl{to{stroke-dashoffset:-20}}
+        .return-path{stroke-dasharray:5 5;animation:dashCrawl 1.5s linear infinite}
+
+        @media(prefers-reduced-motion:reduce){
+            .n1 rect,.n2 rect,.n3 rect,.n4 rect,.n5 rect,.n6 rect,
+            .n1 text,.n2 text,.n3 text,.n4 text,.n5 text,.n6 text,
+            .return-path{animation:none!important}
+            .n1 rect,.n2 rect,.n5 rect{fill:rgba(232,160,49,.08);stroke-opacity:.6}
+            .n3 rect,.n4 rect,.n6 rect{fill:rgba(92,207,230,.08);stroke-opacity:.6}
+            .traveling-dots{display:none}
+        }
+    </style>
+</head>
+<body>
+    <div id="nav"></div>
+
+    <!-- Page header -->
+    <section class="section" style="padding-bottom:0;">
+        <div class="container">
+            <h1>The tower</h1>
+            <p class="text-dim">Every building is a contract. Every contract has a ceiling.</p>
+        </div>
+    </section>
+
+    <!-- NYC skyline establishing shot -->
+    <section class="section" style="padding-top:1rem;">
+        <div class="container">
+            <div class="art-frame">
+                <img src="assets/img/tower-skyline.png"
+                     alt="Night NYC skyline with four skyscrapers glowing amber against a dark post-apocalyptic sky, bioluminescent patches at street level"
+                     loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Contract board system -->
+    <section class="section">
+        <div class="container">
+            <div class="content-split">
+                <div class="split-image">
+                    <div class="art-frame">
+                        <img src="assets/img/tower-contract-board.png"
+                             alt="A physical bulletin board in a dimly lit bunker with pinned building contracts, photographs, and red string connecting intel"
+                             loading="lazy">
+                    </div>
+                </div>
+                <div class="split-text">
+                    <h2>The contract board</h2>
+                    <p>Management provides a contract progression tree — not random missions, but a structured climb through increasingly dangerous buildings. Each contract shows intel: threat level, suspected fauna, guaranteed loot, recommended squad size. You choose which to take, but you can't skip tiers.</p>
+                    <div class="slop-says">
+                        Management has assigned you a routine vertical asset recovery operation. SLOP has reviewed the building's pre-collapse tenant records and can confirm that none of the current occupants have valid leases. Proceed with confidence.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Scene 2: Contract board CRT terminal -->
+    <section class="section">
+        <div class="container">
+            <div class="terminal" id="contract-terminal">
+                <div class="terminal-header">S.L.O.P.://CONTRACT_BOARD [ACTIVE CONTRACTS]</div>
+                <div class="terminal-output" id="contract-output"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Building cards -->
+    <section class="section" data-slop-interjection="S.L.O.P. has conducted a remote structural assessment of all four buildings. Results: structurally sound. Methodology: optimism.">
+        <div class="container">
+            <h2 class="text-accent" style="text-align:center; margin-bottom: 0.5rem;">Contract roster</h2>
+            <p class="text-dim" style="text-align:center; margin-bottom: 2rem;">15 contracts across 6 buildings — 12 active, 3 classified.</p>
+            <div class="fauna-grid">
+                <div class="fauna-card">
+                    <img src="assets/img/tower-skyline.png"
+                         alt="30 Rockefeller Plaza — the introductory contract, low threat"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">30 Rockefeller Plaza</div>
+                        <div class="fauna-biome">Tier 1 // Threat: Low // 8 floors</div>
+                        <p class="fauna-desc">"...none of the current occupants have valid leases."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-contract-board.png"
+                         alt="MetLife Building — moderate threat, two-person squad recommended"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">MetLife Building</div>
+                        <div class="fauna-biome">Tier 1 // Threat: Moderate // 12 floors</div>
+                        <p class="fauna-desc">"...a more direct approach to hostile takeovers."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-elevator.png"
+                         alt="Woolworth Building — high threat, deep elevator shaft"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Woolworth Building</div>
+                        <div class="fauna-biome">Tier 2 // Threat: High // 15 floors</div>
+                        <p class="fauna-desc">"Concern is not within my operational parameters."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-boss-rooftop.png"
+                         alt="One World Trade Center — extreme threat, rooftop boss encounter"
+                         loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">One World Trade Center</div>
+                        <div class="fauna-biome">Tier 2 // Threat: Extreme // 20 floors</div>
+                        <p class="fauna-desc">"Hazard compensation has never been collected."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch contracts -->
+            <h3 style="color: var(--text-dim); font-family: 'Oswald', sans-serif; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 0.1em; margin: 2.5rem 0 1.5rem; text-align: center;">Branch contracts</h3>
+            <div class="fauna-grid">
+                <div class="fauna-card">
+                    <img src="assets/img/tower-night-shift.png" alt="Night shift — 30 Rock after dark, flashlight only" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Night shift</div>
+                        <div class="fauna-biome">30 Rock // T1 // Low // 6 floors</div>
+                        <p class="fauna-desc">"The parameters have been adjusted to include 'no light whatsoever.'"</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-loading-docks.png" alt="Loading docks — MetLife freight infrastructure" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Loading docks</div>
+                        <div class="fauna-biome">MetLife // T1 // Low // 5 floors</div>
+                        <p class="fauna-desc">"It is arriving very aggressively."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-penthouse.png" alt="Penthouse — MetLife rooftop, wind exposure" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Penthouse</div>
+                        <div class="fauna-biome">MetLife // T1 // Moderate // 8 floors</div>
+                        <p class="fauna-desc">"The views remain exceptional. The executives do not."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-sublevel-b.png" alt="Sublevel B — 30 Rock sub-basement, EM interference" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Sublevel B</div>
+                        <div class="fauna-biome">30 Rock // T2 // Moderate // 10 floors</div>
+                        <p class="fauna-desc">"Please disregard any sub-basement levels you may encounter."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-clock-tower.png" alt="Clock tower — Woolworth clock mechanism, structural instability" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Clock tower</div>
+                        <div class="fauna-biome">Woolworth // T2 // High // 8 floors</div>
+                        <p class="fauna-desc">"Degraded to an accuracy of plus or minus several decades."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-server-farm.png" alt="Server farm — MetLife data center, dual hazards" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Server farm</div>
+                        <div class="fauna-biome">MetLife // T2 // High // 10 floors</div>
+                        <p class="fauna-desc">"SLOP strongly recommends not reading them."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-crypt.png" alt="The crypt — Woolworth sub-level, spore clouds and darkness" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">The crypt</div>
+                        <div class="fauna-biome">Woolworth // T3 // Extreme // 12 floors</div>
+                        <p class="fauna-desc">"SLOP's geological surveys were conducted by SLOP, so their reliability is open to interpretation."</p>
+                    </div>
+                </div>
+                <div class="fauna-card">
+                    <img src="assets/img/tower-sublevel-zero.png" alt="Sublevel zero — One World deepest level, EM and instability" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Sublevel zero</div>
+                        <div class="fauna-biome">One World // T3 // Extreme // 15 floors</div>
+                        <p class="fauna-desc">"It continues to not exist. You are not currently standing in it."</p>
+                    </div>
+                </div>
+                <!-- Classified contracts (future models) -->
+                <div class="fauna-card" style="opacity: 0.35; position: relative;">
+                    <img src="assets/img/tower-classified.png" alt="Empire State: Lobby — classified" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Empire State: Lobby</div>
+                        <div class="fauna-biome">Empire State // T1 // [CLASSIFIED]</div>
+                        <p class="fauna-desc">Contract details pending Management authorization.</p>
+                    </div>
+                </div>
+                <div class="fauna-card" style="opacity: 0.35; position: relative;">
+                    <img src="assets/img/tower-classified.png" alt="Chrysler: Observatory — classified" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Chrysler: Observatory</div>
+                        <div class="fauna-biome">Chrysler // T2 // [CLASSIFIED]</div>
+                        <p class="fauna-desc">Contract details pending Management authorization.</p>
+                    </div>
+                </div>
+                <div class="fauna-card" style="opacity: 0.35; position: relative;">
+                    <img src="assets/img/tower-classified.png" alt="Empire State: Antenna — classified" loading="lazy">
+                    <div class="fauna-info">
+                        <div class="fauna-name">Empire State: Antenna</div>
+                        <div class="fauna-biome">Empire State // T3 // [CLASSIFIED]</div>
+                        <p class="fauna-desc">Contract details pending Management authorization.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Contract progression tree -->
+    <section class="section">
+        <div class="container">
+            <h2 class="text-accent" style="text-align:center; margin-bottom: 1rem;">Contract progression</h2>
+            <p class="text-dim" style="text-align:center; margin-bottom: 2rem;">Spine contracts drive the narrative. Branches reward mastery.</p>
+            <div class="terminal">
+                <div class="terminal-header">S.L.O.P.://CONTRACT_TREE [PROGRESSION MAP]</div>
+                <div style="padding: 1.5rem; font-family: 'Space Mono', monospace; font-size: 0.8rem; line-height: 1.6; overflow-x: auto;">
+<pre style="margin:0; font: inherit; color: var(--text-dim);">
+<span style="color:#E8A031;">SPINE (required)</span>                      <span style="color:#5CCFE6;">BRANCHES (optional)</span>
+<span style="color:#E8A031;">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>                      <span style="color:#5CCFE6;">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>
+
+<span style="color:#E8A031;">30 Rock</span> <span style="color:var(--text-dim);">T1 // Low</span>            &#9472;&#9472;&#8594;  <span style="color:#5CCFE6;">Night shift</span> <span style="color:var(--text-dim);">(30 Rock, T1)</span>
+    &#9474;                               <span style="color:#5CCFE6;">Loading docks</span> <span style="color:var(--text-dim);">(MetLife, T1)</span>
+    &#9660;
+<span style="color:#E8A031;">MetLife</span> <span style="color:var(--text-dim);">T1 // Moderate</span>       &#9472;&#9472;&#8594;  <span style="color:#5CCFE6;">Penthouse</span> <span style="color:var(--text-dim);">(MetLife, T1)</span>
+    &#9474;                               <span style="color:#5CCFE6;">Sublevel B</span> <span style="color:var(--text-dim);">(30 Rock, T2)</span>
+    &#9474;                               <span style="color:#5CCFE6;opacity:0.4;">Empire State: Lobby</span> <span style="color:var(--text-dim);opacity:0.4;">(future)</span>
+    &#9660;
+<span style="color:#E8A031;">Woolworth</span> <span style="color:var(--text-dim);">T2 // High</span>         &#9472;&#9472;&#8594;  <span style="color:#5CCFE6;">Clock tower</span> <span style="color:var(--text-dim);">(Woolworth, T2)</span>
+    &#9474;                               <span style="color:#5CCFE6;">Server farm</span> <span style="color:var(--text-dim);">(MetLife, T2)</span>
+    &#9474;                               <span style="color:#5CCFE6;opacity:0.4;">Chrysler: Observatory</span> <span style="color:var(--text-dim);opacity:0.4;">(future)</span>
+    &#9660;
+<span style="color:#E8A031;">One World</span> <span style="color:var(--text-dim);">T2&#8594;3 // Extreme</span>    &#9472;&#9472;&#8594;  <span style="color:#5CCFE6;">The crypt</span> <span style="color:var(--text-dim);">(Woolworth, T3)</span>
+                                    <span style="color:#5CCFE6;">Sublevel zero</span> <span style="color:var(--text-dim);">(One World, T3)</span>
+                                    <span style="color:#5CCFE6;opacity:0.4;">Empire State: Antenna</span> <span style="color:var(--text-dim);opacity:0.4;">(future)</span>
+</pre>
+                </div>
+            </div>
+            <div class="slop-says" style="margin-top: 1.5rem;">
+                SLOP has organized these contracts in order of increasing regret. Complete them sequentially for the optimal despair curve. Branch contracts are optional but SLOP recommends them for personnel who enjoy unnecessary risk.
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Environmental hazards -->
+    <section class="section" data-slop-interjection="SLOP has classified all environmental hazards as 'character-building opportunities.' Insurance claims will not be processed.">
+        <div class="container">
+            <h2 class="text-accent" style="text-align:center; margin-bottom: 0.5rem;">Environmental hazards</h2>
+            <p class="text-dim" style="text-align:center; margin-bottom: 2rem;">Branch contracts introduce conditions that spine contracts don't prepare you for.</p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+
+                <div style="border: 1px solid rgba(232,160,49,0.2); border-radius: 4px; padding: 1.25rem; background: rgba(232,160,49,0.02);">
+                    <h3 style="color: #E8A031; font-family: 'Oswald', sans-serif; font-size: 1rem; text-transform: uppercase; margin-bottom: 0.5rem;">Darkness</h3>
+                    <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.5;">Power out, flashlight only. Reduced visibility makes stalkers more dangerous. Found in: Night shift, Server farm.</p>
+                </div>
+
+                <div style="border: 1px solid rgba(92,207,230,0.2); border-radius: 4px; padding: 1.25rem; background: rgba(92,207,230,0.02);">
+                    <h3 style="color: #5CCFE6; font-family: 'Oswald', sans-serif; font-size: 1rem; text-transform: uppercase; margin-bottom: 0.5rem;">EM interference</h3>
+                    <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.5;">HUD glitches, compass unreliable, SLOP communications distorted. Biomech hybrids cause it. Found in: Sublevel B, Server farm.</p>
+                </div>
+
+                <div style="border: 1px solid rgba(232,160,49,0.2); border-radius: 4px; padding: 1.25rem; background: rgba(232,160,49,0.02);">
+                    <h3 style="color: #E8A031; font-family: 'Oswald', sans-serif; font-size: 1rem; text-transform: uppercase; margin-bottom: 0.5rem;">Spore clouds</h3>
+                    <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.5;">Damage over time in affected areas. Gas mask required for extended exposure. Spore crawlers emit them. Found in: The crypt.</p>
+                </div>
+
+                <div style="border: 1px solid rgba(92,207,230,0.2); border-radius: 4px; padding: 1.25rem; background: rgba(92,207,230,0.02);">
+                    <h3 style="color: #5CCFE6; font-family: 'Oswald', sans-serif; font-size: 1rem; text-transform: uppercase; margin-bottom: 0.5rem;">Wind exposure</h3>
+                    <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.5;">Knockback near edges, reduced accuracy at range. Roof and antenna combat. Found in: Penthouse, Chrysler: Observatory, Empire State: Antenna.</p>
+                </div>
+
+                <div style="border: 1px solid rgba(232,160,49,0.2); border-radius: 4px; padding: 1.25rem; background: rgba(232,160,49,0.02);">
+                    <h3 style="color: #E8A031; font-family: 'Oswald', sans-serif; font-size: 1rem; text-transform: uppercase; margin-bottom: 0.5rem;">Structural instability</h3>
+                    <p style="color: var(--text-dim); font-size: 0.85rem; line-height: 1.5;">Floor sections collapse under weight or after time. Environmental timer pressure. Found in: Clock tower, Sublevel zero, Empire State: Antenna.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Elevator + co-op system -->
+    <section class="section">
+        <div class="container">
+            <div class="content-split reverse">
+                <div class="split-image">
+                    <div class="art-frame">
+                        <img src="assets/img/tower-elevator.png"
+                             alt="First-person view looking up inside a dark industrial elevator shaft with steel cables and bioluminescent growth"
+                             loading="lazy">
+                    </div>
+                </div>
+                <div class="split-text">
+                    <h2>The elevator</h2>
+                    <p>Every tower uses the same elevator checkpoint framework. Clear floor milestones to unlock checkpoints. When a friend joins mid-contract, they spawn at floor 1 and ride the elevator up to your checkpoint — a brief solo gauntlet that orients them before arrival. No special rejoin logic. The elevator is the mechanic.</p>
+                    <div class="slop-says">
+                        SLOP detects incoming personnel in the elevator shaft. Their life signs are stable. SLOP will continue monitoring from a safe distance. A very safe distance.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="caution-divider"></div>
+
+    <!-- Three-pillar loop -->
+    <section class="section">
+        <div class="container">
+            <div class="content-split">
+                <div class="split-image">
+                    <div class="art-frame">
+                        <img src="assets/img/tower-boss-rooftop.png"
+                             alt="Squad of workers in industrial gear facing a biomechanical creature on a skyscraper rooftop with NYC skyline behind"
+                             loading="lazy">
+                    </div>
+                </div>
+                <div class="split-text">
+                    <h2>The loop</h2>
+                    <p>The tower is the unlock gate. Alternate factory recipes, building blueprints, weapon upgrade components, and narrative fragments — all from tower loot. You can't build a better factory without it. You can't survive harder waves without factory gear. The three pillars form a closed loop.</p>
+                    <div class="slop-says">
+                        SLOP has calculated the optimal risk-reward ratio for your upcoming contract. The reward is significant. The risk is also significant. SLOP recommends not thinking about the risk.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loop diagram (inline SVG, JS-driven animation) -->
+    <section class="section" style="padding-top:0;">
+        <div class="container">
+            <div class="loop-diagram-wrap">
+                <svg id="loop-svg" viewBox="0 0 780 310" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three-pillar progression loop: tower contracts produce loot, which feeds factory upgrades, producing better gear for harder tower tiers and wave defense">
+
+                    <!-- Connector guide lines -->
+                    <line x1="160" y1="40" x2="220" y2="40" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <line x1="310" y1="40" x2="380" y2="40" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <line x1="540" y1="40" x2="600" y2="40" stroke="#5CCFE6" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <polyline points="680,66 680,120 640,155" fill="none" stroke="#E8A031" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <polyline points="460,66 460,170 420,250" fill="none" stroke="#5CCFE6" stroke-opacity="0.2" stroke-width="1.5"/>
+                    <polyline class="return-path" points="540,181 85,181 85,66" fill="none" stroke="#E8A031" stroke-opacity="0.25" stroke-width="1.5"/>
+
+                    <!-- Arrowheads -->
+                    <polygon points="220,40 212,35 212,45" fill="#E8A031" fill-opacity="0.3"/>
+                    <polygon points="380,40 372,35 372,45" fill="#E8A031" fill-opacity="0.3"/>
+                    <polygon points="600,40 592,35 592,45" fill="#5CCFE6" fill-opacity="0.3"/>
+                    <polygon points="640,155 635,147 645,147" fill="#E8A031" fill-opacity="0.3"/>
+                    <polygon points="420,250 415,242 425,242" fill="#5CCFE6" fill-opacity="0.3"/>
+                    <polygon points="85,66 80,74 90,74" fill="#E8A031" fill-opacity="0.3"/>
+
+                    <!-- Nodes -->
+                    <g class="n1">
+                        <rect x="10" y="14" width="150" height="52" rx="4" fill="rgba(232,160,49,0.03)" stroke="#E8A031" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="85" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#E8A031" fill-opacity="0.55">Tower contracts</text>
+                    </g>
+                    <g class="n2">
+                        <rect x="220" y="14" width="90" height="52" rx="4" fill="rgba(232,160,49,0.03)" stroke="#E8A031" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="265" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#E8A031" fill-opacity="0.55">Loot</text>
+                    </g>
+                    <g class="n3">
+                        <rect x="380" y="14" width="160" height="52" rx="4" fill="rgba(92,207,230,0.03)" stroke="#5CCFE6" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="460" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Factory upgrades</text>
+                    </g>
+                    <g class="n4">
+                        <rect x="600" y="14" width="160" height="52" rx="4" fill="rgba(92,207,230,0.03)" stroke="#5CCFE6" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="680" y="44" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Better gear</text>
+                    </g>
+                    <g class="n5">
+                        <rect x="540" y="155" width="200" height="52" rx="4" fill="rgba(232,160,49,0.03)" stroke="#E8A031" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="640" y="185" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#E8A031" fill-opacity="0.55">Harder tower tiers</text>
+                    </g>
+                    <g class="n6">
+                        <rect x="280" y="250" width="280" height="52" rx="4" fill="rgba(92,207,230,0.03)" stroke="#5CCFE6" stroke-opacity="0.35" stroke-width="1.5"/>
+                        <text x="420" y="280" text-anchor="middle" font-family="'IBM Plex Sans',sans-serif" font-size="13" fill="#5CCFE6" fill-opacity="0.55">Wave defense + territory</text>
+                    </g>
+
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loop diagram animation (JS — guaranteed cross-browser) -->
+    <script>
+    (function () {
+        'use strict';
+        var svg = document.getElementById('loop-svg');
+        if (!svg) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        var NS = 'http://www.w3.org/2000/svg';
+        var PATHS = [
+            { pts: [[160,40],[220,40]], color: '#E8A031' },
+            { pts: [[310,40],[380,40]], color: '#E8A031' },
+            { pts: [[540,40],[600,40]], color: '#5CCFE6' },
+            { pts: [[680,66],[680,120],[640,155]], color: '#E8A031' },
+            { pts: [[460,66],[460,170],[420,250]], color: '#5CCFE6' },
+            { pts: [[540,181],[85,181],[85,66]], color: '#E8A031' }
+        ];
+
+        function pLen(pts) {
+            var l = 0;
+            for (var i = 1; i < pts.length; i++) {
+                var dx = pts[i][0] - pts[i-1][0], dy = pts[i][1] - pts[i-1][1];
+                l += Math.sqrt(dx * dx + dy * dy);
+            }
+            return l;
+        }
+
+        function pAt(pts, t) {
+            var total = pLen(pts), target = t * total, w = 0;
+            for (var i = 1; i < pts.length; i++) {
+                var dx = pts[i][0] - pts[i-1][0], dy = pts[i][1] - pts[i-1][1];
+                var s = Math.sqrt(dx * dx + dy * dy);
+                if (w + s >= target) {
+                    var f = (target - w) / s;
+                    return [pts[i-1][0] + dx * f, pts[i-1][1] + dy * f];
+                }
+                w += s;
+            }
+            return pts[pts.length - 1];
+        }
+
+        var dotsG = document.createElementNS(NS, 'g');
+        dotsG.setAttribute('class', 'traveling-dots');
+        svg.appendChild(dotsG);
+
+        function mkC(r, fill) {
+            var c = document.createElementNS(NS, 'circle');
+            c.setAttribute('r', r);
+            c.setAttribute('fill', fill);
+            c.setAttribute('opacity', '0');
+            dotsG.appendChild(c);
+            return c;
+        }
+
+        // Dot schedule: pathIndex, begin offset (s), travel start/end as fraction of cycle
+        var DEFS = [
+            { p:0, b:0.0, s:0.03, e:0.16 },
+            { p:1, b:0.7, s:0.03, e:0.16 },
+            { p:2, b:1.4, s:0.03, e:0.16 },
+            { p:3, b:2.1, s:0.03, e:0.22 },
+            { p:4, b:1.4, s:0.03, e:0.30 },
+            { p:5, b:2.8, s:0.03, e:0.42 },
+            // Second wave for top row
+            { p:0, b:2.5, s:0.03, e:0.16 },
+            { p:1, b:3.2, s:0.03, e:0.16 },
+            { p:2, b:3.9, s:0.03, e:0.16 }
+        ];
+
+        var CYC = 5; // seconds per full cycle
+        var dots = [];
+        for (var i = 0; i < DEFS.length; i++) {
+            var d = DEFS[i], path = PATHS[d.p];
+            dots.push({ def: d, glow: mkC(8, path.color), core: mkC(3.5, '#fff') });
+        }
+
+        function tick(ts) {
+            var sec = ts * 0.001;
+            for (var i = 0; i < dots.length; i++) {
+                var d = dots[i].def;
+                var t = ((sec - d.b) % CYC) / CYC;
+                if (t < 0) t += 1;
+
+                var prog, opa;
+                if (t < d.s) {
+                    prog = 0; opa = 0;
+                } else if (t < d.e) {
+                    prog = (t - d.s) / (d.e - d.s);
+                    opa = 1;
+                    if (prog < 0.12) opa = prog / 0.12; // fade in
+                    if (prog > 0.88) opa = (1 - prog) / 0.12; // fade out
+                } else {
+                    prog = 1; opa = 0;
+                }
+
+                if (opa > 0.005) {
+                    var pos = pAt(PATHS[d.p].pts, prog);
+                    dots[i].glow.setAttribute('cx', pos[0]);
+                    dots[i].glow.setAttribute('cy', pos[1]);
+                    dots[i].glow.setAttribute('opacity', opa * 0.5);
+                    dots[i].core.setAttribute('cx', pos[0]);
+                    dots[i].core.setAttribute('cy', pos[1]);
+                    dots[i].core.setAttribute('opacity', opa * 0.95);
+                } else {
+                    dots[i].glow.setAttribute('opacity', '0');
+                    dots[i].core.setAttribute('opacity', '0');
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        requestAnimationFrame(tick);
+    })();
+    </script>
+
+    <div id="footer"></div>
+
+    <script src="js/main.js"></script>
+    <script src="js/scene-contracts.js"></script>
+</body>
+</html>

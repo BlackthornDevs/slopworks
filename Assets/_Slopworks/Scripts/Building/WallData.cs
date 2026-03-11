@@ -10,7 +10,7 @@ public class WallData
     public string WallId { get; }
     public SnapPoint AttachPoint { get; }
     public Vector2Int Cell { get; }
-    public int Level { get; }
+    public float SurfaceY { get; }
     public Vector2Int EdgeDirection { get; }
     public GameObject Instance { get; set; }
 
@@ -24,15 +24,15 @@ public class WallData
         WallId = wallId;
         AttachPoint = attachPoint;
         Cell = attachPoint.Cell;
-        Level = attachPoint.Level;
+        SurfaceY = attachPoint.SurfaceY;
         EdgeDirection = attachPoint.EdgeDirection;
     }
 
-    public WallData(string wallId, Vector2Int cell, int level, Vector2Int edgeDirection)
+    public WallData(string wallId, Vector2Int cell, float surfaceY, Vector2Int edgeDirection)
     {
         WallId = wallId;
         Cell = cell;
-        Level = level;
+        SurfaceY = surfaceY;
         EdgeDirection = edgeDirection;
     }
 }

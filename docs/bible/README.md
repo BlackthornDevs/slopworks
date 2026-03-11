@@ -37,6 +37,7 @@ Canonical catalog of every game element in Slopworks. Each file defines a schema
 | [systems/research-tree.md](systems/research-tree.md) | Tech nodes: prerequisites, costs, unlocks |
 | [systems/upgrades.md](systems/upgrades.md) | Tier progression for machines, weapons, buildings |
 | [systems/status-effects.md](systems/status-effects.md) | Corrosion, toxicity, bleeding, buffs, debuffs |
+| [systems/tower-contracts.md](systems/tower-contracts.md) | 15 contracts (4 spine + 11 branch), tier progression, co-op drop-in, environmental hazards, SLOP intel |
 | [systems/wave-events.md](systems/wave-events.md) | Wave compositions, threat tiers, spawn configs |
 
 ### World (exploration and territory)
@@ -45,6 +46,7 @@ Canonical catalog of every game element in Slopworks. Each file defines a schema
 |------|----------|
 | [world/biomes.md](world/biomes.md) | Wasteland, grassland, forest, swamp, ruins |
 | [world/reclaimed-buildings.md](world/reclaimed-buildings.md) | Power plant, foundry, warehouse, machine shop, etc. |
+| [world/tower-buildings.md](world/tower-buildings.md) | 6 NYC skyscrapers used as tower contract locations — 4 active models, 2 planned |
 | [world/environmental-hazards.md](world/environmental-hazards.md) | Toxic leaks, collapses, spore clouds, electrical |
 | [world/supply-lines.md](world/supply-lines.md) | Inter-building logistics: throughput, vulnerability |
 

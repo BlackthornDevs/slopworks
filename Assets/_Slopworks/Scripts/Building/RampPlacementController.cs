@@ -24,7 +24,7 @@ public class RampPlacementController
     /// the foundation edge. When directionFilter is set, only snap points with
     /// a matching edge direction are considered.
     /// </summary>
-    public void UpdateFromCursor(Vector3 cursorWorldPos, int level, int footprintLength,
+    public void UpdateFromCursor(Vector3 cursorWorldPos, float surfaceY, int footprintLength,
         Vector2Int? directionFilter = null)
     {
         SelectedBaseSnap = null;
@@ -42,7 +42,7 @@ public class RampPlacementController
             for (int dz = -1; dz <= 1; dz++)
             {
                 var checkCell = new Vector2Int(cursorCell.x + dx, cursorCell.y + dz);
-                var available = _snapRegistry.GetAvailableAt(checkCell, level);
+                var available = _snapRegistry.GetAvailableAt(checkCell, surfaceY);
 
                 foreach (var snap in available)
                 {
@@ -79,14 +79,10 @@ public class RampPlacementController
             if (!_grid.IsInBounds(cell))
                 return;
 
-            var existing = _grid.GetAt(cell, level);
+            var existing = _grid.GetAt(cell, surfaceY);
             if (existing != null && !existing.IsStructural)
                 return;
         }
-
-        // Check that the upper level is valid
-        if (level + 1 >= FactoryGrid.MaxLevels)
-            return;
 
         SelectedBaseSnap = bestSnap;
         RampDirection = direction;

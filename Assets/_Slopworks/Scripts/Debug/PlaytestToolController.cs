@@ -18,6 +18,10 @@ public class PlaytestToolController : MonoBehaviour
 
     public ToolMode CurrentTool => _currentTool;
     public int CurrentLevel => _currentLevel;
+    /// <summary>
+    /// Current level converted to world-space surface Y position.
+    /// </summary>
+    public float CurrentSurfaceY => _currentLevel * FactoryGrid.WallHeight;
     public float GuiNextY { get; set; }
     public bool SuppressInput { get; set; }
 
@@ -487,7 +491,7 @@ public class PlaytestToolController : MonoBehaviour
         if (kb.pageUpKey.wasPressedThisFrame)
         {
             int old = _currentLevel;
-            _currentLevel = Mathf.Min(_currentLevel + 1, FactoryGrid.MaxLevels - 1);
+            _currentLevel = _currentLevel + 1;
             _levelOverrideFrames = 90;
             PlaytestLogger.Log($"input: level {old} -> {_currentLevel}");
             Debug.Log($"Level: {_currentLevel} (manual override)");
@@ -579,9 +583,9 @@ public class PlaytestToolController : MonoBehaviour
         var ray = camera.ScreenPointToRay(new Vector3(mousePos.x, mousePos.y, 0f));
         if (Physics.Raycast(ray, out RaycastHit hit, 500f, PhysicsLayers.StructuralPlacementMask))
         {
-            int level = Mathf.Clamp(
-                Mathf.RoundToInt(hit.point.y / FactoryGrid.LevelHeight),
-                0, FactoryGrid.MaxLevels - 1);
+            int level = Mathf.Max(
+                Mathf.RoundToInt(hit.point.y / FactoryGrid.WallHeight),
+                0);
             return (hit.point, level);
         }
         return null;
@@ -668,11 +672,11 @@ public class PlaytestToolController : MonoBehaviour
             for (int z = min.y; z <= max.y; z++)
             {
                 var cellPos = new Vector2Int(x, z);
-                var data = _ctx.PlacementService.PlaceFoundation(_ctx.FoundationDef, cellPos, _currentLevel);
+                var data = _ctx.PlacementService.PlaceFoundation(_ctx.FoundationDef, cellPos, CurrentSurfaceY);
                 if (data != null)
                 {
                     _foundations.Add(data);
-                    SpawnFoundationVisual(data, cellPos, _currentLevel);
+                    SpawnFoundationVisual(data, cellPos, CurrentSurfaceY);
                     placed++;
                 }
             }
@@ -705,8 +709,8 @@ public class PlaytestToolController : MonoBehaviour
             for (int z = min.y; z <= max.y; z++)
             {
                 var cellPos = new Vector2Int(x, z);
-                bool valid = _ctx.Grid.CanPlace(cellPos, Vector2Int.one, _currentLevel);
-                var worldPos = _ctx.Grid.CellToWorld(cellPos, _currentLevel) + Vector3.up * 0.05f;
+                bool valid = _ctx.Grid.CanPlace(cellPos, Vector2Int.one, CurrentSurfaceY);
+                var worldPos = _ctx.Grid.CellToWorld(cellPos, CurrentSurfaceY) + Vector3.up * 0.05f;
 
                 var ghost = _ghostPool[idx];
                 ghost.SetActive(true);
@@ -763,7 +767,7 @@ public class PlaytestToolController : MonoBehaviour
         // Mouse down: start potential zoop
         if (mouse.leftButton.wasPressedThisFrame && worldPos.HasValue)
         {
-            _wallPlacementCtrl.UpdateFromCursor(worldPos.Value, _ctx.Grid, _currentLevel);
+            _wallPlacementCtrl.UpdateFromCursor(worldPos.Value, _ctx.Grid, CurrentSurfaceY);
             var snap = GetFilteredWallSnap();
             if (snap != null && !snap.IsOccupied)
             {
@@ -777,10 +781,10 @@ public class PlaytestToolController : MonoBehaviour
         // Mouse held: update zoop
         if (_wallZoopDragging && mouse.leftButton.isPressed && worldPos.HasValue)
         {
-            _wallPlacementCtrl.UpdateFromCursor(worldPos.Value, _ctx.Grid, _currentLevel);
+            _wallPlacementCtrl.UpdateFromCursor(worldPos.Value, _ctx.Grid, CurrentSurfaceY);
             var currentSnap = GetFilteredWallSnap();
             if (currentSnap != null)
-                _wallZoop.Update(currentSnap, _ctx.SnapRegistry, _currentLevel);
+                _wallZoop.Update(currentSnap, _ctx.SnapRegistry, CurrentSurfaceY);
             UpdateWallZoopGhosts();
         }
 
@@ -791,7 +795,7 @@ public class PlaytestToolController : MonoBehaviour
             int placed = 0;
             foreach (var snap in planned)
             {
-                var wallData = _ctx.PlacementService.PlaceWall(_ctx.WallDef, snap.Cell, _currentLevel, snap.EdgeDirection);
+                var wallData = _ctx.PlacementService.PlaceWall(_ctx.WallDef, snap.Cell, CurrentSurfaceY, snap.EdgeDirection);
                 if (wallData != null)
                 {
                     _walls.Add(wallData);
@@ -826,14 +830,14 @@ public class PlaytestToolController : MonoBehaviour
 
     private void UpdateWallGhost(Vector3 worldPos)
     {
-        _wallPlacementCtrl.UpdateFromCursor(worldPos, _ctx.Grid, _currentLevel);
+        _wallPlacementCtrl.UpdateFromCursor(worldPos, _ctx.Grid, CurrentSurfaceY);
         var snap = GetFilteredWallSnap();
 
         if (snap != null && !snap.IsOccupied)
         {
             EnsureWallGhost();
             var wallWorldPos = WallPlacementController.GetSnapWorldPosition(snap, _ctx.Grid);
-            wallWorldPos.y += FactoryGrid.LevelHeight * 0.5f;
+            wallWorldPos.y += FactoryGrid.WallHeight * 0.5f;
             float yRot = Mathf.Atan2(snap.EdgeDirection.x, snap.EdgeDirection.y) * Mathf.Rad2Deg;
             _wallGhost.transform.position = wallWorldPos;
             _wallGhost.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
@@ -843,7 +847,7 @@ public class PlaytestToolController : MonoBehaviour
         {
             EnsureWallGhost();
             var wallWorldPos = WallPlacementController.GetSnapWorldPosition(snap, _ctx.Grid);
-            wallWorldPos.y += FactoryGrid.LevelHeight * 0.5f;
+            wallWorldPos.y += FactoryGrid.WallHeight * 0.5f;
             float yRot = Mathf.Atan2(snap.EdgeDirection.x, snap.EdgeDirection.y) * Mathf.Rad2Deg;
             _wallGhost.transform.position = wallWorldPos;
             _wallGhost.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
@@ -863,7 +867,7 @@ public class PlaytestToolController : MonoBehaviour
             _wallGhost.name = "WallGhost";
             var col = _wallGhost.GetComponent<Collider>();
             if (col != null) DestroyImmediate(col);
-            _wallGhost.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+            _wallGhost.transform.localScale = new Vector3(0.95f, FactoryGrid.WallHeight, 0.1f);
         }
         _wallGhost.SetActive(true);
     }
@@ -884,7 +888,7 @@ public class PlaytestToolController : MonoBehaviour
             ghost.name = "WallZoopGhost";
             var col = ghost.GetComponent<Collider>();
             if (col != null) DestroyImmediate(col);
-            ghost.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+            ghost.transform.localScale = new Vector3(0.95f, FactoryGrid.WallHeight, 0.1f);
             ghost.SetActive(false);
             _wallZoopGhosts.Add(ghost);
         }
@@ -895,7 +899,7 @@ public class PlaytestToolController : MonoBehaviour
             var ghost = _wallZoopGhosts[i];
             ghost.SetActive(true);
             var pos = WallPlacementController.GetSnapWorldPosition(snap, _ctx.Grid);
-            pos.y += FactoryGrid.LevelHeight * 0.5f;
+            pos.y += FactoryGrid.WallHeight * 0.5f;
             float yRot = Mathf.Atan2(snap.EdgeDirection.x, snap.EdgeDirection.y) * Mathf.Rad2Deg;
             ghost.transform.position = pos;
             ghost.transform.rotation = Quaternion.Euler(0f, yRot, 0f);
@@ -952,19 +956,19 @@ public class PlaytestToolController : MonoBehaviour
 
         if (mouse.leftButton.wasPressedThisFrame && worldPos.HasValue)
         {
-            _rampPlacementCtrl.UpdateFromCursor(worldPos.Value, _currentLevel,
+            _rampPlacementCtrl.UpdateFromCursor(worldPos.Value, CurrentSurfaceY,
                 _ctx.RampDef.footprintLength, GetRampDirectionFilter());
             if (_rampPlacementCtrl.IsValid)
             {
                 var snap = _rampPlacementCtrl.SelectedBaseSnap;
                 var dir = snap.EdgeDirection;
                 PlaytestLogger.Log($"input: LMB | tool=Ramp cell=({snap.Cell.x},{snap.Cell.y}) dir=({dir.x},{dir.y})");
-                var rampData = _ctx.PlacementService.PlaceRamp(_ctx.RampDef, snap.Cell, _currentLevel, dir);
+                var rampData = _ctx.PlacementService.PlaceRamp(_ctx.RampDef, snap.Cell, CurrentSurfaceY, dir);
                 if (rampData != null)
                 {
                     _ramps.Add(rampData);
                     SpawnRampVisual(rampData);
-                    Debug.Log($"Ramp placed at ({rampData.BaseCell.x},{rampData.BaseCell.y}) level {rampData.BaseLevel}");
+                    Debug.Log($"Ramp placed at ({rampData.BaseCell.x},{rampData.BaseCell.y}) level {rampData.BaseSurfaceY}");
                 }
                 else
                 {
@@ -976,7 +980,7 @@ public class PlaytestToolController : MonoBehaviour
 
     private void UpdateRampGhost(Vector3 worldPos)
     {
-        _rampPlacementCtrl.UpdateFromCursor(worldPos, _currentLevel,
+        _rampPlacementCtrl.UpdateFromCursor(worldPos, CurrentSurfaceY,
             _ctx.RampDef.footprintLength, GetRampDirectionFilter());
 
         if (!_rampPlacementCtrl.IsValid || _rampPlacementCtrl.SelectedBaseSnap == null)
@@ -990,12 +994,13 @@ public class PlaytestToolController : MonoBehaviour
 
         var dir2D = snap.EdgeDirection;
 
-        var startPos = SnapPointToWorld(new SnapPoint(snap.Cell, _currentLevel, dir2D, SnapPointType.FoundationEdge, null));
-        startPos.y = _currentLevel * FactoryGrid.LevelHeight;
+        float currentSurfaceY = _currentLevel * FactoryGrid.WallHeight;
+        var startPos = SnapPointToWorld(new SnapPoint(snap.Cell, currentSurfaceY, dir2D, SnapPointType.FoundationEdge, null));
+        startPos.y = currentSurfaceY;
 
         var endPos = startPos
             + new Vector3(dir2D.x, 0f, dir2D.y) * _ctx.RampDef.footprintLength * FactoryGrid.CellSize;
-        endPos.y = (_currentLevel + 1) * FactoryGrid.LevelHeight;
+        endPos.y = currentSurfaceY + FactoryGrid.WallHeight;
 
         var midpoint = (startPos + endPos) * 0.5f;
         var dir3D = (endPos - startPos).normalized;
@@ -1052,7 +1057,7 @@ public class PlaytestToolController : MonoBehaviour
         {
             if (cell.HasValue)
             {
-                var existing = _ctx.Grid.GetAt(cell.Value, _currentLevel);
+                var existing = _ctx.Grid.GetAt(cell.Value, CurrentSurfaceY);
                 bool hasFoundation = existing != null && existing.IsStructural;
                 UpdatePlaceGhost(cell.Value, Vector2Int.one, hasFoundation,
                     new Color(0.3f, 0.3f, 0.3f, 0.6f), 0.15f);
@@ -1070,7 +1075,7 @@ public class PlaytestToolController : MonoBehaviour
                 }
                 else
                 {
-                    var existing = _ctx.Grid.GetAt(cell.Value, _currentLevel);
+                    var existing = _ctx.Grid.GetAt(cell.Value, CurrentSurfaceY);
                     if (existing == null || !existing.IsStructural)
                     {
                         Debug.Log("Belts must be placed on foundations");
@@ -1101,7 +1106,7 @@ public class PlaytestToolController : MonoBehaviour
                 {
                     PlaytestLogger.Log($"input: LMB | tool=Belt end cell=({cell.Value.x},{cell.Value.y})");
                     var endCell = cell.Value;
-                    var result = _ctx.AutomationService.PlaceBelt(_beltStartCell, endCell, _currentLevel);
+                    var result = _ctx.AutomationService.PlaceBelt(_beltStartCell, endCell, CurrentSurfaceY);
                     if (result != null)
                     {
                         _automationBuildings.Add(result);
@@ -1133,8 +1138,8 @@ public class PlaytestToolController : MonoBehaviour
         if (snappedEnd == _beltStartCell)
             return;
 
-        var startWorld = _ctx.Grid.CellToWorld(_beltStartCell, _currentLevel);
-        var endWorld = _ctx.Grid.CellToWorld(snappedEnd, _currentLevel);
+        var startWorld = _ctx.Grid.CellToWorld(_beltStartCell, CurrentSurfaceY);
+        var endWorld = _ctx.Grid.CellToWorld(snappedEnd, CurrentSurfaceY);
         var center = (startWorld + endWorld) * 0.5f + Vector3.up * 0.15f;
         var d = endWorld - startWorld;
         float len = d.magnitude + FactoryGrid.CellSize;
@@ -1156,7 +1161,7 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = 0; i <= length; i++)
         {
             var checkCell = _beltStartCell + dir * i;
-            var existing = _ctx.Grid.GetAt(checkCell, _currentLevel);
+            var existing = _ctx.Grid.GetAt(checkCell, CurrentSurfaceY);
             if (existing == null || !existing.IsStructural)
             {
                 valid = false;
@@ -1205,7 +1210,7 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = 0; i <= len; i++)
         {
             var check = start + dir * i;
-            var existing = _ctx.Grid.GetAt(check, _currentLevel);
+            var existing = _ctx.Grid.GetAt(check, CurrentSurfaceY);
             if (existing == null || !existing.IsStructural)
             {
                 Debug.Log($"Cannot place belt from ({start.x},{start.y}) to ({end.x},{end.y}): cell ({check.x},{check.y}) has no foundation");
@@ -1230,7 +1235,7 @@ public class PlaytestToolController : MonoBehaviour
 
         if (cell.HasValue)
         {
-            var existing = _ctx.Grid.GetAt(cell.Value, _currentLevel);
+            var existing = _ctx.Grid.GetAt(cell.Value, CurrentSurfaceY);
             bool hasFoundation = existing != null && existing.IsStructural;
             UpdatePlaceGhost(cell.Value, _ctx.SmelterDef.size, hasFoundation,
                 new Color(0.2f, 0.4f, 0.8f, 0.6f), 0.6f);
@@ -1250,7 +1255,7 @@ public class PlaytestToolController : MonoBehaviour
         {
             PlaytestLogger.Log($"input: LMB | tool=Machine cell=({cell.Value.x},{cell.Value.y})");
             ClearGhostPortIndicators();
-            var result = _ctx.AutomationService.PlaceMachine(_ctx.SmelterDef, cell.Value, _placeRotation, _currentLevel);
+            var result = _ctx.AutomationService.PlaceMachine(_ctx.SmelterDef, cell.Value, _placeRotation, CurrentSurfaceY);
             if (result != null)
             {
                 _automationBuildings.Add(result);
@@ -1283,7 +1288,7 @@ public class PlaytestToolController : MonoBehaviour
 
         if (cell.HasValue)
         {
-            var existing = _ctx.Grid.GetAt(cell.Value, _currentLevel);
+            var existing = _ctx.Grid.GetAt(cell.Value, CurrentSurfaceY);
             bool hasFoundation = existing != null && existing.IsStructural;
             UpdatePlaceGhost(cell.Value, _ctx.StorageDef.size, hasFoundation,
                 new Color(0.8f, 0.7f, 0.1f, 0.6f), 0.5f);
@@ -1300,7 +1305,7 @@ public class PlaytestToolController : MonoBehaviour
         else if (mouse.leftButton.wasPressedThisFrame && cell.HasValue)
         {
             PlaytestLogger.Log($"input: LMB | tool=Storage cell=({cell.Value.x},{cell.Value.y})");
-            var result = _ctx.AutomationService.PlaceStorage(_ctx.StorageDef, cell.Value, _placeRotation, _currentLevel);
+            var result = _ctx.AutomationService.PlaceStorage(_ctx.StorageDef, cell.Value, _placeRotation, CurrentSurfaceY);
             if (result != null)
             {
                 _automationBuildings.Add(result);
@@ -1327,7 +1332,7 @@ public class PlaytestToolController : MonoBehaviour
             if (collider != null) Destroy(collider);
         }
 
-        var worldPos = _ctx.Grid.CellToWorld(cell, _currentLevel) + Vector3.up * height;
+        var worldPos = _ctx.Grid.CellToWorld(cell, CurrentSurfaceY) + Vector3.up * height;
         _placeGhost.transform.position = worldPos;
         _placeGhost.transform.localScale = new Vector3(
             size.x * 0.9f * FactoryGrid.CellSize, height * 2f, size.y * 0.9f * FactoryGrid.CellSize);
@@ -1386,7 +1391,7 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _walls.Count - 1; i >= 0; i--)
         {
             var wall = _walls[i];
-            if (wall.Cell == cell && wall.Level == _currentLevel && wall.Instance != null)
+            if (wall.Cell == cell && Mathf.Approximately(wall.SurfaceY, _currentLevel * FactoryGrid.WallHeight) && wall.Instance != null)
                 return wall.Instance;
         }
 
@@ -1394,7 +1399,7 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _ramps.Count - 1; i >= 0; i--)
         {
             var ramp = _ramps[i];
-            if (ramp.OccupiedCells.Contains(cell) && ramp.BaseLevel == _currentLevel && ramp.Instance != null)
+            if (ramp.OccupiedCells.Contains(cell) && Mathf.Approximately(ramp.BaseSurfaceY, _currentLevel * FactoryGrid.WallHeight) && ramp.Instance != null)
                 return ramp.Instance;
         }
 
@@ -1432,7 +1437,7 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _walls.Count - 1; i >= 0; i--)
         {
             var wall = _walls[i];
-            if (wall.Cell == cell && wall.Level == _currentLevel)
+            if (wall.Cell == cell && Mathf.Approximately(wall.SurfaceY, _currentLevel * FactoryGrid.WallHeight))
             {
                 ClearDeleteHighlight();
                 _ctx.PlacementService.RemoveWall(wall);
@@ -1447,7 +1452,7 @@ public class PlaytestToolController : MonoBehaviour
         for (int i = _ramps.Count - 1; i >= 0; i--)
         {
             var ramp = _ramps[i];
-            if (ramp.OccupiedCells.Contains(cell) && ramp.BaseLevel == _currentLevel)
+            if (ramp.OccupiedCells.Contains(cell) && Mathf.Approximately(ramp.BaseSurfaceY, _currentLevel * FactoryGrid.WallHeight))
             {
                 ClearDeleteHighlight();
                 _ctx.PlacementService.RemoveRamp(ramp);
@@ -1617,11 +1622,11 @@ public class PlaytestToolController : MonoBehaviour
 
     // -- Visual spawning (public for dev bootstrappers) --
 
-    public void SpawnFoundationVisual(BuildingData data, Vector2Int cell, int level)
+    public void SpawnFoundationVisual(BuildingData data, Vector2Int cell, float surfaceY)
     {
-        var worldPos = _ctx.Grid.CellToWorld(cell, level);
+        var worldPos = _ctx.Grid.CellToWorld(cell, surfaceY);
         var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        tile.name = $"Foundation_{cell.x}_{cell.y}_L{level}";
+        tile.name = $"Foundation_{cell.x}_{cell.y}_Y{surfaceY:F1}";
         tile.transform.position = worldPos + Vector3.up * 0.05f;
         tile.transform.localScale = new Vector3(0.95f, 0.1f, 0.95f);
         tile.layer = PhysicsLayers.Structures;
@@ -1631,20 +1636,20 @@ public class PlaytestToolController : MonoBehaviour
 
     public void SpawnWallVisual(WallData wallData)
     {
-        var cellCenter = _ctx.Grid.CellToWorld(wallData.Cell, wallData.Level);
+        var cellCenter = _ctx.Grid.CellToWorld(wallData.Cell, wallData.SurfaceY);
         var edgeDir = wallData.EdgeDirection;
         var edgeOffset = new Vector3(
             edgeDir.x * 0.5f * FactoryGrid.CellSize, 0f,
             edgeDir.y * 0.5f * FactoryGrid.CellSize);
-        var wallPos = cellCenter + edgeOffset + Vector3.up * FactoryGrid.LevelHeight * 0.5f;
+        var wallPos = cellCenter + edgeOffset + Vector3.up * FactoryGrid.WallHeight * 0.5f;
 
         float yRotation = Mathf.Atan2(edgeDir.x, edgeDir.y) * Mathf.Rad2Deg;
 
         var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.name = $"Wall_{wallData.Cell.x}_{wallData.Cell.y}_L{wallData.Level}";
+        wall.name = $"Wall_{wallData.Cell.x}_{wallData.Cell.y}_Y{wallData.SurfaceY:F1}";
         wall.transform.position = wallPos;
         wall.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
-        wall.transform.localScale = new Vector3(0.95f, FactoryGrid.LevelHeight, 0.1f);
+        wall.transform.localScale = new Vector3(0.95f, FactoryGrid.WallHeight, 0.1f);
         wall.layer = PhysicsLayers.Structures;
         SetColor(wall, new Color(0.6f, 0.6f, 0.6f));
         wallData.Instance = wall;
@@ -1654,19 +1659,19 @@ public class PlaytestToolController : MonoBehaviour
     {
         var dir2D = rampData.Direction;
         var snapCell = rampData.BaseCell - dir2D;
-        var startPos = SnapPointToWorld(new SnapPoint(snapCell, rampData.BaseLevel, dir2D, SnapPointType.FoundationEdge, null));
-        startPos.y = rampData.BaseLevel * FactoryGrid.LevelHeight;
+        var startPos = SnapPointToWorld(new SnapPoint(snapCell, rampData.BaseSurfaceY, dir2D, SnapPointType.FoundationEdge, null));
+        startPos.y = rampData.BaseSurfaceY;
 
         var endPos = startPos
             + new Vector3(dir2D.x, 0f, dir2D.y) * rampData.FootprintLength * FactoryGrid.CellSize;
-        endPos.y = (rampData.BaseLevel + 1) * FactoryGrid.LevelHeight;
+        endPos.y = rampData.BaseSurfaceY + FactoryGrid.WallHeight;
 
         var midpoint = (startPos + endPos) * 0.5f;
         var dir3D = (endPos - startPos).normalized;
         var length = Vector3.Distance(startPos, endPos);
 
         var ramp = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        ramp.name = $"Ramp_{rampData.BaseCell.x}_{rampData.BaseCell.y}_L{rampData.BaseLevel}";
+        ramp.name = $"Ramp_{rampData.BaseCell.x}_{rampData.BaseCell.y}_Y{rampData.BaseSurfaceY:F1}";
         ramp.transform.position = midpoint;
         ramp.transform.rotation = Quaternion.LookRotation(dir3D);
         ramp.transform.localScale = new Vector3(0.95f, 0.1f, length);
@@ -1677,8 +1682,8 @@ public class PlaytestToolController : MonoBehaviour
 
     public void SpawnBeltVisual(PlacementResult result, Vector2Int startCell, Vector2Int endCell)
     {
-        var startWorld = _ctx.Grid.CellToWorld(startCell, _currentLevel);
-        var endWorld = _ctx.Grid.CellToWorld(endCell, _currentLevel);
+        var startWorld = _ctx.Grid.CellToWorld(startCell, CurrentSurfaceY);
+        var endWorld = _ctx.Grid.CellToWorld(endCell, CurrentSurfaceY);
         var center = (startWorld + endWorld) * 0.5f + Vector3.up * 0.15f;
         var diff = endWorld - startWorld;
         float len = diff.magnitude + FactoryGrid.CellSize;
@@ -1697,7 +1702,7 @@ public class PlaytestToolController : MonoBehaviour
 
     public void SpawnMachineVisual(PlacementResult result, Vector2Int cell)
     {
-        var worldPos = _ctx.Grid.CellToWorld(cell, _currentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, CurrentSurfaceY);
         var machine = GameObject.CreatePrimitive(PrimitiveType.Cube);
         machine.name = $"Machine_{cell.x}_{cell.y}";
 
@@ -1723,7 +1728,7 @@ public class PlaytestToolController : MonoBehaviour
 
     public void SpawnStorageVisual(PlacementResult result, Vector2Int cell)
     {
-        var worldPos = _ctx.Grid.CellToWorld(cell, _currentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, CurrentSurfaceY);
         var storage = GameObject.CreatePrimitive(PrimitiveType.Cube);
         storage.name = $"Storage_{cell.x}_{cell.y}";
 
@@ -1787,7 +1792,7 @@ public class PlaytestToolController : MonoBehaviour
         ClearGhostPortIndicators();
 
         float cellSize = FactoryGrid.CellSize;
-        var worldPos = _ctx.Grid.CellToWorld(cell, _currentLevel);
+        var worldPos = _ctx.Grid.CellToWorld(cell, CurrentSurfaceY);
 
         for (int i = 0; i < portDefs.Length; i++)
         {
@@ -1993,7 +1998,7 @@ public class PlaytestToolController : MonoBehaviour
         var mousePos = mouse.position.ReadValue();
         var ray = camera.ScreenPointToRay(new Vector3(mousePos.x, mousePos.y, 0f));
 
-        float planeY = level * FactoryGrid.LevelHeight;
+        float planeY = level * FactoryGrid.WallHeight;
         // Ray-plane intersection: solve ray.origin.y + t * ray.direction.y = planeY
         if (Mathf.Approximately(ray.direction.y, 0f)) return null;
         float t = (planeY - ray.origin.y) / ray.direction.y;
@@ -2017,7 +2022,7 @@ public class PlaytestToolController : MonoBehaviour
 
     private Vector3 SnapPointToWorld(SnapPoint sp)
     {
-        var cellCenter = _ctx.Grid.CellToWorld(sp.Cell, sp.Level);
+        var cellCenter = _ctx.Grid.CellToWorld(sp.Cell, sp.SurfaceY);
         var edgeOffset = new Vector3(
             sp.EdgeDirection.x * 0.5f * FactoryGrid.CellSize, 0f,
             sp.EdgeDirection.y * 0.5f * FactoryGrid.CellSize);

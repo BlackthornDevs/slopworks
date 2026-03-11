@@ -39,6 +39,34 @@ public class BeltSegment
     }
 
     /// <summary>
+    /// Create a belt segment from arc length in meters.
+    /// Uses SubdivisionsPerTile (100) subdivisions per meter of arc length.
+    /// This is the factory method for curved belts where length is computed
+    /// from spline arc length rather than Manhattan tile distance.
+    /// </summary>
+    public static BeltSegment FromArcLength(float arcLengthMeters)
+    {
+        if (arcLengthMeters <= 0f)
+            throw new ArgumentOutOfRangeException(nameof(arcLengthMeters),
+                "Arc length must be positive.");
+
+        int subdivisions = Math.Max(1,
+            (int)Math.Round(arcLengthMeters * BeltItem.SubdivisionsPerTile));
+
+        return new BeltSegment(subdivisions, fromSubdivisions: true);
+    }
+
+    private BeltSegment(int totalSubdivisions, bool fromSubdivisions)
+    {
+        if (totalSubdivisions <= 0)
+            throw new ArgumentOutOfRangeException(nameof(totalSubdivisions),
+                "Total subdivisions must be positive.");
+
+        _totalLength = totalSubdivisions;
+        _terminalGap = (ushort)Math.Min(_totalLength, ushort.MaxValue);
+    }
+
+    /// <summary>
     /// Insert an item at the input end of the belt.
     /// Succeeds only if the gap before the current first item is at least minSpacing.
     /// On an empty belt, the item is placed at the input edge with the full belt length

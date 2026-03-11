@@ -377,6 +377,10 @@ a:hover {
   line-height: 1.5;
 }
 
+.card-grid .card:nth-child(5) {
+    grid-column: span 2;
+}
+
 /* === ART FRAMES (concept art images) === */
 .art-frame {
   position: relative;
@@ -439,16 +443,14 @@ a:hover {
   font-size: 0.85rem;
   color: var(--accent);
   line-height: 1.6;
-  position: relative;
 }
 
 .slop-says::before {
   content: 'S.L.O.P.://';
+  display: block;
   font-size: 0.7rem;
   color: var(--accent-dim);
-  position: absolute;
-  top: -0.8rem;
-  left: 0;
+  margin-bottom: 0.5rem;
 }
 
 .slop-interjection {
@@ -706,7 +708,7 @@ a:hover {
 
 .terminal-output {
   padding: 1rem 1.5rem;
-  max-height: 300px;
+  max-height: 500px;
   overflow-y: auto;
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -857,6 +859,10 @@ a:hover {
   .card-grid {
     grid-template-columns: 1fr;
   }
+
+    .card-grid .card:nth-child(5) {
+        grid-column: span 1;
+    }
 
   .content-split {
     grid-template-columns: 1fr;
