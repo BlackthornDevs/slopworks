@@ -1366,6 +1366,31 @@ public class NetworkBuildController : NetworkBehaviour
         }
     }
 
+    /// <summary>Max raycast range for belt endpoint detection.</summary>
+    private const float BeltRaycastRange = 50f;
+
+    /// <summary>
+    /// Layers valid for support placement (terrain and foundations only).
+    /// Belts, walls, ramps, machines are NOT valid support surfaces.
+    /// </summary>
+    private static bool IsValidSupportSurface(RaycastHit hit)
+    {
+        int layer = hit.collider.gameObject.layer;
+
+        // Terrain and grid plane are always valid
+        if (layer == PhysicsLayers.Terrain || layer == PhysicsLayers.GridPlane || layer == PhysicsLayers.BIM_Static)
+            return true;
+
+        // Structures layer: only foundations are valid
+        if (layer == PhysicsLayers.Structures)
+        {
+            var info = hit.collider.GetComponentInParent<PlacementInfo>();
+            return info != null && (info.Category == BuildingCategory.Foundation || info.Category == BuildingCategory.Ramp);
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Resolve belt endpoint from raycast. isStart=true means we're picking the
     /// start of the belt (needs Output port), isStart=false means end (needs Input port).
@@ -1377,7 +1402,7 @@ public class NetworkBuildController : NetworkBehaviour
         dir = Vector3.forward;
         fromPort = false;
 
-        if (!Physics.Raycast(ray, out var hit, 200f,
+        if (!Physics.Raycast(ray, out var hit, BeltRaycastRange,
             PhysicsLayers.StructuralPlacementMask |
             (1 << PhysicsLayers.BeltPorts)))
             return false;
@@ -1402,17 +1427,25 @@ public class NetworkBuildController : NetworkBehaviour
             return true;
         }
 
+        // Snap anchor on existing support
         var snapAnchor = hit.collider.GetComponentInParent<BeltSnapAnchor>();
         if (snapAnchor != null)
         {
+            // If anchor already has a belt port, it's occupied -- reject
+            if (HasExistingBeltPort(snapAnchor.WorldPosition, 0.6f))
+                return false;
+
             pos = snapAnchor.WorldPosition;
             dir = snapAnchor.WorldDirection;
             fromPort = true;
             return true;
         }
 
-        // Ground/structure fallback -- server will spawn support here
-        // and derive belt endpoint from the support's actual snap anchor.
+        // Ground/structure fallback -- server will spawn support here.
+        // Only allow on terrain and foundations, not on belts or other structures.
+        if (!IsValidSupportSurface(hit))
+            return false;
+
         pos = hit.point;
         if (isStart)
         {
@@ -1461,20 +1494,49 @@ public class NetworkBuildController : NetworkBehaviour
     {
         var colliders = Physics.OverlapSphere(position, radius, 1 << PhysicsLayers.BeltPorts);
 
-        BeltPort closest = null;
-        float closestDist = float.MaxValue;
+        // Prefer direction-compatible port: start needs Output, end needs Input
+        var wantDir = isStart ? BeltPortDirection.Output : BeltPortDirection.Input;
+
+        BeltPort compatible = null;
+        float compatibleDist = float.MaxValue;
+        BeltPort any = null;
+        float anyDist = float.MaxValue;
+
         foreach (var col in colliders)
         {
             var port = col.GetComponentInParent<BeltPort>();
             if (port == null) continue;
             float dist = Vector3.Distance(position, port.WorldPosition);
-            if (dist < closestDist)
+
+            if (port.Direction == wantDir && dist < compatibleDist)
             {
-                closestDist = dist;
-                closest = port;
+                compatibleDist = dist;
+                compatible = port;
+            }
+            if (dist < anyDist)
+            {
+                anyDist = dist;
+                any = port;
             }
         }
-        return closest;
+
+        // Return compatible port if found, otherwise any port (caller handles direction)
+        return compatible ?? any;
+    }
+
+    /// <summary>
+    /// Check if any belt port exists near a position (regardless of direction).
+    /// Used to detect occupied snap anchors.
+    /// </summary>
+    private static bool HasExistingBeltPort(Vector3 position, float radius)
+    {
+        var colliders = Physics.OverlapSphere(position, radius, 1 << PhysicsLayers.BeltPorts);
+        foreach (var col in colliders)
+        {
+            if (col.GetComponentInParent<BeltPort>() != null)
+                return true;
+        }
+        return false;
     }
 
     private void CancelBeltPlacement()

@@ -447,7 +447,16 @@ public static class BeltRouteBuilder
                     // Straight segment tangent (capped to prevent overshoot)
                     tanIn = dirPrev * Mathf.Min(distPrev / 3f, r * 2f);
                     // Arc tangent (forward, continuing in incoming direction)
-                    tanOut = corners[cIdx].InDir * (r * BezierK);
+                    var arcTanOut = corners[cIdx].InDir * (r * BezierK);
+                    // Add Y slope so arcs with distributed elevation don't spiral
+                    if (hasElevation && p + 1 < points.Count)
+                    {
+                        float arcDeltaY = points[p + 1].pos.y - pos.y;
+                        float arcLen = r * Mathf.PI * 0.5f;
+                        if (arcLen > 0.001f)
+                            arcTanOut.y = arcDeltaY / arcLen * (r * BezierK);
+                    }
+                    tanOut = arcTanOut;
                     break;
                 }
 
@@ -455,7 +464,16 @@ public static class BeltRouteBuilder
                 {
                     float r = radii[cIdx];
                     // Arc tangent (backward, opposite to outgoing direction)
-                    tanIn = -corners[cIdx].OutDir * (r * BezierK);
+                    var arcTanIn = -corners[cIdx].OutDir * (r * BezierK);
+                    // Add Y slope so arcs with distributed elevation don't spiral
+                    if (hasElevation && p - 1 >= 0)
+                    {
+                        float arcDeltaY = points[p - 1].pos.y - pos.y;
+                        float arcLen = r * Mathf.PI * 0.5f;
+                        if (arcLen > 0.001f)
+                            arcTanIn.y = arcDeltaY / arcLen * (r * BezierK);
+                    }
+                    tanIn = arcTanIn;
                     // Straight segment tangent (capped to prevent overshoot)
                     tanOut = dirNext * Mathf.Min(distNext / 3f, r * 2f);
                     break;

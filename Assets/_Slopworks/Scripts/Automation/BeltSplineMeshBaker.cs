@@ -37,9 +37,8 @@ public static class BeltSplineMeshBaker
             var localTanOut = (float3)worldToLocal.MultiplyVector(wp.TangentOut);
 
             // Forward direction for knot rotation: prefer outgoing, fall back to -incoming.
-            // Project to horizontal so belt cross-section stays level on ramps
-            // (like a real conveyor belt). Doesn't affect the spline path --
-            // rot * invRot cancels out when evaluating control points.
+            // Use actual 3D tangent so cross-section stays perpendicular to the
+            // belt path on ramps and curves with elevation. World-up prevents roll.
             float3 forward;
             if (math.lengthsq(localTanOut) > 0.001f)
                 forward = localTanOut;
@@ -48,8 +47,6 @@ public static class BeltSplineMeshBaker
             else
                 forward = new float3(0, 0, 1);
 
-            // Remove vertical component for level cross-section
-            forward.y = 0;
             if (math.lengthsq(forward) < 0.001f)
                 forward = new float3(0, 0, 1);
             else
