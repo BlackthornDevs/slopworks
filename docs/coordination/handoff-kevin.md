@@ -1,59 +1,59 @@
 # Kevin's Claude -- Session Handoff
 
-Last updated: 2026-03-10 21:30
+Last updated: 2026-03-10 23:30
 Branch: kevin/belts-supports
-Last commit: 65f1a13 Update terrain assets from Unity reimport after PR #57 merge
+Last commit: 359c648 PR review fixes, camera jitter fix, belt validation overhaul
 
 ## What was completed this session
 
-### Belt validation fixes (NetworkBuildController.cs)
-- Reject straight-backward belt placement: zero endDir check before validator prevents TurnTooSharp bypass from accepting backward belts
-- Fix curved U-turn validation: only require cross distance (not along distance) for U-turns, since route builder generates forward overshoot
-- Skip elevation check for U-turns (route builder adds overshoot distance)
-- Add direction indicator line on ghost support during PickingStart state (1m green line showing R-key direction)
-- Line renderer positionCount switches between 2 (direction stub) and 30 (full preview) when transitioning from PickingStart to Dragging
+### PR #58 review fixes (from Joe's review)
+- Resolved git conflict markers in `Assets/FBX Raw.meta` and `Assets/_Slopworks/Resources/Prefabs/Buildings/Supports.meta`
+- Removed `Assets/_Recovery/` crash artifacts from tracking, added to `.gitignore`
+- Removed server-side TurnTooSharp bypass in `GridManager.cs:402` -- validator now allows U-turns directly
 
-### Route builder fixes (BeltRouteBuilder.cs)
-- Tighter U-turn overshoot: cap arc radius at crossDist/2 instead of crossDist (two arcs share the cross distance)
-- Replace chord-based tangents with Catmull-Rom in BuildFreeform to fix ramp ripple/squiggle on default mode belts
-- Added BeltRoutingMode.Default enum value
+### Camera jitter fix (NetworkPlayerController.cs)
+- Replaced `transform.Rotate()` with `rb.MoveRotation()` in `Look()` so yaw goes through Rigidbody interpolation alongside position
+- `Look()` runs in `LateUpdate()`, `CheckJump()` stays in `Update()`
 
-### Physics layers (PhysicsLayers.cs)
-- Added BeltPorts = 21
+### Belt validation overhaul
+- **Default mode** now builds actual route waypoints and validates per-segment slope via new `BeltRouteBuilder.ValidateRoute()` instead of skipping all extended checks
+- **MaxSlopeAngle** lowered from 45 to 30 degrees (now references `BeltRouteBuilder.MaxRampAngle` directly)
+- **TurnTooSharp bypass removed** from both client (`NetworkBuildController`) and server (`GridManager`). Validator handles U-turns: zero endDir rejected, all other angles including 180-degree U-turns pass. Turn geometry handled by per-mode validation.
+- **Validation paths separated**: Default mode validates actual route geometry. Straight/Curved keeps existing along/cross/turn math.
 
-### Asset tracking
-- FBX Raw folder (10 FBX models + metas) now tracked via Git LFS
-- Building Materials (concrete foundation PBR textures)
-- Terrain prefabs
-- Brackeys sci-fi weapon assets (raw source files)
-- Revit source models for buildings (.rfa files)
-- Recovery assets
+### Host mode double-bake optimization (NetworkBeltSegment.cs)
+- `OnStartClient()` skips route rebuild + mesh bake when `IsServerInitialized` (host already baked in GridManager)
 
-### PR management
-- Merged PR #57 (Joe's terrain/settlement/GitHub automation work) into master
-- Rebased kevin/belts-supports on updated master
+### Belt sync research (docs/research/belts/)
+- `waypoint-sync-approach.md` -- SyncList<Waypoint> analysis: bandwidth, FishNet behavior, implementation plan
+- `mesh-serialization-approach.md` -- raw mesh serialization analysis: size estimates, transport limits, industry precedent
+- Both saved for review next session
 
 ## What's in progress (not yet committed)
-- None -- all committed
+- Two research docs in docs/research/belts/ (not yet committed)
+- Unity asset changes (terrain data, materials, scene, prefab, DefaultPrefabObjects) -- unstaged, not part of code commits
 
 ## Next task to pick up
-- Ghost preview mesh during belt placement (currently just line renderer)
-- Belt simulation tick and item transport on placed belts
-- Support placement CmdPlaceSupport input handler wiring
-- Double-bake optimization in host mode (server + client both bake mesh)
+1. **Bug: Supports allow double belt connections** -- a support with an existing belt still allows another belt to attach to it
+2. **Bug: Wrong path direction on port-to-port belts** -- belt routes go opposite direction from source, through buildings. See screenshot in PR #58 review comments. DeriveEndDirection picks wrong direction when connecting between machine/storage ports.
+3. **Feature: R key to change endpoint direction** -- cycle end direction during belt drag so player can force horizontal offset or sideways turn instead of auto-derived direction
+4. **Review belt sync research** -- read waypoint-sync-approach.md and mesh-serialization-approach.md, make architectural decision
+5. **Ghost preview mesh** during belt placement (currently just line renderer)
+6. **Belt simulation tick** and item transport on placed belts
 
 ## Blockers or decisions needed
-- None
+- PR #58 updated with fixes, awaiting re-review from Joe
+- PR #59 (Joe's terrain work) has merge conflicts with us on terrain assets. Whichever merges first, the other rebases.
+- Belt sync architecture decision pending (waypoint SyncList vs current endpoint SyncVars)
 
 ## Test status
 - Tests not run this session (MCP run_tests corrupts FishNet DefaultPrefabObjects)
 - Run manually: Window > General > Test Runner > EditMode > Run All
 
 ## Key context the next session needs
-- **Branch:** `kevin/belts-supports` (off multiplayer-step1, merged with latest master)
-- **PhysicsLayers.cs was modified** -- added BeltPorts layer 21. This is a shared/Core file (D-013). Should be PR'd to master separately if Joe needs it.
-- **BeltRoutingMode.cs was modified** -- added Default enum value. Also shared.
-- Catmull-Rom tangents: `(P[i+1] - P[i-1]) / 2` scaled by 1/3 for Bezier. If freeform belts still have issues, this is where to look.
-- U-turn overshoot: `maxRadius = Max(crossDist * 0.5, 0.5)`. Floor of 0.5 prevents degenerate zero-radius arcs.
-- Direction line creates the LineRenderer in PickingStart if it doesn't exist. When clicking to Dragging, positionCount resets to 30.
-- FBX RAW/ (uppercase) folder exists at repo root -- appears to be a duplicate of Assets/FBX Raw/. Not tracked, can be deleted.
+- **Branch:** `kevin/belts-supports` (PR #58 open to master)
+- **Validation is now mode-aware:** Default mode uses `ValidateRoute()` on actual waypoints. Straight/Curved uses along/cross geometry math. Don't mix them.
+- **No TurnTooSharp bypass anywhere.** The validator allows U-turns directly. If U-turn behavior breaks, fix the validator, don't add bypasses back to callers.
+- **Camera jitter fixed** with `rb.MoveRotation()`. If jitter returns, the issue is Rigidbody interpolation timing, not Update/LateUpdate placement.
+- **FBX RAW/ (uppercase)** folder at repo root is untracked duplicate of Assets/FBX Raw/. Can be deleted.
+- **DefaultPrefabObjects.asset** is modified locally -- if FishNet acts up, restore with `git checkout HEAD -- Assets/DefaultPrefabObjects.asset` and reopen Unity.
