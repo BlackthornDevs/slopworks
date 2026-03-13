@@ -24,7 +24,9 @@ public class NetworkPlayerController : NetworkBehaviour
         (1 << PhysicsLayers.Terrain) |
         (1 << PhysicsLayers.BIM_Static) |
         (1 << PhysicsLayers.Structures) |
-        (1 << PhysicsLayers.GridPlane);
+        (1 << PhysicsLayers.GridPlane) |
+        (1 << PhysicsLayers.Interactable) |
+        (1 << 0); // Default layer (belts)
 
     public override void OnStartClient()
     {
@@ -72,8 +74,15 @@ public class NetworkPlayerController : NetworkBehaviour
         if (!IsOwner) return;
         if (Cursor.lockState != CursorLockMode.Locked) return;
 
-        Look();
         CheckJump();
+    }
+
+    private void LateUpdate()
+    {
+        if (!IsOwner) return;
+        if (Cursor.lockState != CursorLockMode.Locked) return;
+
+        Look();
     }
 
     private void FixedUpdate()
@@ -97,7 +106,10 @@ public class NetworkPlayerController : NetworkBehaviour
         _pitch -= look.y * _mouseSensitivity;
         _pitch = Mathf.Clamp(_pitch, -90f, 90f);
 
-        transform.Rotate(0f, yaw, 0f);
+        // Use MoveRotation so yaw goes through Rigidbody interpolation,
+        // matching the interpolated position and eliminating jitter.
+        Quaternion yawRot = _rb.rotation * Quaternion.Euler(0f, yaw, 0f);
+        _rb.MoveRotation(yawRot);
         _cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
     }
 

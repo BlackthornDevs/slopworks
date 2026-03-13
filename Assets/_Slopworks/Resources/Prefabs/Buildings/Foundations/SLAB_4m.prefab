@@ -1004,6 +1004,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SLAB_4m
       objectReference: {fileID: 0}
+    - target: {fileID: 2613825598619561700, guid: a1aec98d5d8e9244fb1d69524f554246, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 15b7948308ca6534997064120df7bda5, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7174986039450648032, guid: a1aec98d5d8e9244fb1d69524f554246, type: 3}

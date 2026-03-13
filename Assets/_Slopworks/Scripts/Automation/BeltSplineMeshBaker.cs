@@ -4,10 +4,10 @@ using UnityEngine.Splines;
 using Unity.Mathematics;
 
 /// <summary>
-/// Generates a belt mesh from spline data using SplineMesh.Extrude with a flat
-/// rectangular cross-section. Knot rotations are set to force world-up so the
-/// belt never twists on curves. Bake-and-destroy: temporary SplineContainer is
-/// removed after mesh generation. No runtime overhead after baking.
+/// Generates a belt mesh from waypoints using SplineMesh.Extrude with a flat
+/// rectangular cross-section. Knot rotations are projected to horizontal so the
+/// belt never twists on curves or ramps. Bake-and-destroy: temporary
+/// SplineContainer is removed after mesh generation. No runtime overhead.
 /// </summary>
 public static class BeltSplineMeshBaker
 {
@@ -16,48 +16,7 @@ public static class BeltSplineMeshBaker
     private const int SegmentsPerMeter = 4;
 
     /// <summary>
-    /// Generate a belt mesh from Hermite spline data (curved mode).
-    /// </summary>
-    public static void BakeMesh(GameObject target, BeltSplineData splineData, Material material)
-    {
-        var bezier = splineData.GetBezierControlPoints();
-
-        EnsureMeshComponents(target, material, out var meshFilter);
-
-        var splineContainer = target.AddComponent<SplineContainer>();
-        var spline = splineContainer.Spline;
-        spline.Clear();
-
-        var worldToLocal = target.transform.worldToLocalMatrix;
-
-        var localP0 = (float3)worldToLocal.MultiplyPoint3x4(bezier.p0);
-        var localP1 = (float3)worldToLocal.MultiplyPoint3x4(bezier.p1);
-        var localP2 = (float3)worldToLocal.MultiplyPoint3x4(bezier.p2);
-        var localP3 = (float3)worldToLocal.MultiplyPoint3x4(bezier.p3);
-
-        var tangentOut0 = localP1 - localP0;
-        var tangentIn1 = localP2 - localP3;
-        var localUp = (float3)worldToLocal.MultiplyVector(Vector3.up);
-
-        var rot0 = ComputeKnotRotation(tangentOut0, localUp);
-        var rot1 = ComputeKnotRotation(-tangentIn1, localUp);
-
-        var invRot0 = math.inverse(rot0);
-        var invRot1 = math.inverse(rot1);
-        var localTanOut0 = math.mul(invRot0, tangentOut0);
-        var localTanIn1 = math.mul(invRot1, tangentIn1);
-
-        spline.Add(new BezierKnot(localP0, float3.zero, localTanOut0, rot0));
-        spline.Add(new BezierKnot(localP3, localTanIn1, float3.zero, rot1));
-
-        float arcLength = splineData.ArcLength;
-        int segments = Mathf.Max(2, Mathf.RoundToInt(arcLength * SegmentsPerMeter));
-
-        ExtrudeAndFinalize(target, splineContainer, spline, meshFilter, segments);
-    }
-
-    /// <summary>
-    /// Generate a belt mesh from orthogonal route waypoints (straight mode).
+    /// Generate a belt mesh from route waypoints. Works for all routing modes.
     /// </summary>
     public static void BakeMesh(GameObject target, List<BeltRouteBuilder.Waypoint> waypoints, Material material)
     {
@@ -78,9 +37,8 @@ public static class BeltSplineMeshBaker
             var localTanOut = (float3)worldToLocal.MultiplyVector(wp.TangentOut);
 
             // Forward direction for knot rotation: prefer outgoing, fall back to -incoming.
-            // Project to horizontal so belt cross-section stays level on ramps
-            // (like a real conveyor belt). Doesn't affect the spline path --
-            // rot * invRot cancels out when evaluating control points.
+            // Use actual 3D tangent so cross-section stays perpendicular to the
+            // belt path on ramps and curves with elevation. World-up prevents roll.
             float3 forward;
             if (math.lengthsq(localTanOut) > 0.001f)
                 forward = localTanOut;
@@ -89,8 +47,6 @@ public static class BeltSplineMeshBaker
             else
                 forward = new float3(0, 0, 1);
 
-            // Remove vertical component for level cross-section
-            forward.y = 0;
             if (math.lengthsq(forward) < 0.001f)
                 forward = new float3(0, 0, 1);
             else

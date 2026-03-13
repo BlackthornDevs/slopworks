@@ -7,18 +7,19 @@ using UnityEngine;
 /// </summary>
 public static class BeltSplineBuilder
 {
-    private const float MinTangentMagnitude = 0.5f;
-    private const float MaxTangentMagnitude = 18.67f; // 56m / 3
+    private const float MinTangentMagnitude = 2f;
+    private const float MaxTangentMagnitude = 42f; // 56m * 0.75
 
     /// <summary>
     /// Build spline data from two endpoints and their tangent directions.
-    /// Tangent magnitude is distance/3, clamped to [0.5, 18.67].
+    /// Tangent magnitude is distance * 0.75, clamped to [2, 42].
+    /// High magnitude keeps belt straight near endpoints, curves in the middle.
     /// </summary>
     public static BeltSplineData Build(Vector3 startPos, Vector3 startDir,
         Vector3 endPos, Vector3 endDir)
     {
         float distance = Vector3.Distance(startPos, endPos);
-        float tangentMag = Mathf.Clamp(distance / 3f, MinTangentMagnitude, MaxTangentMagnitude);
+        float tangentMag = Mathf.Clamp(distance * 0.75f, MinTangentMagnitude, MaxTangentMagnitude);
 
         var t0 = startDir.normalized * tangentMag;
         var t1 = endDir.normalized * tangentMag;

@@ -13,6 +13,12 @@ public class GridManager : NetworkBehaviour
 
     private Dictionary<BuildingCategory, GameObject[]> _prefabArrays = new();
 
+    /// <summary>
+    /// Height offset from ground to the support's snap anchor (read from prefab).
+    /// Belt endpoints on open ground are raised by this amount.
+    /// </summary>
+    public float SupportAnchorHeight { get; private set; }
+
     private static readonly Vector2Int[] CardinalDirs =
         { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
@@ -94,6 +100,15 @@ public class GridManager : NetworkBehaviour
 
         foreach (var kvp in _prefabArrays)
             Debug.Log($"grid: {kvp.Key} variants: {kvp.Value.Length}");
+
+        // Read snap anchor height from support prefab
+        var supportPrefab = GetPrefab(BuildingCategory.Support, 0);
+        if (supportPrefab != null)
+        {
+            var anchor = supportPrefab.GetComponentInChildren<BeltSnapAnchor>();
+            SupportAnchorHeight = anchor != null ? anchor.transform.localPosition.y : 1.075f;
+            Debug.Log($"grid: support anchor height = {SupportAnchorHeight:F3}");
+        }
     }
 
     // ------------------------------------------------------------------
@@ -267,23 +282,6 @@ public class GridManager : NetworkBehaviour
         return Mathf.Round(hitValue);
     }
 
-    private static void SetBuildingLayer(GameObject go, BuildingCategory category)
-    {
-        int layer = category switch
-        {
-            BuildingCategory.Foundation => PhysicsLayers.Structures,
-            BuildingCategory.Wall => PhysicsLayers.Structures,
-            BuildingCategory.Ramp => PhysicsLayers.Structures,
-            _ => PhysicsLayers.Interactable
-        };
-        foreach (var t in go.GetComponentsInChildren<Transform>(true))
-        {
-            // Preserve snap point layer -- they must stay on SnapPoints for raycasts
-            if (t.gameObject.layer == PhysicsLayers.SnapPoints) continue;
-            t.gameObject.layer = layer;
-        }
-    }
-
     // ------------------------------------------------------------------
     // Unified CmdPlace RPCs
     // ------------------------------------------------------------------
@@ -318,7 +316,7 @@ public class GridManager : NetworkBehaviour
 
         var go = Instantiate(prefab, worldPos, Quaternion.Euler(0f, rotation, 0f));
 
-        SetBuildingLayer(go, category);
+
         var info = go.AddComponent<PlacementInfo>();
         info.Category = category;
         info.Cell = cell;
@@ -361,7 +359,7 @@ public class GridManager : NetworkBehaviour
 
         var go = Instantiate(prefab, worldPos, worldRot);
 
-        SetBuildingLayer(go, category);
+
         var info = go.AddComponent<PlacementInfo>();
         info.Category = category;
         info.Cell = cell;
@@ -381,11 +379,26 @@ public class GridManager : NetworkBehaviour
 
     [ServerRpc(RequireOwnership = false)]
     public void CmdPlaceBelt(Vector3 startPos, Vector3 startDir, Vector3 endPos, Vector3 endDir,
-        byte tier = 0, int variant = 0, NetworkConnection sender = null)
+        byte tier = 0, int variant = 0, byte routingMode = 0,
+        bool startFromPort = true, bool endFromPort = true,
+        NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
 
-        var validation = BeltPlacementValidator.Validate(startPos, startDir, endPos, endDir);
+        var mode = (BeltRoutingMode)routingMode;
+
+        // For free endpoints, startPos/endPos are raw ground positions.
+        // Spawn supports first and use their actual anchor positions for the belt.
+        var beltStartPos = startPos;
+        var beltEndPos = endPos;
+
+        if (!startFromPort)
+            beltStartPos = SpawnSupportAt(startPos, Quaternion.LookRotation(startDir), sender);
+        if (!endFromPort)
+            beltEndPos = SpawnSupportAt(endPos, Quaternion.LookRotation(endDir), sender);
+
+        // Server is final authority -- validate without bypasses
+        var validation = BeltPlacementValidator.Validate(beltStartPos, startDir, beltEndPos, endDir);
         if (!validation.IsValid)
         {
             Debug.Log($"grid: belt placement rejected: {validation.Error} by {sender?.ClientId}");
@@ -395,30 +408,32 @@ public class GridManager : NetworkBehaviour
         var prefab = GetPrefab(BuildingCategory.Belt, variant);
         if (prefab == null) return;
 
-        var splineData = BeltSplineBuilder.Build(startPos, startDir, endPos, endDir);
-        var segment = BeltSegment.FromArcLength(splineData.ArcLength);
+        var waypoints = BeltRouteBuilder.Build(beltStartPos, startDir, beltEndPos, endDir, mode);
+        var arcLength = BeltRouteBuilder.ComputeRouteLength(waypoints);
+        var segment = BeltSegment.FromArcLength(arcLength);
 
-        var midpoint = splineData.Evaluate(0.5f);
+        var midpoint = BeltRouteBuilder.EvaluateRoute(waypoints, arcLength, 0.5f);
         var go = Instantiate(prefab, midpoint, Quaternion.identity);
-
-        // Reset scale -- mesh comes from SplineExtrude, not prefab scale
         go.transform.localScale = Vector3.one;
+        go.layer = PhysicsLayers.Structures;
+
+        var prefabCollider = go.GetComponent<Collider>();
+        if (prefabCollider != null)
+            DestroyImmediate(prefabCollider);
 
         var info = go.AddComponent<PlacementInfo>();
         info.Category = BuildingCategory.Belt;
-        info.SurfaceY = startPos.y;
+        info.SurfaceY = beltStartPos.y;
 
         var netBelt = go.GetComponent<NetworkBeltSegment>();
         if (netBelt != null)
-            netBelt.ServerInit(segment, splineData, tier);
+            netBelt.ServerInit(segment, beltStartPos, startDir, beltEndPos, endDir, waypoints, tier, mode);
 
         ServerManager.Spawn(go);
 
-        // Server also bakes mesh (host needs to see it)
         var material = go.GetComponent<MeshRenderer>()?.sharedMaterial;
-        BeltSplineMeshBaker.BakeMesh(go, splineData, material);
+        BeltSplineMeshBaker.BakeMesh(go, waypoints, material);
 
-        // Add belt collider for raycast interaction (D-BLT-005)
         var meshCollider = go.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = go.GetComponent<MeshFilter>()?.sharedMesh;
 
@@ -428,11 +443,10 @@ public class GridManager : NetworkBehaviour
         if (netBelt != null && _factorySimulation != null)
             _factorySimulation.RegisterBelt(netBelt);
 
-        // Add BeltPort children at endpoints for port-based connections
-        AddBeltPort(go, startPos, -startDir, BeltPortDirection.Input, 0);
-        AddBeltPort(go, endPos, endDir, BeltPortDirection.Output, 0);
+        AddBeltPort(go, beltStartPos, -startDir, BeltPortDirection.Input, 0);
+        AddBeltPort(go, beltEndPos, endDir, BeltPortDirection.Output, 0);
 
-        Debug.Log($"grid: belt placed from {startPos} to {endPos} arc={splineData.ArcLength:F1}m by {sender?.ClientId}");
+        Debug.Log($"grid: {mode} belt placed from {beltStartPos} to {beltEndPos} route={arcLength:F1}m by {sender?.ClientId}");
     }
 
     private static void AddBeltPort(GameObject parent, Vector3 worldPos, Vector3 worldDir, BeltPortDirection direction, int slotIndex)
@@ -442,14 +456,14 @@ public class GridManager : NetworkBehaviour
         child.transform.SetParent(parent.transform);
         child.transform.position = worldPos;
         child.transform.forward = worldDir;
-        child.layer = PhysicsLayers.SnapPoints;
+        child.layer = PhysicsLayers.BeltPorts;
 
         var port = child.AddComponent<BeltPort>();
         port.Direction = direction;
         port.SlotIndex = slotIndex;
 
         var col = child.AddComponent<SphereCollider>();
-        col.radius = 0.15f;
+        col.radius = 0.4f;
         col.isTrigger = true;
     }
 
@@ -458,37 +472,31 @@ public class GridManager : NetworkBehaviour
         int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
+        SpawnSupportAt(position, rotation, sender);
+    }
 
-        var prefab = GetPrefab(BuildingCategory.Support, variant);
+    private Vector3 SpawnSupportAt(Vector3 groundPos, Quaternion rotation, NetworkConnection sender = null)
+    {
+        var prefab = GetPrefab(BuildingCategory.Support, 0);
         if (prefab == null)
         {
-            // Runtime fallback: create a simple pole with snap anchor
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.transform.position = position;
-            go.transform.rotation = rotation;
-            go.transform.localScale = new Vector3(0.15f, 1f, 0.15f);
-            go.GetComponent<Renderer>().material.color = new Color(0.4f, 0.4f, 0.45f);
-
-            var anchorChild = new GameObject("SnapAnchor");
-            anchorChild.transform.SetParent(go.transform);
-            anchorChild.transform.localPosition = new Vector3(0, 1f, 0);
-            anchorChild.transform.localRotation = Quaternion.identity;
-            anchorChild.AddComponent<BeltSnapAnchor>();
-            anchorChild.layer = PhysicsLayers.SnapPoints;
-            var col = anchorChild.AddComponent<SphereCollider>();
-            col.radius = 0.2f;
-            col.isTrigger = true;
-
-            go.AddComponent<NetworkObject>();
-            ServerManager.Spawn(go);
-
-            Debug.Log($"grid: support placed at {position} by {sender?.ClientId}");
-            return;
+            Debug.LogWarning($"grid: no support prefab found at {groundPos}");
+            return groundPos;
         }
 
-        var instance = Instantiate(prefab, position, rotation);
+        var instance = Instantiate(prefab, groundPos, rotation);
+
+        var info = instance.AddComponent<PlacementInfo>();
+        info.Category = BuildingCategory.Support;
+        info.SurfaceY = groundPos.y;
+
         ServerManager.Spawn(instance);
-        Debug.Log($"grid: support placed at {position} by {sender?.ClientId}");
+
+        var anchor = instance.GetComponentInChildren<BeltSnapAnchor>();
+        var anchorPos = anchor != null ? anchor.WorldPosition : groundPos;
+
+        Debug.Log($"grid: support at {groundPos}, anchor at {anchorPos} by {sender?.ClientId}");
+        return anchorPos;
     }
 
     // ------------------------------------------------------------------
@@ -537,6 +545,16 @@ public class GridManager : NetworkBehaviour
         }
 
         Debug.Log($"grid: nothing to delete at ({cell.x},{cell.y}) y={surfaceY:F1} dir ({direction.x},{direction.y})");
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void CmdDeleteByNetworkObject(NetworkObject nob, NetworkConnection sender = null)
+    {
+        if (!IsServerInitialized) return;
+        if (nob == null) return;
+
+        ServerManager.Despawn(nob.gameObject);
+        Debug.Log($"grid: deleted network object {nob.gameObject.name} by {sender?.ClientId}");
     }
 
     // ------------------------------------------------------------------

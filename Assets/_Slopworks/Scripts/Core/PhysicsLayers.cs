@@ -14,6 +14,7 @@ public static class PhysicsLayers
     public const int Decal = 18;
     public const int FogOfWar = 19;
     public const int SnapPoints = 20;
+    public const int BeltPorts = 21;
 
     // Raycast masks -- compute once at class load, reuse everywhere
     public static readonly int PlacementMask =

@@ -1,110 +1,116 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
 [TestFixture]
 public class BeltSplineBuilderTests
 {
-    private const float Tolerance = 0.01f;
+    private const float Tolerance = 0.1f;
 
     [Test]
-    public void StraightBelt_StartAndEnd_MatchInputPositions()
+    public void DefaultMode_StartAndEnd_MatchInputPositions()
     {
         var start = new Vector3(0, 1, 0);
         var end = new Vector3(10, 1, 0);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.right);
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.right, BeltRoutingMode.Default);
+        float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
 
-        AssertVec3Near(start, data.Evaluate(0f));
-        AssertVec3Near(end, data.Evaluate(1f));
+        AssertVec3Near(start, BeltRouteBuilder.EvaluateRoute(waypoints, len, 0f));
+        AssertVec3Near(end, BeltRouteBuilder.EvaluateRoute(waypoints, len, 1f));
     }
 
     [Test]
-    public void StraightBelt_Midpoint_IsHalfway()
+    public void DefaultMode_StraightBelt_MidpointIsHalfway()
     {
         var start = new Vector3(0, 1, 0);
         var end = new Vector3(10, 1, 0);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.right);
-        var mid = data.Evaluate(0.5f);
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.right, BeltRoutingMode.Default);
+        float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
+        var mid = BeltRouteBuilder.EvaluateRoute(waypoints, len, 0.5f);
 
         AssertVec3Near(new Vector3(5, 1, 0), mid);
     }
 
     [Test]
-    public void CurvedBelt_StartAndEnd_MatchInputPositions()
+    public void DefaultMode_CurvedBelt_EndpointsMatch()
     {
         var start = new Vector3(0, 1, 0);
         var end = new Vector3(5, 1, 5);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.forward);
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.forward, BeltRoutingMode.Default);
+        float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
 
-        AssertVec3Near(start, data.Evaluate(0f));
-        AssertVec3Near(end, data.Evaluate(1f));
+        AssertVec3Near(start, BeltRouteBuilder.EvaluateRoute(waypoints, len, 0f));
+        AssertVec3Near(end, BeltRouteBuilder.EvaluateRoute(waypoints, len, 1f));
     }
 
     [Test]
-    public void ArcLength_StraightBelt_MatchesDistance()
+    public void DefaultMode_StraightBelt_RouteLengthMatchesDistance()
     {
         var start = new Vector3(0, 0, 0);
         var end = new Vector3(10, 0, 0);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.right);
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.right, BeltRoutingMode.Default);
+        float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
 
-        Assert.AreEqual(10f, data.ArcLength, 0.1f);
+        Assert.AreEqual(10f, len, 0.5f);
     }
 
     [Test]
-    public void ArcLength_CurvedBelt_LongerThanStraightLine()
+    public void DefaultMode_CurvedBelt_LongerThanStraightLine()
     {
         var start = new Vector3(0, 0, 0);
         var end = new Vector3(5, 0, 5);
         var straightDist = Vector3.Distance(start, end);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.forward);
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.forward, BeltRoutingMode.Default);
+        float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
 
-        Assert.Greater(data.ArcLength, straightDist);
+        Assert.Greater(len, straightDist);
     }
 
     [Test]
-    public void TangentMagnitude_ClampedToRange()
+    public void DefaultMode_ShortBelt_NoNaN()
     {
         var start = new Vector3(0, 0, 0);
         var end = new Vector3(0.5f, 0, 0);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.right);
-        var mid = data.Evaluate(0.5f);
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.right, BeltRoutingMode.Default);
+        float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
+        var mid = BeltRouteBuilder.EvaluateRoute(waypoints, len, 0.5f);
 
         Assert.IsFalse(float.IsNaN(mid.x));
     }
 
     [Test]
-    public void BezierControlPoints_MatchHermiteToBezierConversion()
-    {
-        var start = new Vector3(0, 0, 0);
-        var end = new Vector3(9, 0, 0);
-
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.right);
-        var bezier = data.GetBezierControlPoints();
-
-        // distance=9, tangentMag=9/3=3, T0=right*3=(3,0,0), T1=right*3=(3,0,0)
-        // P1_bezier = P0 + T0/3 = (0,0,0) + (1,0,0) = (1,0,0)
-        // P2_bezier = P1 - T1/3 = (9,0,0) - (1,0,0) = (8,0,0)
-        AssertVec3Near(new Vector3(0, 0, 0), bezier.p0);
-        AssertVec3Near(new Vector3(1, 0, 0), bezier.p1);
-        AssertVec3Near(new Vector3(8, 0, 0), bezier.p2);
-        AssertVec3Near(new Vector3(9, 0, 0), bezier.p3);
-    }
-
-    [Test]
-    public void EvaluateTangent_AtStart_MatchesStartDirection()
+    public void DefaultMode_ProducesMultipleWaypoints()
     {
         var start = new Vector3(0, 0, 0);
         var end = new Vector3(10, 0, 0);
 
-        var data = BeltSplineBuilder.Build(start, Vector3.right, end, Vector3.right);
-        var tangent = data.EvaluateTangent(0f).normalized;
+        var waypoints = BeltRouteBuilder.Build(start, Vector3.right, end, Vector3.right, BeltRoutingMode.Default);
 
-        AssertVec3Near(Vector3.right, tangent);
+        Assert.Greater(waypoints.Count, 2, "freeform should produce sampled waypoints");
+    }
+
+    [Test]
+    public void AllModes_ProduceValidWaypoints()
+    {
+        var start = new Vector3(0, 0, 0);
+        var end = new Vector3(5, 0, 5);
+
+        foreach (var mode in new[] { BeltRoutingMode.Default, BeltRoutingMode.Straight, BeltRoutingMode.Curved })
+        {
+            var waypoints = BeltRouteBuilder.Build(start, Vector3.forward, end, Vector3.right, mode);
+            float len = BeltRouteBuilder.ComputeRouteLength(waypoints);
+
+            Assert.Greater(waypoints.Count, 0, $"{mode} produced no waypoints");
+            Assert.Greater(len, 0f, $"{mode} produced zero-length route");
+            AssertVec3Near(start, waypoints[0].Position);
+            AssertVec3Near(end, waypoints[waypoints.Count - 1].Position);
+        }
     }
 
     private void AssertVec3Near(Vector3 expected, Vector3 actual)

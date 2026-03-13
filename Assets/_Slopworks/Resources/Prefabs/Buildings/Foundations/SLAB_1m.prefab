@@ -1000,10 +1000,22 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -5442355415925399799, guid: 98fef8224b51d8a40829a233860712a7, type: 3}
+      propertyPath: m_Layer
+      value: 13
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 98fef8224b51d8a40829a233860712a7, type: 3}
       propertyPath: m_Name
       value: SLAB_1m
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 98fef8224b51d8a40829a233860712a7, type: 3}
+      propertyPath: m_Layer
+      value: 13
+      objectReference: {fileID: 0}
+    - target: {fileID: 3748687090841664156, guid: 98fef8224b51d8a40829a233860712a7, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 15b7948308ca6534997064120df7bda5, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 7174986039450648032, guid: 98fef8224b51d8a40829a233860712a7, type: 3}

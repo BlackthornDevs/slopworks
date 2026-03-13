@@ -37,8 +37,12 @@ public static class BeltPortEditor
         var child = new GameObject($"{portName}_{slotIndex}");
         child.transform.SetParent(selected.transform);
         child.transform.localPosition = Vector3.zero;
-        child.transform.localRotation = Quaternion.identity;
-        child.layer = PhysicsLayers.SnapPoints;
+        // Output ports face backward (local -Z) so forward points away from machine.
+        // Input ports face forward (local +Z) -- convention: FBX input side faces +Z.
+        child.transform.localRotation = direction == BeltPortDirection.Output
+            ? Quaternion.Euler(0f, 180f, 0f)
+            : Quaternion.identity;
+        child.layer = PhysicsLayers.BeltPorts;
 
         var port = child.AddComponent<BeltPort>();
         port.Direction = direction;

@@ -5,7 +5,8 @@ public enum BeltValidationError
     None,
     TooShort,
     TooLong,
-    TooSteep
+    TooSteep,
+    TurnTooSharp
 }
 
 public struct BeltValidationResult
@@ -32,12 +33,17 @@ public static class BeltPlacementValidator
 {
     public const float MinLength = 0.5f;
     public const float MaxLength = 56f;
-    public const float MaxSlopeAngle = 45f;
+    public const float MaxSlopeAngle = BeltRouteBuilder.MaxRampAngle;
+    public const float MinTurnAngle = 30f; // minimum angle between startDir and endDir
 
     public static BeltValidationResult Validate(
         Vector3 startPos, Vector3 startDir,
         Vector3 endPos, Vector3 endDir)
     {
+        // Zero endDir signals an invalid direction (e.g. straight backward)
+        if (endDir.sqrMagnitude < 0.001f)
+            return BeltValidationResult.Invalid(BeltValidationError.TurnTooSharp);
+
         float distance = Vector3.Distance(startPos, endPos);
 
         if (distance < MinLength)
@@ -59,6 +65,11 @@ public static class BeltPlacementValidator
         {
             return BeltValidationResult.Invalid(BeltValidationError.TooSteep);
         }
+
+        // Turn angle is not rejected here. Zero endDir (straight backward with
+        // no offset) is caught above. All other angles including U-turns are valid
+        // -- the route builder and per-mode validation in NetworkBuildController
+        // handle turn geometry constraints.
 
         return BeltValidationResult.Valid();
     }

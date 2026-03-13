@@ -46,14 +46,6 @@ public class BuildingSnapPoint : MonoBehaviour
         var localCenter = go.transform.InverseTransformPoint(worldBounds.center);
         var ext = worldExtents;
 
-        // Belts and supports use BeltPort/BeltSnapAnchor, not BuildingSnapPoints
-        if (category == BuildingCategory.Belt || category == BuildingCategory.Support)
-            return;
-
-        bool isRamp = category == BuildingCategory.Ramp;
-        bool isMachine = category == BuildingCategory.Machine;
-        bool isStorage = category == BuildingCategory.Storage;
-
         var cardinals = new[]
         {
             (name: "North", dir: Vector3.forward, offset: new Vector3(0, 0, ext.z)),
@@ -62,58 +54,86 @@ public class BuildingSnapPoint : MonoBehaviour
             (name: "West",  dir: Vector3.left,    offset: new Vector3(-ext.x, 0, 0)),
         };
 
-        foreach (var (name, dir, offset) in cardinals)
+        switch (category)
         {
-            bool isXFace = Mathf.Abs(dir.x) > 0.5f;
-            var faceSize = isXFace
-                ? new Vector2(worldExtents.z * 2, worldExtents.y * 2)
-                : new Vector2(worldExtents.x * 2, worldExtents.y * 2);
-
-            if (isRamp)
-            {
-                if (name != "South")
+            case BuildingCategory.Foundation:
+            case BuildingCategory.Wall:
+                // Structural: 14 points (4 cardinal x 3 heights + Center_Top + Center_Bot)
+                foreach (var (name, dir, offset) in cardinals)
+                {
+                    bool isXFace = Mathf.Abs(dir.x) > 0.5f;
+                    var faceSize = isXFace
+                        ? new Vector2(worldExtents.z * 2, worldExtents.y * 2)
+                        : new Vector2(worldExtents.x * 2, worldExtents.y * 2);
+                    AddPoint(go, $"{name}_Top", localCenter + offset + new Vector3(0, ext.y, 0), dir, faceSize);
+                    AddPoint(go, $"{name}_Mid", localCenter + offset, dir, faceSize);
                     AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
-            }
-            else if (isMachine || isStorage)
-            {
-                // Machines/Storage: bottom edge only -- side-by-side alignment
-                AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
-            }
-            else
-            {
-                AddPoint(go, $"{name}_Top", localCenter + offset + new Vector3(0, ext.y, 0), dir, faceSize);
-                AddPoint(go, $"{name}_Mid", localCenter + offset, dir, faceSize);
-                AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
-            }
-        }
+                }
+                {
+                    var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+                    AddPoint(go, "Center_Top", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
+                    AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+                }
+                break;
 
-        if (isRamp)
-        {
-            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
-            AddPoint(go, "HighEdge", localCenter + new Vector3(0, ext.y, ext.z), Vector3.forward,
-                new Vector2(worldExtents.x * 2, 0.1f));
-            AddPoint(go, "LowEdge", localCenter + new Vector3(0, -ext.y, -ext.z), Vector3.back,
-                new Vector2(worldExtents.x * 2, 0.1f));
-            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
-        }
-        else if (isMachine)
-        {
-            // Machines: Center_Bot only, no stacking
-            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
-            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
-        }
-        else if (isStorage)
-        {
-            // Storage: Center_Top + Center_Bot for vertical stacking
-            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
-            AddPoint(go, "Center_Top", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
-            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
-        }
-        else
-        {
-            var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
-            AddPoint(go, "Center_Top", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
-            AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+            case BuildingCategory.Ramp:
+                // 6 points: 3 cardinal _Bot (no South) + HighEdge + LowEdge + Center_Bot
+                foreach (var (name, dir, offset) in cardinals)
+                {
+                    if (name == "South") continue;
+                    bool isXFace = Mathf.Abs(dir.x) > 0.5f;
+                    var faceSize = isXFace
+                        ? new Vector2(worldExtents.z * 2, worldExtents.y * 2)
+                        : new Vector2(worldExtents.x * 2, worldExtents.y * 2);
+                    AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
+                }
+                {
+                    var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+                    AddPoint(go, "HighEdge", localCenter + new Vector3(0, ext.y, ext.z), Vector3.forward,
+                        new Vector2(worldExtents.x * 2, 0.1f));
+                    AddPoint(go, "LowEdge", localCenter + new Vector3(0, -ext.y, -ext.z), Vector3.back,
+                        new Vector2(worldExtents.x * 2, 0.1f));
+                    AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+                }
+                break;
+
+            case BuildingCategory.Machine:
+                // 5 points: 4 cardinal _Bot + Center_Bot
+                foreach (var (name, dir, offset) in cardinals)
+                {
+                    bool isXFace = Mathf.Abs(dir.x) > 0.5f;
+                    var faceSize = isXFace
+                        ? new Vector2(worldExtents.z * 2, worldExtents.y * 2)
+                        : new Vector2(worldExtents.x * 2, worldExtents.y * 2);
+                    AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
+                }
+                {
+                    var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+                    AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+                }
+                break;
+
+            case BuildingCategory.Storage:
+                // 6 points: 4 cardinal _Bot + Center_Top + Center_Bot
+                foreach (var (name, dir, offset) in cardinals)
+                {
+                    bool isXFace = Mathf.Abs(dir.x) > 0.5f;
+                    var faceSize = isXFace
+                        ? new Vector2(worldExtents.z * 2, worldExtents.y * 2)
+                        : new Vector2(worldExtents.x * 2, worldExtents.y * 2);
+                    AddPoint(go, $"{name}_Bot", localCenter + offset + new Vector3(0, -ext.y, 0), dir, faceSize);
+                }
+                {
+                    var topBotSize = new Vector2(worldExtents.x * 2, worldExtents.z * 2);
+                    AddPoint(go, "Center_Top", localCenter + new Vector3(0, ext.y, 0), Vector3.up, topBotSize);
+                    AddPoint(go, "Center_Bot", localCenter + new Vector3(0, -ext.y, 0), Vector3.down, topBotSize);
+                }
+                break;
+
+            // Belt and Support use BeltPort/BeltSnapAnchor, not BuildingSnapPoints.
+            // Any future categories also skip snap generation by default.
+            default:
+                break;
         }
     }
 

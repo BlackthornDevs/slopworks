@@ -1,5 +1,6 @@
 public enum BeltRoutingMode : byte
 {
-    Curved,
-    Straight
+    Default,
+    Straight,
+    Curved
 }
