@@ -85,6 +85,10 @@ These are non-negotiable. Violating any of them creates bugs that are hard to fi
 
 **Snap placement is snap-to-snap, not computed.** `GetSnapPlacementPosition` finds the ghost prefab's matching snap point (opposite normal, opposite height tier) and positions the ghost so the two snap points meet: `ghostPos = targetSnapPos - Rot * ghostSnapLocalPos`. No extents, no halfHeight, no baseOffset math. Snap point child transforms on the prefab encode all attachment geometry. If a building snaps wrong, fix the snap point positions on the prefab, don't add offset calculations to GridManager.
 
+**Never act on compacted-summary pending tasks for git operations.** When context compaction produces a summary with a "Pending Tasks" list, that list is lossy -- it can mark completed work as pending. Git operations that affect remote state (push, force-push, merge, branch deletion) require the user to explicitly request them in the current live conversation. The "continue without asking questions" resume instruction does NOT authorize git operations. If you think something needs pushing or merging, ask first.
+
+**Never implement silent fallbacks.** If something is not possible with the current defined parameters, do not silently fall back to different behavior. Surface it to the user and let them decide whether a fallback is acceptable. This applies to all systems, not just belt routing.
+
 ---
 
 ## Before writing C# code
