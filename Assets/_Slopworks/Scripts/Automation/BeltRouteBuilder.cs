@@ -623,9 +623,16 @@ public static class BeltRouteBuilder
                     break;
                 }
 
-                case 1: // End
-                    tanIn = dirPrev * (distPrev / 3f);
+                case 1: // End -- use horizontal tangent for level connector attachment
+                {
+                    Vector3 flatPrev = new Vector3(toPrev.x, 0, toPrev.z);
+                    float flatDistPrev = flatPrev.magnitude;
+                    if (flatDistPrev > 0.001f)
+                        tanIn = (flatPrev / flatDistPrev) * (distPrev / 3f);
+                    else
+                        tanIn = dirPrev * (distPrev / 3f);
                     break;
+                }
 
                 case 2: // Ramp transition -- dist/3 for perfect straight Bezier lines
                     tanIn = dirPrev * (distPrev / 3f);
