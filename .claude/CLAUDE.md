@@ -274,6 +274,7 @@ All major architectural decisions are documented in `docs/reference/`. Check her
 | `service-architecture.md` | VContainer DI, scope hierarchy, registration, MonoBehaviour injection |
 | `ui-framework.md` | uGUI primary, world-space machine panels, FishNet SyncVar binding, UI Toolkit future |
 | `supabase-unity-sdk.md` | supabase-csharp, UniTask, JSONB upsert, authentication, thread safety |
+| `naming-glossary.md` | Class suffixes, ID conventions, asset naming, enum catalog, UI taxonomy, tower system names |
 
 Additional reference docs are added as architectural decisions are made. Check for new files before assuming a decision hasn't been made yet.
 
