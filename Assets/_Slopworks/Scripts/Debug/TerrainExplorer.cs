@@ -63,6 +63,7 @@ public class TerrainExplorer : MonoBehaviour
         }
 
         if (Cursor.lockState != CursorLockMode.Locked) return;
+        if (_camTransform == null) return;
 
         // mouse look
         var delta = mouse.delta.ReadValue();

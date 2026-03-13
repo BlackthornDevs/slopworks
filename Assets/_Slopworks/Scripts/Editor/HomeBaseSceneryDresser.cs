@@ -153,8 +153,6 @@ public static class HomeBaseSceneryDresser
     private static readonly PropDef[] UndergrowthProps = {
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/grass-large.fbx", 3f, 6f, false),
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/grass.fbx", 3f, 5f, false),
-        new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/patch-grass-large.fbx", 4f, 7f, false),
-        new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/patch-grass.fbx", 3f, 5f, false),
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-log.fbx", 2f, 4f),
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/tree-log-small.fbx", 2f, 3f),
         new("Assets/_Slopworks/Art/Kenney/survival-kit/Models/resource-wood.fbx", 2f, 3f, false),

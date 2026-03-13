@@ -420,7 +420,7 @@ public class NetworkBuildController : NetworkBehaviour
             {
                 var nob = placement.GetComponent<NetworkObject>();
                 if (nob != null)
-                    GridManager.Instance.CmdDeleteByNetworkObject(nob);
+                    CmdDeleteBelt(nob);
             }
             else if (placement.Category == BuildingCategory.Wall || placement.Category == BuildingCategory.Ramp)
                 GridManager.Instance.CmdDeleteDirectional(placement.Cell, placement.SurfaceY, placement.EdgeDirection);
@@ -428,6 +428,14 @@ public class NetworkBuildController : NetworkBehaviour
                 GridManager.Instance.CmdDelete(placement.Cell, placement.SurfaceY);
             Debug.Log($"build: deleted {placement.Category} at ({placement.Cell.x},{placement.Cell.y}) y={placement.SurfaceY:F1}");
         }
+    }
+
+    [ServerRpc]
+    private void CmdDeleteBelt(NetworkObject nob)
+    {
+        if (NetworkObject != null && !IsServerInitialized) return;
+        if (nob == null || !nob.IsSpawned) return;
+        ServerManager.Despawn(nob);
     }
 
     private void ClearDeleteHighlight()
@@ -1197,7 +1205,7 @@ public class NetworkBuildController : NetworkBehaviour
                     // Port endpoint: allow multi-turn, use standard validation
                     var validation = BeltPlacementValidator.Validate(
                         _beltStartPos, startDir, endPos, endDir);
-                    isValid = validation.IsValid || validation.Error == BeltValidationError.TurnTooSharp;
+                    isValid = validation.IsValid;
 
                     // Elevation validation for port endpoints too
                     float portHeightDiff = Mathf.Abs(endPos.y - _beltStartPos.y);
@@ -1275,8 +1283,7 @@ public class NetworkBuildController : NetworkBehaviour
                 Debug.Log($"belt: placing {_beltRoutingMode} from {_beltStartPos} to {endPos}");
                 GridManager.Instance.CmdPlaceBelt(
                     _beltStartPos, startDir,
-                    endPos, endDir,
-                    routingMode: (byte)_beltRoutingMode);
+                    endPos, endDir);
 
                 _beltState = BeltPlacementState.Idle;
                 _beltPreviewLine.SetActive(false);
@@ -1309,7 +1316,7 @@ public class NetworkBuildController : NetworkBehaviour
 
         if (!Physics.Raycast(ray, out var hit, 200f,
             PhysicsLayers.StructuralPlacementMask |
-            (1 << PhysicsLayers.BeltPorts)))
+            (1 << PhysicsLayers.SnapPoints)))
             return false;
 
         // Direct hit on a BeltPort
@@ -1392,7 +1399,7 @@ public class NetworkBuildController : NetworkBehaviour
 
     private static BeltPort FindNearbyPort(Vector3 position, bool isStart, float radius)
     {
-        var colliders = Physics.OverlapSphere(position, radius, 1 << PhysicsLayers.BeltPorts);
+        var colliders = Physics.OverlapSphere(position, radius, 1 << PhysicsLayers.SnapPoints);
 
         BeltPort closest = null;
         float closestDist = float.MaxValue;
