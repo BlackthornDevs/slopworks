@@ -39,12 +39,12 @@ public static class BeltRouteBuilder
     public static float TurnRadius = 1.0f;
     public static float MaxRampAngle = 30f;
     public static float MinTurnAngle = 30f;
+    public static float MinFreeformTangent = 2f;
+    public static int FreeformSamples = 8;
 
     // -- Internal math constants (not tunable) --
     private const float BezierK = 0.5523f; // 4/3 * tan(pi/8), quarter-circle approximation
-    private const float MinFreeformTangent = 2f;
-    private const float MaxFreeformTangent = 42f; // 56m * 0.75
-    private const int FreeformSamples = 8;
+    private static float MaxFreeformTangent => MaxLength * 0.75f;
 
     public struct Waypoint
     {

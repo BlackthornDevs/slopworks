@@ -24,6 +24,14 @@ public class BeltSettings : MonoBehaviour
     [Tooltip("Minimum turn angle between start and end directions")]
     [SerializeField] private float _minTurnAngle = 30f;
 
+    [Header("Default Mode (Freeform Curves)")]
+    [Tooltip("Minimum tangent magnitude for freeform curves (controls tightness at short distances)")]
+    [SerializeField] private float _minFreeformTangent = 2f;
+
+    [Tooltip("Number of sample points on freeform curves (higher = smoother, more waypoints)")]
+    [Range(3, 32)]
+    [SerializeField] private int _freeformSamples = 8;
+
     private void Awake()
     {
         PushValues();
@@ -41,5 +49,7 @@ public class BeltSettings : MonoBehaviour
         BeltRouteBuilder.TurnRadius = _turnRadius;
         BeltRouteBuilder.MaxRampAngle = _maxRampAngle;
         BeltRouteBuilder.MinTurnAngle = _minTurnAngle;
+        BeltRouteBuilder.MinFreeformTangent = _minFreeformTangent;
+        BeltRouteBuilder.FreeformSamples = _freeformSamples;
     }
 }
