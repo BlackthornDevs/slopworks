@@ -64,8 +64,8 @@ public class PlayerHUD : MonoBehaviour
 
     private void Start()
     {
-        CreateUIElements();
-        WireFromSerializedRefs();
+        // PlayerHUD visuals disabled -- visor HUD replaces all UI elements.
+        // Methods kept as no-ops for playtest bootstrapper compatibility.
     }
 
     /// <summary>
@@ -280,14 +280,12 @@ public class PlayerHUD : MonoBehaviour
             return;
         }
 
-        CreateCrosshair();
         CreateHealthBar();
         CreateAmmoText();
         CreateWaveText();
         CreateInteractionPrompt();
         CreateBuildModeIndicator();
         CreateWaveWarning();
-        CreateHotbar();
         CreateBuildingStatus();
         CreateDamageFlash();
     }
