@@ -6,10 +6,12 @@ using UnityEngine.InputSystem;
 public class NetworkBuildController : NetworkBehaviour
 {
     [SerializeField] private float _placementRange = 50f;
+    [SerializeField] private bool _showDebugGUI = true;
 
     private enum BuildTool { Foundation, Wall, Ramp, Machine, Storage, Belt }
     private enum PlacementMode { None, Grid, Snap }
 
+    private SlopworksControls _controls;
     private Camera _camera;
     private bool _buildMode;
     private BuildTool _currentTool;
@@ -73,6 +75,9 @@ public class NetworkBuildController : NetworkBehaviour
     private bool _peerSnapMode;
     private GameObject _snapHighlight;
 
+    // UI integration
+    private IBuildStateReceiver _buildUI;
+
     private static readonly int StructuralMask =
         (1 << PhysicsLayers.Terrain) | (1 << PhysicsLayers.Structures) | (1 << PhysicsLayers.SnapPoints);
     private static readonly int DeleteMask =
@@ -95,6 +100,24 @@ public class NetworkBuildController : NetworkBehaviour
         _camera = GetComponentInChildren<Camera>();
         _gridOverlay = gameObject.AddComponent<GridOverlay>();
         _gridOverlay.Init(_camera);
+
+        _controls = new SlopworksControls();
+        _controls.Combat.Enable();
+
+        _buildUI = GetComponentInChildren<IBuildStateReceiver>();
+    }
+
+    private void OnDestroy()
+    {
+        CancelAllPending();
+        if (_snapHighlight != null)
+            Destroy(_snapHighlight);
+        if (_controls != null)
+        {
+            _controls.Build.Disable();
+            _controls.Combat.Disable();
+            _controls.Dispose();
+        }
     }
 
     // Available recipes for cycling
@@ -103,18 +126,51 @@ public class NetworkBuildController : NetworkBehaviour
     private void Update()
     {
         if (!IsOwner) return;
+        if (_controls == null) return;
         if (Cursor.lockState != CursorLockMode.Locked) return;
 
-        var kb = Keyboard.current;
-        var mouse = Mouse.current;
-        if (kb == null || mouse == null) return;
+        // Toggle build mode: B key (lives in both Combat and Build maps)
+        bool toggleBuild = _buildMode
+            ? _controls.Build.ToggleBuildMode.WasPressedThisFrame()
+            : _controls.Combat.ToggleBuildMode.WasPressedThisFrame();
 
-        // F key: interact with machine (set recipe)
-        if (kb.fKey.wasPressedThisFrame)
+        if (toggleBuild)
+        {
+            _buildMode = !_buildMode;
+            _nudgeOffset = 0f;
+            Debug.Log($"build: mode {(_buildMode ? "ON" : "OFF")}");
+            if (_buildMode)
+            {
+                _controls.Combat.Disable();
+                _controls.Build.Enable();
+                _buildUI?.OnBuildModeEntered();
+            }
+            else
+            {
+                CancelAllPending();
+                _controls.Build.Disable();
+                _controls.Combat.Enable();
+                _buildUI?.OnBuildModeExited();
+            }
+            PushState();
+            return;
+        }
+
+        if (!_buildMode)
+        {
+            // Machine interact (F) works outside build mode via Combat map Interact
+            return;
+        }
+
+        // All build input from the Build action map
+        var build = _controls.Build;
+
+        // Machine interact (F key)
+        if (build.MachineInteract.WasPressedThisFrame())
             TryInteract();
 
-        // Delete mode toggle (X key) -- works regardless of build mode
-        if (kb.xKey.wasPressedThisFrame)
+        // Delete mode toggle (X key)
+        if (build.DeleteMode.WasPressedThisFrame())
         {
             _deleteMode = !_deleteMode;
             _nudgeOffset = 0f;
@@ -128,40 +184,30 @@ public class NetworkBuildController : NetworkBehaviour
                 ClearDeleteHighlight();
                 Debug.Log("build: delete mode OFF");
             }
+            PushState();
         }
 
         // Delete mode takes priority
         if (_deleteMode)
         {
-            HandleDeleteMode(mouse, kb);
+            HandleDeleteMode(build);
             return;
         }
 
-        // Toggle build mode
-        if (kb.bKey.wasPressedThisFrame)
-        {
-            _buildMode = !_buildMode;
-            _nudgeOffset = 0f;
-            Debug.Log($"build: mode {(_buildMode ? "ON" : "OFF")}");
-            if (!_buildMode) CancelAllPending();
-        }
-
-        if (!_buildMode) return;
-
         // Debug diagnostic dump (press 0)
-        if (kb.digit0Key.wasPressedThisFrame)
+        if (build.DebugDump.WasPressedThisFrame())
             DumpBeltDiagnostics();
 
         // Tool switching: 1-6
-        if (kb.digit1Key.wasPressedThisFrame) SwitchTool(BuildTool.Foundation);
-        if (kb.digit2Key.wasPressedThisFrame) SwitchTool(BuildTool.Wall);
-        if (kb.digit3Key.wasPressedThisFrame) SwitchTool(BuildTool.Ramp);
-        if (kb.digit4Key.wasPressedThisFrame) SwitchTool(BuildTool.Machine);
-        if (kb.digit5Key.wasPressedThisFrame) SwitchTool(BuildTool.Storage);
-        if (kb.digit6Key.wasPressedThisFrame) SwitchTool(BuildTool.Belt);
+        if (build.SelectTool1.WasPressedThisFrame()) SwitchTool(BuildTool.Foundation);
+        if (build.SelectTool2.WasPressedThisFrame()) SwitchTool(BuildTool.Wall);
+        if (build.SelectTool3.WasPressedThisFrame()) SwitchTool(BuildTool.Ramp);
+        if (build.SelectTool4.WasPressedThisFrame()) SwitchTool(BuildTool.Machine);
+        if (build.SelectTool5.WasPressedThisFrame()) SwitchTool(BuildTool.Storage);
+        if (build.SelectTool6.WasPressedThisFrame()) SwitchTool(BuildTool.Belt);
 
         // Escape cancels
-        if (kb.escapeKey.wasPressedThisFrame)
+        if (build.Cancel.WasPressedThisFrame())
         {
             CancelAllPending();
             return;
@@ -169,17 +215,18 @@ public class NetworkBuildController : NetworkBehaviour
 
         // Surface Y detection and nudge
         UpdateSurfaceY();
-        HandleNudge(kb);
+        HandleNudge(build);
 
         // Rotation: R key
-        if (kb.rKey.wasPressedThisFrame)
+        if (build.Rotate.WasPressedThisFrame())
         {
             _placeRotation = (_placeRotation + 90) % 360;
             Debug.Log($"build: rotation = {_placeRotation}");
+            PushState();
         }
 
         // Tab key: toggle belt routing mode when on Belt tool, otherwise cycle variant
-        if (kb.tabKey.wasPressedThisFrame)
+        if (build.CycleVariant.WasPressedThisFrame())
         {
             if (_currentTool == BuildTool.Belt)
             {
@@ -195,10 +242,11 @@ public class NetworkBuildController : NetworkBehaviour
             {
                 CycleVariant();
             }
+            PushState();
         }
 
         // Snap mode toggle: scroll wheel swaps snap filter
-        float scroll = mouse.scroll.ReadValue().y;
+        float scroll = build.SnapFilterToggle.ReadValue<float>();
         if (Mathf.Abs(scroll) > 0.1f)
         {
             if (_currentTool == BuildTool.Machine || _currentTool == BuildTool.Storage)
@@ -211,18 +259,20 @@ public class NetworkBuildController : NetworkBehaviour
                 _edgeSnapMode = !_edgeSnapMode;
                 Debug.Log($"build: snap filter = {(_edgeSnapMode ? "EDGE" : "CENTER")}");
             }
+            PushState();
         }
 
         // Zoop toggle: Z key
-        if (kb.zKey.wasPressedThisFrame)
+        if (build.ZoopMode.WasPressedThisFrame())
         {
             _zoopMode = !_zoopMode;
             CancelZoop();
             Debug.Log($"build: zoop mode {(_zoopMode ? "ON" : "OFF")}");
+            PushState();
         }
 
         // Grid overlay toggle: G key
-        if (kb.gKey.wasPressedThisFrame && _gridOverlay != null)
+        if (build.GridOverlay.WasPressedThisFrame() && _gridOverlay != null)
         {
             _gridOverlay.Visible = !_gridOverlay.Visible;
             Debug.Log($"build: grid overlay {(_gridOverlay.Visible ? "ON" : "OFF")}");
@@ -230,14 +280,56 @@ public class NetworkBuildController : NetworkBehaviour
 
         // Tool-specific input
         if (_currentTool == BuildTool.Belt)
-            HandleBeltInput(mouse);
+            HandleBeltInput(build);
         else
-            HandleBuildInput(mouse);
+            HandleBuildInput(build);
+    }
+
+    // -- UI state push --
+
+    private void PushState()
+    {
+        if (_buildUI == null) return;
+
+        string filterLabel;
+        if (_currentTool == BuildTool.Machine || _currentTool == BuildTool.Storage)
+            filterLabel = _peerSnapMode ? "MACHINE/STORAGE" : "FOUNDATION";
+        else
+            filterLabel = _edgeSnapMode ? "EDGE" : "CENTER";
+
+        _buildUI.OnBuildStateChanged(new BuildStateSnapshot
+        {
+            BuildMode = _buildMode,
+            DeleteMode = _deleteMode,
+            ZoopMode = _zoopMode,
+            ZoopStartSet = _zoopStartSet,
+            ToolName = _currentTool.ToString(),
+            RotationDegrees = _placeRotation,
+            BeltRoutingMode = _beltRoutingMode.ToString(),
+            SnapFilter = filterLabel,
+            ValidationError = null,
+            KeycapLabels = GetKeycapLabels()
+        });
+    }
+
+    private string[] GetKeycapLabels()
+    {
+        var build = _controls.Build;
+        return new[]
+        {
+            build.Rotate.GetBindingDisplayString(),
+            build.DeleteMode.GetBindingDisplayString(),
+            build.ZoopMode.GetBindingDisplayString(),
+            build.GridOverlay.GetBindingDisplayString(),
+            build.CycleVariant.GetBindingDisplayString(),
+            build.Cancel.GetBindingDisplayString(),
+            build.MachineInteract.GetBindingDisplayString(),
+        };
     }
 
     // -- Unified build input (all tools except belt) --
 
-    private void HandleBuildInput(Mouse mouse)
+    private void HandleBuildInput(SlopworksControls.BuildActions build)
     {
         // Zoop after start: ray-plane intersection at anchor height.
         // MaxZoopCount in GetZoopCells prevents runaway ghost creation.
@@ -257,7 +349,7 @@ public class NetworkBuildController : NetworkBehaviour
 
             var endCell = GridManager.Instance.Grid.WorldToCell(
                 new Vector3(Mathf.Round(planePoint.x), _zoopStartPos.y, Mathf.Round(planePoint.z)));
-            HandleZoopInput(mouse, _zoopStartPos, _zoopStartRot, endCell);
+            HandleZoopInput(build, _zoopStartPos, _zoopStartRot, endCell);
             return;
         }
 
@@ -329,7 +421,7 @@ public class NetworkBuildController : NetworkBehaviour
         var cell = GridManager.Instance.Grid.WorldToCell(ghostPos);
         if (_zoopMode)
         {
-            HandleZoopInput(mouse, ghostPos, ghostRot, cell);
+            HandleZoopInput(build, ghostPos, ghostRot, cell);
             return;
         }
 
@@ -347,7 +439,7 @@ public class NetworkBuildController : NetworkBehaviour
         SetGhostColor(valid ? ValidColor : InvalidColor);
 
         // Place on left click
-        if (mouse.leftButton.wasPressedThisFrame && valid)
+        if (build.Place.WasPressedThisFrame() && valid)
         {
             int rotDeg = Mathf.RoundToInt(ghostRot.eulerAngles.y);
 
@@ -364,7 +456,7 @@ public class NetworkBuildController : NetworkBehaviour
         }
 
         // Delete on right click
-        if (mouse.rightButton.wasPressedThisFrame)
+        if (build.Remove.WasPressedThisFrame())
         {
             var hitCell = GridManager.Instance.Grid.WorldToCell(hit.point);
             GridManager.Instance.CmdDelete(hitCell, placeSurfaceY);
@@ -379,13 +471,14 @@ public class NetworkBuildController : NetworkBehaviour
 
     // -- Delete mode (X key) --
 
-    private void HandleDeleteMode(Mouse mouse, Keyboard kb)
+    private void HandleDeleteMode(SlopworksControls.BuildActions build)
     {
-        if (kb.escapeKey.wasPressedThisFrame)
+        if (build.Cancel.WasPressedThisFrame())
         {
             _deleteMode = false;
             ClearDeleteHighlight();
             Debug.Log("build: delete mode OFF");
+            PushState();
             return;
         }
 
@@ -424,7 +517,7 @@ public class NetworkBuildController : NetworkBehaviour
             }
         }
 
-        if (mouse.leftButton.wasPressedThisFrame)
+        if (build.Place.WasPressedThisFrame())
         {
             ClearDeleteHighlight();
             if (placement.Category == BuildingCategory.Belt || placement.Category == BuildingCategory.Support)
@@ -555,17 +648,19 @@ public class NetworkBuildController : NetworkBehaviour
         }
     }
 
-    private void HandleNudge(Keyboard kb)
+    private void HandleNudge(SlopworksControls.BuildActions build)
     {
-        bool shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
+        // Shift modifier still read directly -- it's a modifier, not an action
+        var kb = Keyboard.current;
+        bool shift = kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed);
         float step = shift ? 0.5f : 1f;
 
-        if (kb.pageUpKey.wasPressedThisFrame)
+        if (build.NudgeUp.WasPressedThisFrame())
         {
             _nudgeOffset += step;
             Debug.Log($"build: nudge +{_nudgeOffset:F1}m");
         }
-        if (kb.pageDownKey.wasPressedThisFrame)
+        if (build.NudgeDown.WasPressedThisFrame())
         {
             _nudgeOffset -= step;
             Debug.Log($"build: nudge {_nudgeOffset:F1}m");
@@ -584,6 +679,7 @@ public class NetworkBuildController : NetworkBehaviour
             _placeRotation = 0;
         _peerSnapMode = false;
         Debug.Log($"build: tool = {tool}");
+        PushState();
     }
 
     private int CurrentVariant => _variantIndex[(int)_currentTool];
@@ -676,7 +772,7 @@ public class NetworkBuildController : NetworkBehaviour
 
     // -- Zoop (batch placement) --
 
-    private void HandleZoopInput(Mouse mouse, Vector3 currentPos, Quaternion currentRot, Vector2Int currentCell)
+    private void HandleZoopInput(SlopworksControls.BuildActions build, Vector3 currentPos, Quaternion currentRot, Vector2Int currentCell)
     {
         var prefab = GetSelectedPrefab();
         if (prefab == null) return;
@@ -690,7 +786,7 @@ public class NetworkBuildController : NetworkBehaviour
             _ghost.SetActive(true);
             SetGhostColor(ValidColor);
 
-            if (mouse.leftButton.wasPressedThisFrame)
+            if (build.Place.WasPressedThisFrame())
             {
                 _zoopStartSet = true;
                 _zoopStartCell = currentCell;
@@ -705,12 +801,12 @@ public class NetworkBuildController : NetworkBehaviour
         // Show preview line from start to current
         UpdateZoopPreview(currentCell, currentRot);
 
-        if (mouse.leftButton.wasPressedThisFrame)
+        if (build.Place.WasPressedThisFrame())
         {
             PlaceZoopLine(_zoopStartCell, currentCell, currentRot);
             CancelZoop();
         }
-        if (mouse.rightButton.wasPressedThisFrame)
+        if (build.Remove.WasPressedThisFrame())
             CancelZoop();
     }
 
@@ -1124,26 +1220,28 @@ public class NetworkBuildController : NetworkBehaviour
 
     // -- Belt: 2-click placement --
 
-    private void HandleBeltInput(Mouse mouse)
+    private void HandleBeltInput(SlopworksControls.BuildActions build)
     {
         var cam = Camera.main;
         if (cam == null) return;
 
+        var mouse = Mouse.current;
+        if (mouse == null) return;
         var ray = cam.ScreenPointToRay(mouse.position.ReadValue());
 
         switch (_beltState)
         {
             case BeltPlacementState.Idle:
             case BeltPlacementState.PickingStart:
-                HandleBeltPickStart(mouse, ray);
+                HandleBeltPickStart(build, ray);
                 break;
             case BeltPlacementState.Dragging:
-                HandleBeltDragging(mouse, ray);
+                HandleBeltDragging(build, ray);
                 break;
         }
     }
 
-    private void HandleBeltPickStart(Mouse mouse, Ray ray)
+    private void HandleBeltPickStart(SlopworksControls.BuildActions build, Ray ray)
     {
         // Preview ghost support at cursor before clicking
         if (TryResolveBeltEndpoint(ray, true, out var previewPos, out var previewDir, out var previewFromPort))
@@ -1202,7 +1300,7 @@ public class NetworkBuildController : NetworkBehaviour
                 _beltPreviewLine.SetActive(false);
         }
 
-        if (!mouse.leftButton.wasPressedThisFrame) return;
+        if (!build.Place.WasPressedThisFrame()) return;
 
         if (TryResolveBeltEndpoint(ray, true, out var pos, out var dir, out var fromPort, log: true))
         {
@@ -1247,7 +1345,7 @@ public class NetworkBuildController : NetworkBehaviour
         }
     }
 
-    private void HandleBeltDragging(Mouse mouse, Ray ray)
+    private void HandleBeltDragging(SlopworksControls.BuildActions build, Ray ray)
     {
         if (!TryResolveBeltEndpoint(ray, false, out var endPos, out var endDir, out var endFromPort))
         {
@@ -1259,7 +1357,7 @@ public class NetworkBuildController : NetworkBehaviour
             if (_beltEndSupportGhost != null)
                 _beltEndSupportGhost.SetActive(false);
 
-            if (mouse.rightButton.wasPressedThisFrame)
+            if (build.Remove.WasPressedThisFrame())
             {
                 _beltState = BeltPlacementState.Idle;
                 if (_beltPreviewLine != null)
@@ -1426,7 +1524,7 @@ public class NetworkBuildController : NetworkBehaviour
                 }
             }
 
-            if (mouse.leftButton.wasPressedThisFrame && isValid)
+            if (build.Place.WasPressedThisFrame() && isValid)
             {
                 // Re-resolve with logging on the actual click
                 TryResolveBeltEndpoint(ray, false, out _, out _, out _, log: true);
@@ -1445,11 +1543,11 @@ public class NetworkBuildController : NetworkBehaviour
                 HideSupportGhosts();
             }
 
-            if (!isValid && mouse.leftButton.wasPressedThisFrame)
+            if (!isValid && build.Place.WasPressedThisFrame())
                 Debug.Log($"belt: placement rejected -- not enough room for turn");
         }
 
-        if (mouse.rightButton.wasPressedThisFrame)
+        if (build.Remove.WasPressedThisFrame())
         {
             _beltState = BeltPlacementState.Idle;
             if (_beltPreviewLine != null)
@@ -1980,6 +2078,7 @@ public class NetworkBuildController : NetworkBehaviour
     private void OnGUI()
     {
         if (!IsOwner) return;
+        if (!_showDebugGUI) return;
 
         // Crosshair
         float cx = Screen.width / 2f;
@@ -2087,12 +2186,5 @@ public class NetworkBuildController : NetworkBehaviour
             GUILayout.Label("[F] Deposit held item");
             GUILayout.EndArea();
         }
-    }
-
-    private void OnDestroy()
-    {
-        CancelAllPending();
-        if (_snapHighlight != null)
-            Destroy(_snapHighlight);
     }
 }
