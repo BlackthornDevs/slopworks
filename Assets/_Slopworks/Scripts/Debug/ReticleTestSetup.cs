@@ -43,11 +43,6 @@ public class ReticleTestSetup : MonoBehaviour
 
     private void Start()
     {
-        // disable entire old PlayerHUD when visor HUD takes over
-        var oldHud = FindObjectOfType<PlayerHUD>();
-        if (oldHud != null)
-            oldHud.gameObject.SetActive(false);
-
         // create overlay canvas
         var canvasObj = new GameObject("ReticleCanvas");
         _canvas = canvasObj.AddComponent<Canvas>();
