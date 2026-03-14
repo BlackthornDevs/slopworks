@@ -280,14 +280,12 @@ public class PlayerHUD : MonoBehaviour
             return;
         }
 
-        CreateCrosshair();
         CreateHealthBar();
         CreateAmmoText();
         CreateWaveText();
         CreateInteractionPrompt();
         CreateBuildModeIndicator();
         CreateWaveWarning();
-        CreateHotbar();
         CreateBuildingStatus();
         CreateDamageFlash();
     }
