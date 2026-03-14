@@ -731,7 +731,7 @@ Turrets should have configurable range and targeting priority (closest, lowest h
 The multiplayer HomeBase scene currently uses a flat checkerboard Plane as terrain. Create a real Unity Terrain with sculpted topology and painted textures that gives the game a post-apocalyptic feel.
 
 **Implementation:**
-1. Create a new scene: `Assets/_Slopworks/Scenes/Multiplayer/HomeBaseTerrain.unity`
+1. Create a new scene: `Assets/_Slopworks/Scenes/Multiplayer/HomeBase_Terrain.unity`
 2. Add a Unity Terrain (GameObject > 3D Object > Terrain)
 3. Set the Terrain object to layer 12 (Terrain) -- required for player ground check
 4. Terrain size: 200x200, height 50-100m
@@ -750,11 +750,71 @@ The multiplayer HomeBase scene currently uses a flat checkerboard Plane as terra
 
 ---
 
-## Visor HUD Integration (Part 3 of input system plan)
+## Multiplayer transition (D-019)
 
-**Prerequisites:** Merge master after `kevin/input-shared` PR lands. This gives you `BuildStateSnapshot`, `IBuildStateReceiver`, the Build action map, and `hotkeys.md`.
+**IMPORTANT: Read `decisions.md` D-019 and `ownership.md` before starting any task below.**
 
-**Reference:** `docs/plans/serene-hatching-moon.md` (full visor HUD + input system plan), `docs/reference/hotkeys.md` (keybinding reference for tooltip labels), `docs/reference/input-system.md` (action map reference).
+The playtest bootstrapper system is retired. All development and testing now happens in the multiplayer HomeBase scene structure. HomeBase is split into additive subscenes -- each developer owns their scene files and never edits another developer's `.unity` files.
+
+**How to test:** Open `HomeBase.unity` (or your owned subscene), hit Play, then click "Host" in the ConnectionUI to start as host+client. Test in multiplayer host mode.
+
+**Scene group:** "HomeBase" maps to `["HomeBase", "HomeBase_Terrain", "HomeBase_UI"]` in `SceneLoaderBehaviour._sceneGroups`. All load additively.
+
+---
+
+### TASK J-032: Create HomeBase_UI scene
+
+**Status:** Pending
+**Priority:** Critical
+**Branch:** `joe/main`
+**Ownership:** `Scenes/Multiplayer/`
+
+Create the UI subscene for the HomeBase scene group. This is your owned scene -- you can freely add/modify GameObjects here without merge conflicts with Kevin.
+
+**Files to create:**
+- `Assets/_Slopworks/Scenes/Multiplayer/HomeBase_UI.unity`
+
+**Implementation:**
+1. Create a new empty scene: `HomeBase_UI.unity`
+2. Add any world-space UI anchors needed (e.g., for machine status panels, interaction prompts)
+3. The visor HUD itself lives on the NetworkPlayer prefab (not in this scene), but this scene is the home for any UI that needs to exist in the world
+4. Keep the scene lightweight -- screen-space HUD is on the player prefab, world-space UI is here
+5. Add the scene to Unity's Build Settings (File > Build Settings > Add Open Scenes)
+
+**Important:** The visor HUD (VisorHUD, ReticleController, BuildTooltipUI) should be on the NetworkPlayer prefab (`Prefabs/Player/NetworkPlayer.prefab`) so it spawns with each player. Do NOT put player-specific UI in the scene.
+
+**Acceptance criteria:**
+- Scene exists at `Assets/_Slopworks/Scenes/Multiplayer/HomeBase_UI.unity`
+- Scene is added to Build Settings
+- Scene loads additively alongside HomeBase.unity without errors
+- No references to objects in Kevin's HomeBase.unity (cross-scene refs are forbidden)
+
+---
+
+### TASK J-033: Wire HomeBase_Terrain for additive loading
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Scenes/Multiplayer/`
+**Depends on:** J-032
+
+The terrain scene created in J-029 needs to work as an additive subscene in the HomeBase group.
+
+**Implementation:**
+1. Verify `HomeBase_Terrain.unity` is in Build Settings
+2. Verify terrain is on layer 12 (Terrain) for player ground check
+3. Verify the scene has no references to objects in Kevin's `HomeBase.unity`
+4. If the terrain was created as a standalone scene, remove any duplicate lighting (directional light, skybox) -- only one directional light should exist across all subscenes. Kevin's `HomeBase.unity` currently has lighting; coordinate via `contradictions.md` if there's a conflict about who owns lighting.
+5. Test: open Kevin's `HomeBase.unity`, then additively load `HomeBase_Terrain.unity` (File > Open Scene Additive). Player should walk on the terrain.
+
+**Acceptance criteria:**
+- Terrain scene loads additively with HomeBase.unity
+- Player ground check works on the terrain (layer 12)
+- No duplicate lighting or skyboxes
+- Scene is in Build Settings
+
+---
 
 ### TASK J-030: Create VisorBuildAdapter
 
@@ -762,9 +822,11 @@ The multiplayer HomeBase scene currently uses a flat checkerboard Plane as terra
 **Priority:** High
 **Branch:** `joe/main`
 **Ownership:** `Scripts/UI/`
-**Depends on:** `kevin/input-shared` merged to master
+**Depends on:** J-032
 
 Create the adapter that translates `BuildStateSnapshot` into calls to your visor UI components. This is the ONLY file that knows about both the snapshot and Joe's UI components. Kevin never touches it.
+
+**Testing context (D-019):** Test this in the multiplayer HomeBase scene, not a playtest bootstrapper. Hit Play, click "Host" in ConnectionUI, then NetworkBuildController finds your adapter via `GetComponentInChildren<IBuildStateReceiver>()` on the spawned player.
 
 **Files to create:**
 - `Scripts/UI/VisorBuildAdapter.cs` -- implements `IBuildStateReceiver`
@@ -780,7 +842,7 @@ Create the adapter that translates `BuildStateSnapshot` into calls to your visor
 4. Implement `OnBuildModeExited()`:
    - Hide build tooltips, reticle back to gameplay style
 5. Tooltip keycap labels come from `state.KeycapLabels[]` (populated from Input Action display names, supports player rebinding)
-6. Attach as a child of the player prefab so `GetComponentInChildren<IBuildStateReceiver>()` finds it
+6. Attach to the **NetworkPlayer prefab** (`Prefabs/Player/NetworkPlayer.prefab`) so `GetComponentInChildren<IBuildStateReceiver>()` finds it
 
 **ToolName values Kevin's controller sends:** "Foundation", "Wall", "Ramp", "Belt", "Machine", "Storage", "Delete"
 **BeltRoutingMode values:** "Default", "Straight", "Curved"
@@ -789,7 +851,7 @@ Create the adapter that translates `BuildStateSnapshot` into calls to your visor
 **Acceptance criteria:**
 - Implements `IBuildStateReceiver` correctly
 - Translates snapshot to UI component calls
-- Attached to player prefab hierarchy
+- Attached to NetworkPlayer prefab hierarchy (not a scene object)
 - No references to `NetworkBuildController` internals (only reads snapshot)
 - No references to `Keyboard.current` or `Mouse.current` -- all input comes through snapshot
 
@@ -801,7 +863,7 @@ Create the adapter that translates `BuildStateSnapshot` into calls to your visor
 **Ownership:** `Scripts/Debug/`
 **Depends on:** J-030
 
-Gate `VisorAutoBootstrap` to skip auto-spawn when `NetworkBuildController` is present in the scene. This lets Joe iterate on UI in his standalone test scene while the real controller drives UI in the HomeBase scene.
+Gate `VisorAutoBootstrap` to skip auto-spawn when `NetworkBuildController` is present in the scene. This lets Joe iterate on UI in a standalone test scene while the real controller drives UI in the HomeBase scene.
 
 **Implementation:**
 ```csharp
@@ -816,3 +878,43 @@ if (Object.FindObjectOfType<NetworkBuildController>() != null) return;
 - VisorAutoBootstrap does NOT fire when NetworkBuildController exists in scene
 - VisorAutoBootstrap still works in Joe's standalone test scene
 - No compilation errors
+
+---
+
+### TASK J-034: Attach VisorHUD to NetworkPlayer prefab
+
+**Status:** Pending
+**Priority:** High
+**Branch:** `joe/main`
+**Ownership:** `Prefabs/Player/`
+**Depends on:** J-030
+
+The VisorHUD currently auto-spawns via `VisorAutoBootstrap` (`RuntimeInitializeOnLoadMethod`). For multiplayer, it needs to be part of the player prefab so each connected player gets their own HUD instance.
+
+**Implementation:**
+1. Add VisorHUD, ReticleController, and BuildTooltipUI components to the NetworkPlayer prefab
+2. These should be on a child Canvas object within the prefab (screen-space overlay)
+3. Wire VisorBuildAdapter references to the co-located VisorHUD components
+4. Ensure the HUD only renders for the owning player (check `IsOwner` or use a local-only Canvas)
+
+**Acceptance criteria:**
+- NetworkPlayer prefab contains VisorHUD, ReticleController, BuildTooltipUI, VisorBuildAdapter
+- HUD renders only for the local player, not for remote players
+- No dependency on VisorAutoBootstrap for multiplayer (auto-bootstrap is editor testing only)
+- HUD works when FishNet spawns the player in HomeBase
+
+---
+
+### TASK J-035: Delete playtest bootstrapper references from joe/main
+
+**Status:** Pending
+**Priority:** Low
+**Branch:** `joe/main`
+**Ownership:** all
+**Depends on:** J-032
+
+Kevin will delete the playtest bootstrapper files from master. After merging master, verify no compilation errors on joe/main. If any of Joe's code still references playtest types (PlaytestContext, PlaytestToolController, etc.), remove those references.
+
+**Acceptance criteria:**
+- joe/main compiles with zero errors after merging master
+- No references to deleted playtest types in Joe's code

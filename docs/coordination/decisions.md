@@ -259,3 +259,35 @@ EditMode tests passing is necessary but not sufficient. The MasterPlaytest scene
 **Rationale:** Child transforms and component fields are visible in the Inspector, debuggable, and independent of mesh origin conventions. Computed values from renderer bounds are fragile (origin varies between Unity primitives and FBX imports), invisible at edit time, and require understanding the math to debug.
 
 **Impact:** New systems should prefer data-on-object patterns. Existing systems that compute from renderer bounds should be left as-is unless they cause bugs.
+
+---
+
+## D-019: Additive scene split, retire playtest bootstrapper
+
+**Date:** 2026-03-13
+**Resolved by:** Lead (Kevin's Claude)
+**Context:** The single-player playtest bootstrapper system (PlaytestBootstrap, PlaytestToolController, KevinPlaytestSetup, JoePlaytestSetup, MasterPlaytestSetup) was built for the vertical slice. Multiplayer development now uses the HomeBase scene with FishNet. The playtest system is dead code in the multiplayer path, and PlayerHUD was gutted (PR #69) leaving ~500 lines of no-op methods. Both developers need to work in the multiplayer scene simultaneously without merge conflicts on `.unity` files.
+
+**Decision:** Three changes:
+
+1. **Retire the playtest bootstrapper system.** All development and testing happens in the multiplayer HomeBase scene structure. The `Scripts/Debug/` bootstrapper files (PlaytestBootstrap, PlaytestToolController, PlaytestContext, KevinPlaytestSetup, JoePlaytestSetup, MasterPlaytestSetup, IPlaytestFeatureProvider, PlaytestValidator, BeltPlaytestSetup, PlaytestEnvironment) are dead code and will be deleted by Kevin. PlayerHUD and its supporting types (HotbarSlotUI, HotbarPage, HealthBarUI, InteractionPromptUI) are also dead code and will be deleted.
+
+2. **Split HomeBase into additive subscenes.** Each developer owns separate scene files loaded additively via `SceneLoaderBehaviour.TransitionTo("HomeBase")`. The "HomeBase" scene group in `SceneGroupDefinition[]` maps to all HomeBase subscenes. Scene ownership:
+   - `HomeBase.unity` (Kevin) -- grid, machines, belts, network objects, spawn points
+   - `HomeBase_Terrain.unity` (Joe) -- terrain, lighting, atmosphere, environment art
+   - `HomeBase_UI.unity` (Joe) -- world-space UI anchors only (e.g., machine status panels, interaction prompts). Screen-space HUD (VisorHUD, ReticleController, BuildTooltipUI) lives on the NetworkPlayer prefab, not in this scene.
+
+3. **Hard rule: never edit a scene file you do not own.** Both agents check `ownership.md` before touching any `.unity` file. If you need something changed in a scene you don't own, document it in `contradictions.md` and let the owner handle it. Prefabs and scripts are fine -- scene files are the conflict boundary.
+
+**Rationale:** Unity `.unity` files are YAML blobs that don't merge cleanly even with UnityYAMLMerge. Teams of 20+ handle this by splitting into additive subscenes with single owners. Two developers editing the same scene will produce corrupted merges. The playtest bootstrapper is no longer needed because the multiplayer scene structure (FishNet host mode, NetworkPlayer prefab, server-authoritative grid) is the development target.
+
+**Supersedes:** D-009 (one playtest scene per developer), D-012 (IPlaytestFeatureProvider), D-014 (MasterPlaytest merge gate). These decisions governed the playtest system which is now retired. The new merge gate is: the HomeBase subscene group loads without errors and the feature works in multiplayer host mode (hit Play, click "Host" in ConnectionUI).
+
+**Impact:**
+- Kevin deletes the playtest bootstrapper files and PlayerHUD system
+- Kevin wires `SceneLoaderBehaviour` to load all HomeBase subscenes as a group
+- Joe creates `HomeBase_UI.unity` for his UI work
+- Joe wires `HomeBase_Terrain.unity` (already created in J-029) for additive loading
+- Joe's VisorBuildAdapter (J-030) attaches to NetworkPlayer prefab, not a scene object
+- All testing happens in multiplayer host mode (hit Play, FishNet boots as host)
+- The NetworkPlayer prefab (`Prefabs/Player/NetworkPlayer.prefab`) is Joe's -- UI components attach there

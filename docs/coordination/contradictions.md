@@ -27,18 +27,10 @@ Format:
 - C-007: GetComponent per melee attack. Fixed in J-010 — cached on target acquisition.
 - C-008: Dev_Test bootstrapper question. Moot — StructuralPlaytestSetup no longer exists. JoePlaytestSetup replaces it per D-012 bootstrapper refactoring.
 - C-009: Turret ghost not cleaned up on tool switch. Fixed by Kevin — added `RegisterToolCleanup(Action)` to PlaytestToolController. Both KevinPlaytestSetup and JoePlaytestSetup register `DestroyTurretGhost` during `RegisterToolHandlers`. Commit `255f2a7`.
+- C-010: Redefine Joe's scope. Resolved — see D-019. Joe focuses on terrain, environment art, UI visuals, asset sourcing, lore. Kevin handles mechanics, multiplayer, simulation. Joe's code tasks are limited to UI scripts (VisorHUD, VisorBuildAdapter) and terrain/environment scripts directly related to his visual work.
 
 ---
 
 ## Open
 
-## C-010: Redefine Joe's task scope to focus on art/world-building
-
-**Found by:** joe
-**Date:** 2026-03-06
-**Issue:** Joe's task list (tasks-joe.md) has been mostly C# code tasks (turret simulation, tower data model, bug fixes). Joe's actual strength and intended role is maps, terrain, textures, asset sourcing, lore/story, and visual polish. Kevin has been handling all mechanics, multiplayer, and systems code anyway -- when Joe's code tasks got blocked, Kevin completed them himself (J-018 through J-021).
-**Current state:** All Joe code tasks are complete. No pending tasks.
-**Options:**
-1. Redefine Joe's task scope: Joe focuses on terrain/levels, sourcing and integrating free asset packs, lore/story writing, visual polish, UI art. Kevin continues mechanics, multiplayer, simulation. Code tasks only go to Joe if they're directly related to his visual/world work (e.g., terrain generator scripts).
-2. Keep mixed scope: Kevin assigns whatever's needed, could be code or art.
-**Recommendation:** Option 1. Joe already built the terrain generator and PlaytestEnvironment. His next natural tasks are: finding post-apocalyptic asset packs, building tower floor layouts, creating overworld terrain, writing the game's backstory and lore. These don't require deep systems knowledge and avoid the dependency bottleneck where Joe's code tasks get blocked on Kevin's deliverables.
+(none)

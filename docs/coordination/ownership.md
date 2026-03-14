@@ -2,21 +2,26 @@
 
 Who owns what. The owner is responsible for implementation on their branch. Ownership prevents merge conflicts -- don't edit files you don't own without coordinating.
 
+**Hard rule (D-019): Never edit a `.unity` scene file you do not own.** If you need something changed in a scene you don't own, document it in `contradictions.md` and let the owner handle it. Prefabs and scripts are fine -- scene files are the conflict boundary.
+
 ---
 
 ## Scene ownership
 
+HomeBase loads as an additive scene group via `SceneLoaderBehaviour.TransitionTo("HomeBase")`. All HomeBase subscenes load simultaneously.
+
 | Scene | Owner | Notes |
 |-------|-------|-------|
 | `Core_Network.unity` | Shared (master) | NetworkManager config. Changes go through master. |
-| `Core_GameManager.unity` | Shared (master) | Session state, registries. Changes go through master. |
-| `HomeBase_Terrain.unity` | Kevin | Ground, resource nodes |
-| `HomeBase_Grid.unity` | Kevin | Factory grid, belt network, machines |
-| `HomeBase_UI.unity` | Joe | HUD, build menu, inventory |
-| `HomeBase_Lighting.unity` | Kevin | Directional light, ambient, baked GI |
-| `Building_Template.unity` | Kevin | BIM pipeline is Kevin's contribution |
+| `Core_GameManager.unity` | Shared (master) | Session state, registries, SceneLoaderBehaviour. Changes go through master. |
+| `HomeBase.unity` | Kevin | Grid, machines, belts, network objects, spawn points, ConnectionUI |
+| `HomeBase_Terrain.unity` | Joe | Terrain, lighting, atmosphere, environment art |
+| `HomeBase_UI.unity` | Joe | World-space UI anchors (visor HUD is on the player prefab) |
+| `Building_Template.unity` | Kevin | BIM pipeline |
 | `Overworld_Map.unity` | Joe | Territory, supply lines |
 | `Overworld_UI.unity` | Joe | Overworld HUD, dossier panel |
+
+**Playtest scenes (`Scenes/Playtest/`) are retired per D-019.** Kevin will delete them. Do not create new playtest bootstrapper scenes.
 
 ## Script ownership (by folder)
 
@@ -24,17 +29,20 @@ Who owns what. The owner is responsible for implementation on their branch. Owne
 |--------|-------|-------|
 | `Scripts/Automation/` | Kevin | Belt, machine, grid, power |
 | `Scripts/Combat/` | Joe | Weapons, damage, health, AI |
-| `Scripts/Network/` | Joe | FishNet setup, save system |
-| `Scripts/Player/` | Joe | Character controller, camera, input |
-| `Scripts/World/` | Kevin | Terrain gen, BIM import, chunks |
-| `Scripts/UI/` | Joe | HUD, menus, panels |
-| `Scripts/Core/` | Shared (master) | Game manager, scene loader, registries, event bus |
+| `Scripts/Network/` | Kevin | FishNet setup, GridManager, NetworkInventory, NetworkBeltSegment |
+| `Scripts/Player/` | Kevin | NetworkPlayerController, NetworkBuildController, input |
+| `Scripts/World/` | Kevin | Terrain gen, BIM import, chunks, tower, buildings |
+| `Scripts/UI/` | Joe | VisorHUD, ReticleController, BuildTooltipUI, VisorBuildAdapter, menus |
+| `Scripts/Core/` | Shared (master) | Game manager, scene loader, registries, event bus, BuildStateSnapshot, IBuildStateReceiver |
+| `Scripts/Debug/` | Kevin | Retired playtest bootstrapper (pending deletion) |
 
 ## Shared assets (master only)
 
 These live on `master` and both branches merge from it:
 - `Scripts/Core/` -- interfaces, base types, registries
 - `Scripts/Core/PhysicsLayers.cs` -- layer constants and raycast masks (D-013: never edit on feature branches)
+- `Scripts/Core/BuildStateSnapshot.cs` -- shared contract between NetworkBuildController and VisorBuildAdapter
+- `Scripts/Core/IBuildStateReceiver.cs` -- interface Joe's adapter implements
 - `ScriptableObjects/Items/` -- item definitions
 - `ScriptableObjects/Recipes/` -- recipe definitions
 - `ScriptableObjects/Events/` -- event bus assets
@@ -53,18 +61,24 @@ These live on `master` and both branches merge from it:
 | `Prefabs/Buildings/` | Kevin |
 | `Prefabs/FX/` | Joe |
 
-## Shared UI components
+**NetworkPlayer prefab** (`Prefabs/Player/NetworkPlayer.prefab`) is Joe's. UI components (VisorBuildAdapter, VisorHUD, ReticleController) attach here. Kevin's NetworkBuildController finds `IBuildStateReceiver` via `GetComponentInChildren` on the player -- no scene dependency.
 
-These components are used by both developers' playtest scenes and should go through master:
-- `PlayerHUD.cs` -- consolidated HUD (crosshair, health bar, ammo, wave status, hotbar with pages, build mode indicator, interaction prompt, damage flash)
-- `HotbarSlotUI.cs` -- individual hotbar slot with inventory binding and `SetEntry()` for non-inventory pages
-- `HotbarPage.cs` -- hotbar page data types (HotbarPage, HotbarEntry)
-- `HealthBarUI.cs` -- health bar fill display
-- `InteractionPromptUI.cs` -- raycast-based interaction prompt
-- `InventoryUI.cs` -- full inventory grid panel
-- `RecipeSelectionUI.cs` -- machine recipe selection modal with live status display
-- `StorageUI.cs` -- storage interaction split panel (player inventory + storage)
-- `InventorySlotUI.cs` -- single inventory grid slot
+## UI components (Joe owns)
+
+Joe's visor HUD system replaces the old PlayerHUD (deleted per D-019):
+
+| File | Purpose |
+|------|---------|
+| `VisorHUD.cs` | Runtime-generated persistent gameplay overlay |
+| `ReticleController.cs` | TMP crosshair with mode label and fade |
+| `ReticleStyle.cs` | Pure data struct for 6 reticle styles |
+| `BuildTooltipUI.cs` | Keycap row and action stack for build mode |
+| `VisorBuildAdapter.cs` | Implements `IBuildStateReceiver`, bridges snapshot to UI (pending J-030) |
+| `VisorAutoBootstrap.cs` | Editor-only auto-spawner (pending J-031 guard) |
+| `InventoryUI.cs` | Full inventory grid panel |
+| `RecipeSelectionUI.cs` | Machine recipe selection modal |
+| `StorageUI.cs` | Storage interaction split panel |
+| `InventorySlotUI.cs` | Single inventory grid slot |
 
 ## Render pipeline assets
 

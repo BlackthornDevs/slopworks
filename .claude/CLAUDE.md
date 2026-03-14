@@ -89,6 +89,10 @@ These are non-negotiable. Violating any of them creates bugs that are hard to fi
 
 **Never implement silent fallbacks.** If something is not possible with the current defined parameters, do not silently fall back to different behavior. Surface it to the user and let them decide whether a fallback is acceptable. This applies to all systems, not just belt routing.
 
+**Never edit a `.unity` scene file you do not own.** Check `docs/coordination/ownership.md` for scene ownership. Each `.unity` file has exactly one owner. If you need something changed in a scene you don't own, document it in `contradictions.md` and let the owner handle it. Prefabs (`.prefab`) and scripts (`.cs`) are fine to edit per folder ownership -- scene files are the conflict boundary. This prevents corrupted YAML merges that break scenes silently.
+
+**The playtest bootstrapper system is retired (D-019).** Do not create, modify, or reference playtest bootstrapper files (PlaytestBootstrap, PlaytestToolController, PlaytestContext, KevinPlaytestSetup, JoePlaytestSetup, MasterPlaytestSetup, IPlaytestFeatureProvider, PlaytestValidator). Do not create new playtest scenes. All development and testing happens in the multiplayer HomeBase scene group (additive subscenes loaded via SceneLoaderBehaviour). PlayerHUD is dead code -- use VisorHUD instead.
+
 ---
 
 ## Before writing C# code
@@ -111,21 +115,14 @@ Don't skip step 1. Server-side factory simulation logic is pure C# with no MonoB
 
 ## Phase completion standard
 
-**A phase is not done until it is playable.** Every implementation phase must produce a self-contained playtest scene that lets a human verify the system works end-to-end. The pattern:
+**A phase is not done until it is playable.** Every implementation phase must work end-to-end in the multiplayer HomeBase scene group. The pattern:
 
 1. **Simulation layer** — pure C# classes with EditMode tests (D-004 pattern). All tests must pass.
 2. **MonoBehaviour wrappers** — thin wrappers that own the simulation objects and spawn placeholder visuals.
-3. **Playtest scene** — a `[SystemName]Playtest` scene with a single bootstrapper component. Drop it on an empty GameObject, hit Play, and exercise every feature the phase adds. No prefabs or asset dependencies required -- runtime primitives and `ScriptableObject.CreateInstance` only.
+3. **Multiplayer verification** — open HomeBase, hit Play, click "Host" in ConnectionUI to start as host+client. Exercise every feature the phase adds. The feature must work in multiplayer host mode.
 4. **Human verification** — the developer plays the scene and confirms behavior matches intent before the phase is marked complete.
 
-**Playtest scenes must log extensively.** Every user action, placement, removal, validation failure, and state change must produce a `Debug.Log` message. These logs are the primary verification tool -- if something goes wrong, the console should make it obvious what happened and why. Log messages should be short and factual: `"foundation placed at (5,3) level 0"`, `"ramp blocked: cell (5,7) occupied by non-structural building"`, `"wall removed at (5,5) edge north"`.
-
-Existing playtest scenes to reference:
-- `PortNodePlaytestSetup.cs` — factory automation chain (belts, machines, inserters)
-- `StructuralPlaytestSetup.cs` — structural building, automation, combat, turrets (the main playtest bootstrapper)
-- `PlaytestEnvironment.cs` — reusable post-apocalyptic arena generator (procedural ground, ruins, props, lighting, fog). Call `Generate()` from any bootstrapper.
-
-**Pre-seed factory** (`P` key or `_preSeedFactory` checkbox): lays a foundation slab, places a storage->belt->smelter->belt->storage chain and an ammo storage->belt->turret defense chain. Use this to skip manual placement when testing.
+**Log extensively.** Every user action, placement, removal, validation failure, and state change must produce a `Debug.Log` message. These logs are the primary verification tool -- if something goes wrong, the console should make it obvious what happened and why. Log messages should be short and factual: `"foundation placed at (5,3) level 0"`, `"ramp blocked: cell (5,7) occupied by non-structural building"`, `"wall removed at (5,5) edge north"`.
 
 ---
 
@@ -191,27 +188,30 @@ Underscore prefix on `_Slopworks/` sorts it to the top of the Project window and
 
 ## Scene structure
 
+HomeBase is an additive scene group (D-019). `SceneLoaderBehaviour` loads all subscenes in the group simultaneously via `TransitionTo("HomeBase")`. Each scene file has exactly one owner -- see `docs/coordination/ownership.md`.
+
 ```
 Scenes/
   Core/
     Core_Network.unity       — NetworkManager, FishNet (ALWAYS loaded, never unloaded)
-    Core_GameManager.unity   — session state, threat level, wave controller
-  HomeBase/
-    HomeBase_Terrain.unity   — ground, resource nodes
-    HomeBase_Grid.unity      — factory grid, belt network, machines
-    HomeBase_UI.unity        — HUD, build menu, inventory
-    HomeBase_Lighting.unity  — baked GI
+    Core_GameManager.unity   — session state, SceneLoaderBehaviour, registries
+  Multiplayer/
+    HomeBase.unity           — [Kevin] grid, machines, belts, network objects, ConnectionUI
+    HomeBase_Terrain.unity   — [Joe] terrain, lighting, atmosphere, environment art
+    HomeBase_UI.unity        — [Joe] world-space UI anchors (screen-space HUD is on player prefab)
   Buildings/
-    Building_Template.unity  — base for all reclaimed buildings
+    Building_Template.unity  — [Kevin] base for all reclaimed buildings
     [BuildingName].unity     — one scene per building
   Overworld/
-    Overworld_Map.unity      — territory, supply lines
-    Overworld_UI.unity       — overworld HUD
+    Overworld_Map.unity      — [Joe] territory, supply lines
+    Overworld_UI.unity       — [Joe] overworld HUD
 ```
 
-`Core_Network.unity` is always loaded first and never unloaded. The NetworkManager lives there. `ItemRegistry` and `RecipeRegistry` live in Core — loaded once at startup.
+`Core_Network.unity` is always loaded first and never unloaded. The NetworkManager lives there. `ItemRegistry` and `RecipeRegistry` live in Core -- loaded once at startup.
 
-Scene loading is host-initiated: `NetworkManager.SceneManager.LoadScene` loads the same scene for all connected clients simultaneously.
+Scene loading uses `SceneLoaderBehaviour.TransitionTo()` which calls `SceneManager.LoadSceneAsync` additively for each scene in the group. FishNet scene sync is a future step.
+
+**Playtest scenes (`Scenes/Playtest/`) are retired (D-019).** Do not use or reference them.
 
 ---
 
@@ -305,8 +305,7 @@ Reference implementation: turret system (J-013 through J-015). Files: `TurretCon
 
 ## Current phase status
 
-- **Phase 3** (Combat): Complete — weapons, enemies, AI, waves
-- **Phase 4** (Turret Defenses): Complete — J-013, J-014, J-015
-- **Phase 5** (Core UI + Inventory): Complete (Kevin)
-- **Phase 7** (The Tower): Next for Joe — starts at J-016. Tower contracts bible complete (15 contracts, 6 buildings). Website tower page updated with progression tree, contract cards, and environmental hazards.
-- **Phase 6** (Building Exploration): Next for Kevin
+- **Phases 1-8** (Vertical Slice): Complete on kevin/main. 891/891 EditMode tests passing.
+- **Multiplayer conversion**: In progress (Kevin). Steps 1-3 complete, step 4 (machines+belts+simulation) in progress.
+- **Joe's focus**: Terrain, environment art, UI visuals (VisorHUD), asset sourcing. See `tasks-joe.md`.
+- **Playtest bootstrapper**: Retired (D-019). All work happens in multiplayer HomeBase scene group.
