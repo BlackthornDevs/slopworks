@@ -178,5 +178,15 @@
     "author": "Joe",
     "tags": ["testing", "phase-completion"],
     "status": "active"
+  },
+  {
+    "id": "a3f7c91b04e2",
+    "text": "Skills are non-negotiable checklists. Every numbered step must be executed. Do not skip steps, do not rationalize that a step does not apply, do not adapt the skill by dropping structural steps like PR creation or pushing. After completing a skill, walk through each step and verify it was done. Incident: slopworks-handoff skill step 7b (create PR) was skipped entirely because the agent adapted the push target and then stopped processing remaining steps.",
+    "source": "session/2026-03-15/user-correction",
+    "confidence": 1.0,
+    "created": "2026-03-15T00:00:00",
+    "author": "Kevin",
+    "tags": ["workflow", "skills", "discipline", "hard-rules"],
+    "status": "active"
   }
 ]

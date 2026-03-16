@@ -1,7 +1,8 @@
 # Project playbook (auto-generated)
-18 active lessons
+Last updated: 2026-03-15T18:18:49Z | 19 active lessons
 
-## Uncategorized (18 lessons)
+## Uncategorized (19 lessons)
+- **[1.0]** Skills are non-negotiable checklists. Every numbered step must be executed. Do not skip steps, do not rationalize that a step does not apply, do not adapt the skill by dropping structural steps like PR creation or pushing. After completing a skill, walk through each step and verify it was done. Incident: slopworks-handoff skill step 7b (create PR) was skipped entirely because the agent adapted the push target and then stopped processing remaining steps. (workflow, skills, discipline, hard-rules)
 - **[0.9]** Never mutate ScriptableObjects at runtime. SOs are read-only static definitions shared across all instances. Write per-instance state to ItemInstance/ItemSlot structs. (hard-rules, scriptable-objects)
 - **[0.9]** Never spawn a NetworkObject per belt item. Belt contents are a SyncList<BeltItem> on the segment entity. One NetworkObject per belt segment. (hard-rules, networking, performance)
 - **[0.9]** Factory simulation runs server-side only. Belt tick, machine tick, power calculation, crafting progress run under if (!IsServerInitialized) return. Clients display synced state only. (hard-rules, networking, server-authority)

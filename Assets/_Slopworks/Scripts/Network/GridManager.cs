@@ -18,6 +18,7 @@ public class GridManager : NetworkBehaviour
     /// Belt endpoints on open ground are raised by this amount.
     /// </summary>
     public float SupportAnchorHeight { get; private set; }
+    public float SupportPoleHeight { get; private set; }
 
     private static readonly Vector2Int[] CardinalDirs =
         { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
@@ -107,7 +108,19 @@ public class GridManager : NetworkBehaviour
         {
             var anchor = supportPrefab.GetComponentInChildren<BeltSnapAnchor>();
             SupportAnchorHeight = anchor != null ? anchor.transform.localPosition.y : 1.075f;
-            Debug.Log($"grid: support anchor height = {SupportAnchorHeight:F3}");
+
+            // Read cylinder mesh height for correct scaling
+            SupportPoleHeight = SupportAnchorHeight; // fallback
+            foreach (Transform child in supportPrefab.transform)
+            {
+                var mf = child.GetComponent<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null && mf.sharedMesh.name.Contains("3155"))
+                {
+                    SupportPoleHeight = mf.sharedMesh.bounds.size.y;
+                    break;
+                }
+            }
+            Debug.Log($"grid: support anchor height = {SupportAnchorHeight:F3}, pole mesh height = {SupportPoleHeight:F3}");
         }
     }
 
@@ -382,6 +395,8 @@ public class GridManager : NetworkBehaviour
         byte tier = 0, int variant = 0, byte routingMode = 0,
         bool startFromPort = true, bool endFromPort = true,
         bool flipBeltPorts = false,
+        float startHeightOffset = 0f,
+        float endHeightOffset = 0f,
         NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
@@ -394,9 +409,9 @@ public class GridManager : NetworkBehaviour
         var beltEndPos = endPos;
 
         if (!startFromPort)
-            beltStartPos = SpawnSupportAt(startPos, Quaternion.LookRotation(startDir), sender);
+            beltStartPos = SpawnSupportAt(startPos, Quaternion.LookRotation(startDir), startHeightOffset, sender);
         if (!endFromPort)
-            beltEndPos = SpawnSupportAt(endPos, Quaternion.LookRotation(endDir), sender);
+            beltEndPos = SpawnSupportAt(endPos, Quaternion.LookRotation(endDir), endHeightOffset, sender);
 
         // Server is final authority -- validate without bypasses
         var validation = BeltRouteBuilder.Validate(beltStartPos, startDir, beltEndPos, endDir);
@@ -603,10 +618,10 @@ public class GridManager : NetworkBehaviour
         int variant = 0, NetworkConnection sender = null)
     {
         if (!IsServerInitialized) return;
-        SpawnSupportAt(position, rotation, sender);
+        SpawnSupportAt(position, rotation, 0f, sender);
     }
 
-    private Vector3 SpawnSupportAt(Vector3 groundPos, Quaternion rotation, NetworkConnection sender = null)
+    private Vector3 SpawnSupportAt(Vector3 groundPos, Quaternion rotation, float heightOffset = 0f, NetworkConnection sender = null)
     {
         var prefab = GetPrefab(BuildingCategory.Support, 0);
         if (prefab == null)
@@ -617,6 +632,25 @@ public class GridManager : NetworkBehaviour
 
         var instance = Instantiate(prefab, groundPos, rotation);
 
+        if (heightOffset > 0f)
+        {
+            foreach (Transform child in instance.transform)
+            {
+                var meshFilter = child.GetComponent<MeshFilter>();
+                if (meshFilter == null) continue;
+                string meshName = meshFilter.sharedMesh != null ? meshFilter.sharedMesh.name : "";
+
+                if (meshName.Contains("3155"))
+                    child.localScale = new Vector3(1f, 1f + (heightOffset / SupportPoleHeight), 1f);
+                else if (meshName.Contains("3029"))
+                    child.localPosition = new Vector3(child.localPosition.x, child.localPosition.y + heightOffset, child.localPosition.z);
+            }
+
+            var anchorTransform = instance.GetComponentInChildren<BeltSnapAnchor>()?.transform;
+            if (anchorTransform != null)
+                anchorTransform.localPosition = new Vector3(anchorTransform.localPosition.x, anchorTransform.localPosition.y + heightOffset, anchorTransform.localPosition.z);
+        }
+
         var info = instance.AddComponent<PlacementInfo>();
         info.Category = BuildingCategory.Support;
         info.SurfaceY = groundPos.y;
@@ -626,7 +660,7 @@ public class GridManager : NetworkBehaviour
         var anchor = instance.GetComponentInChildren<BeltSnapAnchor>();
         var anchorPos = anchor != null ? anchor.WorldPosition : groundPos;
 
-        Debug.Log($"grid: support at {groundPos}, anchor at {anchorPos} by {sender?.ClientId}");
+        Debug.Log($"grid: support at {groundPos}, anchor at {anchorPos} offset={heightOffset:F2}m by {sender?.ClientId}");
         return anchorPos;
     }
 
