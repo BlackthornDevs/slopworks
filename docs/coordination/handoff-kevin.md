@@ -56,7 +56,18 @@ Last commit: 6724283 Fix curved belt item visuals -- use spline not linear inter
 - None
 
 ## Test status
-- Tests not run via MCP (corrupts FishNet DefaultPrefabObjects)
+- **938 total, 909 passed, 29 failed** (EditMode, 2026-03-15)
+- All 6 new BeltNetwork tests pass
+- 29 pre-existing failures (not from this session's changes):
+  - BeltPlacementValidatorTests: 2 (45-degree slope, too-short belt)
+  - BeltPortTests: 1 (WorldDirection matches transform.forward)
+  - BuildingSnapPointTests: 2 (snap point generation)
+  - BuildModeControllerTests: 1 (out-of-bounds placement)
+  - FactoryGridTests: 3 (out-of-bounds checks)
+  - SnapPlacementTests: 7 (all snap placement tests)
+  - UnifiedPlacementTests: 13 (all unified placement tests)
+- These likely broke during multiplayer conversion (grid size changes, snap system). Relevance unclear -- haven't been run in a while.
+- Full results: `docs/test-results/TestResults_20260315_204956.xml`
 - Run manually: Window > General > Test Runner > EditMode > Run All
 
 ## Key context the next session needs
