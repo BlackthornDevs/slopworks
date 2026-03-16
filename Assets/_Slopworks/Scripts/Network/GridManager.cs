@@ -427,6 +427,7 @@ public class GridManager : NetworkBehaviour
         var waypoints = BeltRouteBuilder.Build(beltStartPos, startDir, beltEndPos, endDir, mode);
         var arcLength = BeltRouteBuilder.ComputeRouteLength(waypoints);
         var segment = BeltSegment.FromArcLength(arcLength);
+        segment.Reversed = flipBeltPorts;
 
         var midpoint = BeltRouteBuilder.EvaluateRoute(waypoints, arcLength, 0.5f);
         var go = Instantiate(prefab, midpoint, Quaternion.identity);

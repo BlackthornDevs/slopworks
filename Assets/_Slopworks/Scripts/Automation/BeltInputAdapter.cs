@@ -2,7 +2,8 @@ using System;
 
 /// <summary>
 /// Wraps the input end of a BeltSegment as an IItemDestination.
-/// Allows an inserter to push items onto the start of a belt.
+/// When the segment is reversed, the input port is at the end
+/// of the internal list instead of the start.
 /// </summary>
 public class BeltInputAdapter : IItemDestination
 {
@@ -24,14 +25,17 @@ public class BeltInputAdapter : IItemDestination
         if (_belt.IsEmpty)
             return true;
 
-        // Check if there is enough room at the input end.
-        // The first item's distanceToNext represents how far it is from the input edge.
+        if (_belt.Reversed)
+            return _belt.TerminalGap >= _minSpacing;
+
         var items = _belt.GetItems();
         return items[0].distanceToNext >= _minSpacing;
     }
 
     public bool TryInsert(string itemId)
     {
-        return _belt.TryInsertAtStart(itemId, _minSpacing);
+        return _belt.Reversed
+            ? _belt.TryInsertAtEnd(itemId, _minSpacing)
+            : _belt.TryInsertAtStart(itemId, _minSpacing);
     }
 }

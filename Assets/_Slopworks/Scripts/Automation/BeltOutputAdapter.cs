@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Wraps the output end of a BeltSegment as an IItemSource.
-/// Allows an inserter to pull items from the end of a belt.
+/// When the segment is reversed, the output port is at the start
+/// of the internal list instead of the end.
 /// </summary>
 public class BeltOutputAdapter : IItemSource
 {
@@ -16,24 +17,23 @@ public class BeltOutputAdapter : IItemSource
         _belt = belt ?? throw new ArgumentNullException(nameof(belt));
     }
 
-    public bool HasItemAvailable => _belt.HasItemAtEnd;
+    public bool HasItemAvailable => _belt.Reversed ? _belt.HasItemAtStart : _belt.HasItemAtEnd;
 
     public string PeekItemId()
     {
-        if (!_belt.HasItemAtEnd)
+        if (!HasItemAvailable)
             return null;
 
         IReadOnlyList<BeltItem> items = _belt.GetItems();
         if (items.Count == 0)
             return null;
 
-        // The last item in the list is at the output end
-        return items[items.Count - 1].itemId;
+        return _belt.Reversed ? items[0].itemId : items[items.Count - 1].itemId;
     }
 
     public bool TryExtract(out string itemId)
     {
-        itemId = _belt.TryExtractFromEnd();
+        itemId = _belt.Reversed ? _belt.TryExtractFromStart() : _belt.TryExtractFromEnd();
         return itemId != null;
     }
 }

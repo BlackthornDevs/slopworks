@@ -97,7 +97,10 @@ public static class BeltSplineMeshBaker
         var shape = new BeltCrossSection();
         SplineMesh.Extrude(spline, mesh, 1f, segments, true, shape);
 
-        Object.DestroyImmediate(container);
+        // Keep the SplineContainer for item position evaluation (NetworkBeltSegment uses it).
+        // Only destroy if this is a ghost preview (Decal layer), not a placed belt.
+        if (target.layer == PhysicsLayers.Decal)
+            Object.DestroyImmediate(container);
 
         if (mesh.vertexCount > 0)
             meshFilter.sharedMesh = mesh;

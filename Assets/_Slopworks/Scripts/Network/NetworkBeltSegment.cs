@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
+using UnityEngine.Splines;
 
 /// <summary>
 /// FishNet wrapper for a belt segment. Syncs geometry via SyncVars so clients
@@ -119,6 +120,12 @@ public class NetworkBeltSegment : NetworkBehaviour
     /// </summary>
     public Vector3 EvaluatePosition(float t)
     {
+        var splineContainer = GetComponent<SplineContainer>();
+        if (splineContainer != null && splineContainer.Spline != null && splineContainer.Spline.Count > 0)
+        {
+            var localPos = SplineUtility.EvaluatePosition(splineContainer.Spline, t);
+            return transform.TransformPoint(localPos);
+        }
         if (_routeWaypoints != null)
             return BeltRouteBuilder.EvaluateRoute(_routeWaypoints, _routeLength, t);
         return transform.position;

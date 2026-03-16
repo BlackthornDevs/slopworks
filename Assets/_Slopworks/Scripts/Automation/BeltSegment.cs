@@ -27,6 +27,14 @@ public class BeltSegment
     public ushort TerminalGap => _terminalGap;
     public bool IsEmpty => _items.Count == 0;
     public bool HasItemAtEnd => _items.Count > 0 && _terminalGap == 0;
+    public bool HasItemAtStart => _items.Count > 0 && _items[0].distanceToNext == 0;
+
+    /// <summary>
+    /// When true, the segment's physical Input port is at the end and Output port is at
+    /// the start (reversed from default). Set once at placement based on flipBeltPorts.
+    /// The adapters use this to operate on the correct physical end.
+    /// </summary>
+    public bool Reversed { get; set; }
 
     /// <param name="lengthInTiles">Length of the belt segment in tiles.</param>
     public BeltSegment(int lengthInTiles)
@@ -135,6 +143,63 @@ public class BeltSegment
     }
 
     /// <summary>
+    /// Remove the item at the input end of the belt (start of internal list).
+    /// Only succeeds if the first item is at the input edge (distanceToNext == 0).
+    /// Used by adapters when segment is reversed (Output port at start).
+    /// </summary>
+    public string TryExtractFromStart()
+    {
+        if (_items.Count == 0)
+            return null;
+
+        if (_items[0].distanceToNext > 0)
+            return null;
+
+        string extractedId = _items[0].itemId;
+        _items.RemoveAt(0);
+
+        if (_items.Count == 0)
+        {
+            _terminalGap = (ushort)Math.Min(_totalLength, ushort.MaxValue);
+        }
+
+        return extractedId;
+    }
+
+    /// <summary>
+    /// Insert an item at the output end of the belt (end of internal list).
+    /// Succeeds only if terminalGap >= minSpacing.
+    /// Used by adapters when segment is reversed (Input port at end).
+    /// </summary>
+    public bool TryInsertAtEnd(string itemId, ushort minSpacing)
+    {
+        if (string.IsNullOrEmpty(itemId))
+            return false;
+
+        if (_items.Count == 0)
+        {
+            _items.Add(new BeltItem
+            {
+                itemId = itemId,
+                distanceToNext = (ushort)Math.Min(_totalLength, ushort.MaxValue)
+            });
+            _terminalGap = 0;
+            return true;
+        }
+
+        if (_terminalGap < minSpacing)
+            return false;
+
+        _items.Add(new BeltItem
+        {
+            itemId = itemId,
+            distanceToNext = _terminalGap
+        });
+        _terminalGap = 0;
+        return true;
+    }
+
+    /// <summary>
     /// Advance all items toward the output end by the given speed in subdivisions.
     /// Two values change per tick: items[0].distanceToNext increases (first item moves
     /// away from input end) and terminalGap decreases (last item moves toward output end).
@@ -147,22 +212,42 @@ public class BeltSegment
         if (_items.Count == 0)
             return;
 
-        ushort actualMove;
-        if (speed >= _terminalGap)
+        if (Reversed)
         {
-            actualMove = _terminalGap;
-            _terminalGap = 0;
+            // Items flow toward start: decrease items[0].distanceToNext
+            var first = _items[0];
+            ushort actualMove;
+            if (speed >= first.distanceToNext)
+            {
+                actualMove = first.distanceToNext;
+                first.distanceToNext = 0;
+            }
+            else
+            {
+                actualMove = speed;
+                first.distanceToNext = (ushort)(first.distanceToNext - speed);
+            }
+            _items[0] = first;
+            _terminalGap = (ushort)(_terminalGap + actualMove);
         }
         else
         {
-            actualMove = speed;
-            _terminalGap = (ushort)(_terminalGap - speed);
+            // Items flow toward end: decrease terminalGap
+            ushort actualMove;
+            if (speed >= _terminalGap)
+            {
+                actualMove = _terminalGap;
+                _terminalGap = 0;
+            }
+            else
+            {
+                actualMove = speed;
+                _terminalGap = (ushort)(_terminalGap - speed);
+            }
+            var first = _items[0];
+            first.distanceToNext = (ushort)(first.distanceToNext + actualMove);
+            _items[0] = first;
         }
-
-        // Increase first item's distance from input end to preserve the invariant
-        var first = _items[0];
-        first.distanceToNext = (ushort)(first.distanceToNext + actualMove);
-        _items[0] = first;
     }
 
     /// <summary>
