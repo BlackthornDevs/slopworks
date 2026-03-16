@@ -44,11 +44,13 @@ Last commit: 31d79eb Fix support height gap -- use actual cylinder mesh height
 
 ## Known bugs (from 2026-03-15 playtesting)
 
-1. **Item flow direction wrong** -- items on belts travel in the direction the belt was drawn, not based on which end is Input vs Output. When flipBeltPorts is true, the BeltSegment still moves items start-to-end regardless of port assignment. Need to check whether adapters or BeltSegment flow direction needs to account for the flip.
+1. ~~**Item flow direction wrong**~~ -- FIXED in kevin/belt-bugs (commit 1bdc951). BeltSegment.Reversed flag set from flipBeltPorts. Adapters and Tick respect reversed flow.
 
 2. **Curved belt item visuals go point-to-point** -- items on curved belts travel in straight lines between waypoints instead of following the spline mesh. They float in mid-air on curves. Compare how BeltSplineMeshBaker evaluates the spline vs how GetItemWorldPositions evaluates it -- they should use the same method.
 
 3. **Delete tool doesn't always work** -- sometimes clicking a placed building with the delete tool does nothing. Not yet reproducible consistently. User needs more time to identify the pattern. Could be raycast layer issues, collider gaps, or PlacementInfo lookup failures.
+
+4. **Deleting a belt with items breaks simulation** -- ServerManager.Despawn destroys the belt but never unregisters the BeltSegment from FactorySimulation or removes BeltNetwork connections. The simulation keeps ticking dead connections, breaking subsequent belt placement. Fix needs: unregister segment from FactorySimulation, disconnect all BeltNetwork connections referencing the segment, clean up BeltPort connections. Future improvement: deleting a belt should return its in-transit items to the player's inventory so items are never lost.
 
 ## Blockers or decisions needed
 - Three bugs above need investigation before belt system is shippable
