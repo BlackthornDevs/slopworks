@@ -1,8 +1,8 @@
 # Kevin's Claude -- Session Handoff
 
 Last updated: 2026-03-15
-Branch: kevin/belts
-Last commit: 31d79eb Fix support height gap -- use actual cylinder mesh height
+Branch: kevin/belt-bugs (off kevin/belts)
+Last commit: 6724283 Fix curved belt item visuals -- use spline not linear interpolation
 
 ## What was completed this session
 
@@ -17,53 +17,52 @@ Last commit: 31d79eb Fix support height gap -- use actual cylinder mesh height
 - 6 new EditMode tests for generalized connections
 - Items verified flowing from storage through belt into machine
 
-### Belt ghost mesh preview (kevin/belts, not yet merged)
-- Replaced line renderer with `BeltSplineMeshBaker` ghost mesh during placement (`NetworkBuildController.cs`)
+### Belt ghost mesh preview (kevin/belts, PR #74 open)
+- Replaced line renderer with `BeltSplineMeshBaker` ghost mesh during placement
 - Semi-transparent green/red mesh updates every frame during drag
-- Exact match between ghost and placed belt (both use same waypoints)
 - Line renderer kept as backup
 
-### Support height adjustment (kevin/belts, not yet merged)
-- PgUp/PgDn adjusts support height in 0.5m steps (0.25m with Shift)
-- Independent start/end offsets (`_beltStartHeightOffset`, `_beltEndHeightOffset`)
-- Idle state = adjusts start, Dragging state = adjusts end
-- Cylinder scales via Y (pivot at bottom), top piece and anchor offset upward
-- `SupportPoleHeight` read from mesh bounds for correct scaling (0.926 units, not 1.0)
-- Server-side `SpawnSupportAt` applies same scaling via `startHeightOffset`/`endHeightOffset` params on `CmdPlaceBelt`
-- User verified: ghost matches placed result, no gap between cylinder and top piece
+### Support height adjustment (kevin/belts, PR #74 open)
+- PgUp/PgDn with independent start/end offsets
+- Cylinder scales via Y, top piece and anchor offset upward
+- `SupportPoleHeight` read from mesh bounds for correct scaling
+- Server-side support scaling matches client ghost
+
+### Bug fixes (kevin/belt-bugs)
+- **Item flow direction** -- `BeltSegment.Reversed` flag set from `flipBeltPorts`. Added `TryExtractFromStart`, `TryInsertAtEnd`, `HasItemAtStart`. Adapters check `Reversed` to operate on correct end. Tick moves items toward start when reversed. Commit `1bdc951`.
+- **Curved belt item visuals** -- keep `SplineContainer` after mesh bake instead of destroying it. `EvaluatePosition` uses the spline for Bezier curve evaluation instead of linear `EvaluateRoute`. Items now follow the actual belt mesh path. Commit `6724283`.
 
 ## What's in progress (not yet committed)
-- Terrain data and water material changes are unstaged (user said don't commit)
+- Terrain data, water material, BeltMat material changes are unstaged (don't commit)
+
+## Known bugs (remaining)
+
+1. ~~**Item flow direction wrong**~~ -- FIXED (commit 1bdc951)
+
+2. ~~**Curved belt item visuals go point-to-point**~~ -- FIXED (commit 6724283)
+
+3. **Delete tool doesn't always work** -- sometimes clicking a placed building with the delete tool does nothing. Not yet reproducible consistently. Could be raycast layer issues, collider gaps, or PlacementInfo lookup failures.
+
+4. **Deleting a belt with items breaks simulation** -- ServerManager.Despawn destroys the belt but never unregisters the BeltSegment from FactorySimulation or removes BeltNetwork connections. Fix needs: unregister segment, disconnect BeltNetwork connections, clean up BeltPort connections. Future improvement: return in-transit items to player inventory.
 
 ## Next task to pick up
-1. **PR for kevin/belts** -- create PR to master, wait for checks, merge
-2. **NetworkMachine/NetworkStorage on prefabs** -- user added manually during testing, verify they're saved to prefabs and committed
-3. **Ghost preview mesh** -- consider removing line renderer backup once ghost mesh is proven stable
-4. **Machine/Storage UI** -- recipe selection and status display for multiplayer
-5. **Belt item visuals** -- upgrade from orange cubes to item-specific meshes
-
-## Known bugs (from 2026-03-15 playtesting)
-
-1. ~~**Item flow direction wrong**~~ -- FIXED in kevin/belt-bugs (commit 1bdc951). BeltSegment.Reversed flag set from flipBeltPorts. Adapters and Tick respect reversed flow.
-
-2. **Curved belt item visuals go point-to-point** -- items on curved belts travel in straight lines between waypoints instead of following the spline mesh. They float in mid-air on curves. Compare how BeltSplineMeshBaker evaluates the spline vs how GetItemWorldPositions evaluates it -- they should use the same method.
-
-3. **Delete tool doesn't always work** -- sometimes clicking a placed building with the delete tool does nothing. Not yet reproducible consistently. User needs more time to identify the pattern. Could be raycast layer issues, collider gaps, or PlacementInfo lookup failures.
-
-4. **Deleting a belt with items breaks simulation** -- ServerManager.Despawn destroys the belt but never unregisters the BeltSegment from FactorySimulation or removes BeltNetwork connections. The simulation keeps ticking dead connections, breaking subsequent belt placement. Fix needs: unregister segment from FactorySimulation, disconnect all BeltNetwork connections referencing the segment, clean up BeltPort connections. Future improvement: deleting a belt should return its in-transit items to the player's inventory so items are never lost.
+1. **PR for kevin/belts** -- PR #74 open, wait for checks, merge
+2. **PR for kevin/belt-bugs** -- create PR to master after kevin/belts merges
+3. **Bug 3 investigation** -- reproduce delete tool failure, identify pattern
+4. **Bug 4 implementation** -- belt deletion cleanup (unregister, disconnect, return items)
+5. **Machine/Storage UI** -- recipe selection and status display for multiplayer
 
 ## Blockers or decisions needed
-- Three bugs above need investigation before belt system is shippable
+- None
 
 ## Test status
 - Tests not run via MCP (corrupts FishNet DefaultPrefabObjects)
-- 6 new tests from belt simulation tick (on master via PR #73)
 - Run manually: Window > General > Test Runner > EditMode > Run All
 
 ## Key context the next session needs
-- **Branch:** `kevin/belts` with ghost mesh + support height work, not yet merged
-- **`SupportPoleHeight`** reads actual cylinder mesh bounds, not anchor position. If the cylinder FBX changes, this auto-adjusts.
-- **`ApplySupportHeightOffset`** uses hardcoded Y defaults (-0.075 for top piece, 1.0 for anchor). The spec reviewer flagged this -- if prefab positions change, these need updating. Consider reading defaults from prefab like `SupportPoleHeight`.
-- **`BeltPlacementState.PickingStart`** enum value exists but is never used as a state. `Idle` handles both "no belt active" and "hovering before first click". PgUp/PgDn checks `Idle` for start height.
-- **TestItemSpawner T key** fills storage and sets recipes. Debug tool, delete when real UI exists.
-- **Prefabs need NetworkMachine/NetworkStorage** for simulation to work. User added them manually.
+- **Branch:** `kevin/belt-bugs` off `kevin/belts`. Both need PRs to master.
+- **`BeltSegment.Reversed`** -- bool set from `flipBeltPorts`. Adapters check it to call the correct start/end methods. Tick direction flips when reversed.
+- **SplineContainer stays on placed belts** after mesh bake. Ghost previews (Decal layer) still destroy it. `EvaluatePosition` uses the spline if present, falls back to `EvaluateRoute`.
+- **`BeltPlacementState.PickingStart`** enum value exists but is never used. PgUp/PgDn checks `Idle` for start height.
+- **Prefabs need NetworkMachine/NetworkStorage** for simulation. User added manually.
+- **TestItemSpawner T key** fills storage and sets recipes. Debug tool.
